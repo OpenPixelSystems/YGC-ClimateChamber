@@ -1,0 +1,20 @@
+[
+  {
+    "id": "Climate chamber temperature",
+    "type": "dht22",
+    "pin": 4,
+    "description": "Main chamber sensor"
+  },
+  {
+    "id": "sensor2",
+    "type": "ds18b20",
+    "pin": 28,
+    "description": "Secondary sensor"
+  },
+  {
+    "id": "sensor3",
+    "type": "dht11",
+    "pin": 17,
+    "description": "Humidity monitoring point"
+  }
+]

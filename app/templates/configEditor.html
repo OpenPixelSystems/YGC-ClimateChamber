@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Configuration Editor{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="input-section">
+        <h1>Graph Configuration Editor</h1>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-messages">
+                    {% for category, message in messages %}
+                        <div class="flash {{ category }}">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+        <form method="POST" class="vertical-form">
+            {% for key, group in config.items() %}
+                {% if not key.startswith('_') %}
+                    <div class="config-group">
+                        <div class="config-header">
+                            <h3>{{ group.name }}</h3>
+                            {% if group._comment %}
+                                <p class="config-description">{{ group._comment }}</p>
+                            {% endif %}
+                        </div>
+
+                        <div class="config-fields">
+                            <div class="config-field">
+                                <label for="{{ key }}.value">
+                                    Current Value
+                                    {% if group.unit %}({{ group.unit|safe }}){% endif %}
+                                </label>
+                                <input type="text"
+                                       id="{{ key }}.value"
+                                       name="{{ key }}.value"
+                                       value="{{ group.value }}">
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+            {% endfor %}
+            <div class="button-group">
+                <button type="submit" class="full-width">Save Configuration</button>
+                <button type="button" class="full-width"
+                        onclick="window.location.href='/'">Back to Home</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

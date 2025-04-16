@@ -1,0 +1,19 @@
+{
+  "Climate chamber temperature": {
+    "base_temperature": 22.5,
+    "variation": 10,
+    "has_humidity": true,
+    "base_humidity": 45.0
+  },
+  "sensor 2": {
+    "base_temperature": 23.0,
+    "variation": 15,
+    "has_humidity": false
+  },
+  "sensor 3": {
+    "base_temperature": 21.5,
+    "variation": 40,
+    "has_humidity": true,
+    "base_humidity": 50.0
+  }
+}
