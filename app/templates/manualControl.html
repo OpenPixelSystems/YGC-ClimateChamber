@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Graph and Control Panel{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="input-section">
+    <h2>Manual Control Panel</h2>
+    <div class="vertical-form">
+      <div class="slider-container">
+        <div class="slider-wrapper" data-slider-type="power">
+          <div class="slider-header">
+            <label for="powerSlider">Power Control</label>
+            <span class="slider-value" id="powerValue">0</span>%
+          </div>
+          <input type="range"
+                 id="powerSlider"
+                 class="slider full-width"
+                 min="0"
+                 max="100"
+                 value="0">
+        </div>
+      </div>
+      <button id="StartCycle" class="full-width">Start Cycle</button>
+    </div>
+  </div>
+
+  <div class="graph-section">
+    <canvas id="newGraph"></canvas>
+    <div id="sensorList" class="sensor-list"></div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation"></script>
+  <script src="{{ url_for('static', filename='js/manual-steering.js') }}" type="module"></script>
+{% endblock %}

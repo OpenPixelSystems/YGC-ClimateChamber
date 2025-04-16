@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}Graph and Control Panel{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="input-section">
+    <h2>Control Panel</h2>
+    <form class="vertical-form">
+      <label for="cycleName">Cycle Name (optional):</label>
+      <input type="text" id="cycleName" name="cycleName" placeholder="Enter custom cycle name">
+      <button type="button" id="StartCycle">Start cycle</button>
+      <div class="sensor-list-container">
+        <h3>Available Sensors</h3>
+        <div id="sensorList" class="sensor-list">
+          <!-- Sensors will be populated here dynamically -->
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <div class="graph-section">
+    <canvas id="newGraph"></canvas>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation"></script>
+  <script src="{{ url_for('static', filename='js/display-graph.js') }}" type="module"></script>
+{% endblock %}
+
+{% block styles %}
+<style>
+  .sensor-list-container {
+    margin-top: 20px;
+    max-width: 300px;
+  }
+  
+  .sensor-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px;
+    background: #f8f9fa;
+    border-radius: 6px;
+  }
+  
+  .sensor-checkbox {
+    display: flex;
+    align-items: center;
+    padding: 8px;
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  
+  .sensor-checkbox:hover {
+    background: #e9ecef;
+  }
+  
+  .sensor-checkbox input[type="checkbox"] {
+    margin-right: 8px;
+  }
+  
+  .sensor-checkbox label {
+    cursor: pointer;
+    user-select: none;
+    flex-grow: 1;
+  }
+</style>
+{% endblock %}

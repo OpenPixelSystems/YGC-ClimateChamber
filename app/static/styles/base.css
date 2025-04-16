@@ -1,0 +1,125 @@
+:root {
+    --background-color: #f4f4f4;
+    --card-background: #fff;
+    --text-color: #333;
+    --shadow-color: rgba(0, 0, 0, 0.1);
+    --nav-background: #fff;
+    --nav-text: #333;
+    --nav-hover: #f0f0f0;
+}
+
+/* Dark mode colors */
+.dark-mode {
+    --background-color: #1a1a1a;
+    --card-background: #2d2d2d;
+    --text-color: #e0e0e0;
+    --shadow-color: rgba(0, 0, 0, 0.3);
+    --nav-background: #2d2d2d;
+    --nav-text: #e0e0e0;
+    --nav-hover: #3d3d3d;
+}
+
+/* Original general styles */
+body {
+    font-family: Arial, sans-serif;
+    background-color: var(--background-color);
+    margin: 0;
+    padding: 0;
+    color: var(--text-color);
+}
+
+/* Navigation styles */
+.navbar {
+    background-color: var(--nav-background);
+    padding: 1rem 2rem;
+    box-shadow: 0 2px 4px var(--shadow-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+}
+
+.nav-links {
+    display: flex;
+    gap: 2rem;
+}
+
+.nav-controls {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.nav-link {
+    color: var(--nav-text);
+    text-decoration: none;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+}
+
+.nav-link:hover {
+    background-color: var(--nav-hover);
+}
+
+.icon-button {
+    background: none;
+    border: none;
+    color: var(--nav-text);
+    cursor: pointer;
+    padding: 0.5rem;
+    border-radius: 4px;
+    transition: all 0.2s;
+    font-size: 1.2rem;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+}
+
+.icon-button:hover {
+    background-color: var(--nav-hover);
+    transform: scale(1.1);
+}
+
+/* Content styles */
+.container {
+    display: flex;
+    justify-content: space-around;
+    padding: 20px;
+}
+
+.input-section {
+    background-color: var(--card-background);
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px var(--shadow-color);
+    width: 25%;
+}
+
+.graph-section {
+    width: 75%;
+}
+
+@media (max-width: 768px) {
+    .container {
+        flex-direction: column;
+        align-items: center;
+    }
+    .input-section, .graph-section {
+        width: 80%;
+        margin-bottom: 20px;
+    }
+    
+    .navbar {
+        padding: 1rem;
+    }
+    
+    .nav-links {
+        gap: 1rem;
+    }
+}

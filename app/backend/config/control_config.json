@@ -1,0 +1,27 @@
+{
+  "_comment": "This file contains the parameters for the controlling stage within the climate chamber.",
+  "sensor_read_delay": {
+    "name": "sensor_read_delay",
+    "value": 2.5,
+    "unit": "seconds",
+    "_comment": "Handles how fast temperature sensors are read out."
+  },
+  "kp": {
+    "name": "kp",
+    "value": 1.1,
+    "unit": "",
+    "_comment": "Proportional control"
+  },
+  "ki": {
+    "name": "ki",
+    "value": 1,
+    "unit": "",
+    "_comment": "Integral control"
+  },
+  "kd": {
+    "name": "kd",
+    "value": 0,
+    "unit": "",
+    "_comment": "Differential control"
+  }
+}

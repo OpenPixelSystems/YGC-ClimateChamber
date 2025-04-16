@@ -1,0 +1,22 @@
+/* Original flash messages */
+.flash-messages {
+    margin-bottom: 2rem;
+}
+
+.flash {
+    padding: 10px;
+    margin: 10px 0;
+    border-radius: 4px;
+}
+
+.flash.error {
+    background-color: #f8d7da;
+    border-color: #f5c6cb;
+    color: #721c24;
+}
+
+.flash.success {
+    background-color: #d4edda;
+    border-color: #c3e6cb;
+    color: #155724;
+}

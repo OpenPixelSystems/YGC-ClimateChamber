@@ -1,0 +1,6 @@
+/* Main CSS imports - original styles split logically */
+@import 'base.css';
+@import 'buttons.css';
+@import 'forms.css';
+@import 'graphs.css';
+@import 'alerts.css';

@@ -1,0 +1,91 @@
+{
+  "_comment": "This file contains the parameters for the raspberry pi.",
+  "Temperature_sensors": {
+    "Inside": {
+      "_comment": "Defines the temperature sensors inside the climate chamber environment",
+      "on_device": {
+        "_comment": "Temperature sensor on device",
+        "gpio_pin": 12,
+        "unit": "degrees",
+        "max_temp": 120
+      },
+      "top_left_back_corner": {
+        "_comment": "Temperature top left back corner",
+        "gpio_pin": 13,
+        "unit": "degrees",
+        "max_temp": 120
+      },
+      "top_right_back_corner": {
+        "_comment": "Temperature top right back corner",
+        "gpio_pin": 14,
+        "unit": "degrees",
+        "max_temp": 120
+      },
+      "top_left_front_corner": {
+        "_comment": "Temperature top left front corner",
+        "gpio_pin": 15,
+        "unit": "degrees",
+        "max_temp": 120
+      },
+      "top_right_front_corner": {
+        "_comment": "Temperature top right front corner",
+        "gpio_pin": 16,
+        "unit": "degrees",
+        "max_temp": 120
+      },
+      "bottom_left_back_corner": {
+        "_comment": "Temperature bottom left back corner",
+        "gpio_pin": 17,
+        "unit": "degrees",
+        "max_temp": 120
+      },
+      "bottom_right_back_corner": {
+        "_comment": "Temperature bottom right back corner",
+        "gpio_pin": 18,
+        "unit": "degrees",
+        "max_temp": 120
+      },
+      "bottom_left_front_corner": {
+        "_comment": "Temperature bottom left front corner",
+        "gpio_pin": 19,
+        "unit": "degrees",
+        "max_temp": 120
+      },
+      "bottom_right_front_corner": {
+        "_comment": "Temperature bottom right front corner",
+        "gpio_pin": 20,
+        "unit": "degrees",
+        "max_temp": 120
+      }
+    },
+    "Outside": {
+      "_comment": "Defines the temperature sensors outside of the climate chamber",
+      "environment": {
+        "_comment": "Temperature outside of climate chamber",
+        "gpio_pin": 21,
+        "unit": "degrees",
+        "max_temp": 120
+      }
+    },
+    "Peltier": {
+      "_comment": "Defines the temperature sensors used to track the Peltier element temperatures",
+      "Peltier1": {
+        "_comment": "Defines inside and outside temperature sensors of Peltier element 1",
+        "Inside": {
+          "_comment": "Temperature sensor on inside of Peltier element 1",
+          "gpio_pin": 22,
+          "unit": "degrees",
+          "max_temp": 120,
+          "min_temp": -40
+        },
+        "Outside": {
+          "_comment": "Temperature sensor on outside of Peltier element 1",
+          "gpio_pin": 23,
+          "unit": "degrees",
+          "max_temp": 120,
+          "min_temp": -40
+        }
+      }
+    }
+  }
+}

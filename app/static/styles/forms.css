@@ -1,0 +1,88 @@
+/* Original form elements */
+input[type="text"],
+input[type="number"],
+select {
+    padding: 8px;
+    margin: 5px 0;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    width: 100%;
+}
+
+.vertical-form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.config-field label {
+    display: block;
+    margin-bottom: 0.3rem;
+    font-weight: bold;
+    color: #34495e;
+}
+
+input[type="file"] {
+    margin-top: 10px;
+}
+
+/* Slider specific styles */
+.slider-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+    width: fit-content;
+}
+
+.slider-header label {
+    margin: 0;
+    margin-right: 0.5rem;
+}
+
+.slider-header .slider-value {
+    font-weight: bold;
+}
+
+input[type="range"].slider {
+    width: 100%;
+    -webkit-appearance: none;
+    background: transparent;
+}
+
+input[type="range"].slider:focus {
+    outline: none;
+}
+
+input[type="range"].slider::-webkit-slider-runnable-track {
+    width: 100%;
+    height: 8px;
+    background: #ddd;
+    border-radius: 4px;
+}
+
+input[type="range"].slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    background: #4CAF50;
+    border-radius: 50%;
+    margin-top: -6px;
+    cursor: pointer;
+}
+
+input[type="range"].slider::-moz-range-track {
+    width: 100%;
+    height: 8px;
+    background: #ddd;
+    border-radius: 4px;
+}
+
+input[type="range"].slider::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    background: #4CAF50;
+    border-radius: 50%;
+    cursor: pointer;
+}
