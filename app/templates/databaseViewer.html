@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Cycle Data Viewer{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="input-section">
+        <h1>Cycle Data Viewer</h1>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-messages">
+                    {% for category, message in messages %}
+                        <div class="flash {{ category }}">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <div class="vertical-form">
+            <div class="config-group">
+                <div class="config-header">
+                    <h3>Select a Cycle</h3>
+                    <p class="config-description">Choose a cycle to view its sensor readings plotted over time.</p>
+                </div>
+
+                <div class="config-fields">
+                    <div class="config-field">
+                        <label for="cycleDropdown">Cycle</label>
+                        <select id="cycleDropdown"></select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="config-group">
+                <div class="config-header">
+                    <h3>Temperature Readings</h3>
+                </div>
+                <div class="config-fields">
+                    <canvas id="temperatureChart" width="800" height="400"></canvas>
+                </div>
+            </div>
+
+            <div class="button-group">
+                <button type="button" class="full-width"
+                        onclick="window.location.href='/'">Back to Home</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="{{ url_for('static', filename='js/database-viewer.js') }}"></script>
+{% endblock %}

@@ -102,6 +102,21 @@ class DatabaseManager:
         conn.close()
         return cycles
 
+    def list_cycle_names(self):
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        cursor.execute("SELECT name FROM cycles")
+        cycles = cursor.fetchall()
+        conn.close()
+        return cycles
+
+    def read_cycle_data(self, cycle_name):
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        cursor.execute("SELECT name FROM cycles")
+        cycles = cursor.fetchall()
+        conn.close()
+        return cycles
 
 class SensorReader:
     def __init__(self, config_path='database/sensorConfig.json', mock_data_path='database/mockSensorData.json'):
