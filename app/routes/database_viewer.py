@@ -20,13 +20,7 @@ def get_cycles():
     cycles = app_state.database.list_cycle_names()
     return jsonify(cycles)
 
-#TODO Edit query to fetch all data from given cycle name
-@viewer_bp.route('/api/data/<int:cycle_id>')
-def get_cycle_data(cycle_id):
-    conn = get_db_connection()
-    readings = conn.execute(
-        'SELECT timestamp, sensor_id, temperature FROM sensor_readings WHERE cycle_id = ?',
-        (cycle_id,)
-    ).fetchall()
-    conn.close()
-    return jsonify([dict(row) for row in readings])
+@viewer_bp.route('/api/data/<cycle_name>')
+def get_cycle_data(cycle_name):
+    readings = app_state.database.read_cycle_data(cycle_name)
+    return jsonify(readings)

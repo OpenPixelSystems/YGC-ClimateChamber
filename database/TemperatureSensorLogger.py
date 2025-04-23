@@ -113,10 +113,14 @@ class DatabaseManager:
     def read_cycle_data(self, cycle_name):
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
-        cursor.execute("SELECT name FROM cycles")
-        cycles = cursor.fetchall()
+        cursor.execute("SELECT cycle_id FROM cycles WHERE name = ?", (cycle_name,))
+        cycle = cursor.fetchone()
+        if cycle:
+            cycle_id = cycle[0]
+            cursor.execute("select sensor_id, timestamp, temperature FROM sensor_readings WHERE cycle_id = ?", (cycle_id,))
+        readings = cursor.fetchall()
         conn.close()
-        return cycles
+        return readings
 
 class SensorReader:
     def __init__(self, config_path='database/sensorConfig.json', mock_data_path='database/mockSensorData.json'):
