@@ -165,11 +165,34 @@ displayTypeDropdown.addEventListener('change', () => {
     loadCycleData(cycleId);
 });
 
+// Delete data button
+document.getElementById('deleteData').addEventListener('click', async () => {
+    try {
+    const cycleName = dropdown.value;
+    const res = await fetch(`/api/delete_cycle/${cycleName}`);
+
+    const data = await res.json(); // parse backend response
+
+    if (!res.ok) {
+        // show popup on error with backend message
+        throw new Error(data.message || 'Failed to delete cycle');
+    }
+
+    // show popup on success
+    alert(`✅ Success: ${data.message || 'Cycle deleted successfully'}`);
+
+    } catch (err) {
+        alert(`❌ Error: ${err.message}`);
+    }
+
+});
+
+
 // Export data button
 document.getElementById('exportData').addEventListener('click', async () => {
     try {
         const cycleId = dropdown.value;
-        const res = await fetch(`/api/data/${cycleId}`);
+        const res = await fetch(`/api/delete_cycle/${cycleId}`);
         if (!res.ok) throw new Error('Failed to fetch data for export');
         const data = await res.json();
 
@@ -191,6 +214,7 @@ document.getElementById('exportData').addEventListener('click', async () => {
         alert('Failed to export data. Please try again.');
     }
 });
+
 
 // Initialize
 window.onload = loadCycles;

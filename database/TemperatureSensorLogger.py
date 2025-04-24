@@ -89,9 +89,13 @@ class DatabaseManager:
             cursor.execute("DELETE FROM cycles WHERE cycle_id = ?", (cycle_id,))
             conn.commit()
             print(f"Deleted cycle '{cycle_name}' and associated sensor readings.")
+            conn.close()
+            return True
         else:
             print(f"Cycle '{cycle_name}' not found.")
-        conn.close()
+            conn.close()
+            return False
+
 
     def list_cycles(self):
         """Retrieve a list of all logging cycles."""

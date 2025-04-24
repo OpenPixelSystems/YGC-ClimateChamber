@@ -20,6 +20,17 @@ def get_cycles():
     cycles = app_state.database.list_cycle_names()
     return jsonify(cycles)
 
+@viewer_bp.route('/api/delete_cycle/<cycle_name>')
+def delete_cycle(cycle_name):
+    success = app_state.database.delete_cycle(cycle_name)
+    if success:
+        result = {"status": "success", "message": "Action performed"}
+        return jsonify(result), 200  # HTTP 200 OK
+    else:
+        result = {"status": "error", "message": "No cycle with name = "+cycle_name}
+        return jsonify(result), 500  # Internal Server Error
+    
+
 @viewer_bp.route('/api/data/<cycle_name>')
 def get_cycle_data(cycle_name):
     readings = app_state.database.read_cycle_data(cycle_name)
