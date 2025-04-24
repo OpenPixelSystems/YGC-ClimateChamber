@@ -1,21 +1,13 @@
 const dropdown = document.getElementById('cycleDropdown');
 const displayTypeDropdown = document.getElementById('displayType');
 const ctx = document.getElementById('temperatureChart').getContext('2d');
-const statusCircle = document.getElementById('connectionStatusCircle');
 let chart;
-
-// Set status indicator
-function setStatus(connected) {
-    statusCircle.style.backgroundColor = connected ? '#2ecc71' : '#e74c3c';
-}
 
 async function loadCycles() {
     try {
-        setStatus(false);
         const res = await fetch('/api/cycles');
         if (!res.ok) throw new Error('Failed to fetch cycles');
         const data = await res.json();
-        setStatus(true);
 
         dropdown.innerHTML = '';
         data.forEach(cycle => {
@@ -30,17 +22,14 @@ async function loadCycles() {
         }
     } catch (error) {
         console.error('Error loading cycles:', error);
-        setStatus(false);
     }
 }
 
 async function loadCycleData(cycle_name) {
     try {
-        setStatus(false);
         const res = await fetch(`/api/data/${cycle_name}`);
         if (!res.ok) throw new Error('Failed to fetch cycle data');
         const data = await res.json();
-        setStatus(true);
 
         // Get current display type
         const displayType = displayTypeDropdown.value;
@@ -91,7 +80,6 @@ async function loadCycleData(cycle_name) {
         updateChart(datasets);
     } catch (error) {
         console.error('Error loading cycle data:', error);
-        setStatus(false);
     }
 }
 
