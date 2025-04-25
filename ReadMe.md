@@ -1,64 +1,90 @@
-# ClimateChamber
+# ClimateChamber Interface
 
+A web-based control and monitoring system for a programmable climate chamber, enabling temperature profile management, real-time sensor data streaming, and experiment data logging. **Development is ongoing; expect further improvements and new features.**
 
+---
 
-## Getting started
+## Features
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+- **Temperature Profile Control:**
+  - Define, edit, and upload custom temperature cycles ("graphs") for the climate chamber.
+  - Supports both constant temperature and time-dependent profiles.
+- **Real-Time Monitoring:**
+  - Live sensor data streaming via Server-Sent Events (SSE).
+  - Visualization of current and target temperatures.
+- **Manual Control:**
+  - Override automatic control to set chamber temperature directly.
+- **Data Logging & Database Viewer:**
+  - Automatic logging of sensor data for each experiment cycle.
+  - Web interface to view, export, and delete logged cycles.
+- **Configurable PID Control:**
+  - PID parameters (kp, ki, kd) and sensor read intervals are configurable.
+  - Mock and real hardware support for development/testing.
+- **Modular Backend:**
+  - Flask-based backend with clear separation: routes, controllers, models, services.
+  - Singleton state management for global app state.
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+---
 
-## Add your files
+## Architecture Overview
 
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/topics/git/add_files/#add-files-to-a-git-repository) or push an existing Git repository with the following command:
+- **Backend:** Python (Flask)
+  - `app/backend/controllers/`: Control logic (e.g., `ClimateChamberController` for PID and cycle management)
+  - `app/backend/models/`: Hardware interfaces, mocks, and sensor modules
+  - `app/backend/services/`: State, config, and temperature profile management
+  - `app/routes/`: Flask blueprints for UI, API, and control endpoints
+- **Frontend:** HTML/CSS/JS (in `app/templates/` and `app/static/`)
+  - Responsive web UI for configuration, control, and data visualization
+- **Database:** SQLite (default: `ClimateChamber_data.db`)
 
+---
+
+## Quick Start
+
+### Prerequisites
+- Python 3.8+
+- `pip install -r requirements.txt`
+
+### Running the Application
+```bash
+python run.py
 ```
-cd existing_repo
-git remote add origin https://gitlab.com/tmc-climatechamber/climatechamber.git
-git branch -M main
-git push -uf origin main
-```
+- Access the web UI at: `http://localhost:5000`
 
-## Integrate with your tools
+---
 
-- [ ] [Set up project integrations](https://gitlab.com/tmc-climatechamber/climatechamber/-/settings/integrations)
+## Main Endpoints
+- `/` : Home/dashboard
+- `/edit-config` : Edit configuration files
+- `/setup-graph` : Create/edit temperature profiles
+- `/display-graph` : Visualize active profile
+- `/manual-control` : Manual override
+- `/view-database` : View and manage logged cycles
+- `/api/cycles`, `/api/data/<cycle_name>`, `/api/delete_cycle/<cycle_name>` : Database API
 
-## Collaborate with your team
+---
 
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Set auto-merge](https://docs.gitlab.com/user/project/merge_requests/auto_merge/)
+## Development Notes
+- **Ongoing Improvements:**
+  - Sensor module auto-discovery/configuration
+  - Improved error handling and validation
+  - More detailed logging and export options
+  - Hardware abstraction for real/virtual chamber
+- **Testing:**
+  - Mock hardware classes for safe local development
+- **Contribution:**
+  - PRs and issues are welcome! Please document changes and follow modular design patterns.
 
-## Test and Deploy
+---
 
-Use the built-in continuous integration in GitLab.
+## License
+MIT (or specify your license)
 
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
+---
 
-***
+## Contact
+For questions or contributions, please contact the maintainers or open an issue on GitLab.
 
-# Editing this README
-
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
-
-## Suggestions for a good README
-
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
-
-## Name
-Choose a self-explaining name for your project.
-
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
-
-## Badges
 On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
 
 ## Visuals
