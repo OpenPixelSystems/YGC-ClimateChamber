@@ -89,9 +89,13 @@ class DatabaseManager:
             cursor.execute("DELETE FROM cycles WHERE cycle_id = ?", (cycle_id,))
             conn.commit()
             print(f"Deleted cycle '{cycle_name}' and associated sensor readings.")
+            conn.close()
+            return True
         else:
             print(f"Cycle '{cycle_name}' not found.")
-        conn.close()
+            conn.close()
+            return False
+
 
     def list_cycles(self):
         """Retrieve a list of all logging cycles."""
@@ -102,6 +106,25 @@ class DatabaseManager:
         conn.close()
         return cycles
 
+    def list_cycle_names(self):
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        cursor.execute("SELECT name FROM cycles")
+        cycles = cursor.fetchall()
+        conn.close()
+        return cycles
+
+    def read_cycle_data(self, cycle_name):
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        cursor.execute("SELECT cycle_id FROM cycles WHERE name = ?", (cycle_name,))
+        cycle = cursor.fetchone()
+        if cycle:
+            cycle_id = cycle[0]
+            cursor.execute("select sensor_id, timestamp, temperature FROM sensor_readings WHERE cycle_id = ?", (cycle_id,))
+        readings = cursor.fetchall()
+        conn.close()
+        return readings
 
 class SensorReader:
     def __init__(self, config_path='database/sensorConfig.json', mock_data_path='database/mockSensorData.json'):

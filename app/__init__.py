@@ -1,8 +1,9 @@
 import os
 from flask import Flask
 import app.backend.services.state as state
-
 app_state = state.AppState()
+
+from app.routes.database_viewer import viewer_bp
 
 def create_app():
     app = Flask(__name__, static_url_path='/static')
@@ -16,5 +17,6 @@ def create_app():
     app.register_blueprint(main_bp)
     app.register_blueprint(graph_bp)
     app.register_blueprint(sensor_bp)
+    app.register_blueprint(viewer_bp)
 
     return app
