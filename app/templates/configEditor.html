@@ -4,17 +4,17 @@
 {% block content %}
 <div class="container">
     <div class="input-section">
-        <h1>Graph Configuration Editor</h1>
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                <div class="flash-messages">
-                    {% for category, message in messages %}
-                        <div class="flash {{ category }}">{{ message }}</div>
-                    {% endfor %}
-                </div>
-            {% endif %}
-        {% endwith %}
-        <form method="POST" class="vertical-form">
+        <h1>Configuration Editor</h1>
+        <form id="fileSelectForm" method="get" action="{{ url_for('config.edit_config') }}" style="margin-bottom: 20px;">
+            <label for="filename">Select configuration file:</label>
+            <select name="filename" id="filename" onchange="document.getElementById('fileSelectForm').submit();">
+                {% for fname in config_files %}
+                    <option value="{{ fname }}" {% if fname == selected_file %}selected{% endif %}>{{ fname }}</option>
+                {% endfor %}
+            </select>
+        </form>
+        <h2 style="margin-top:0;">Currently editing: <span style="color:var(--accent-color);">{{ selected_file }}</span></h2>
+        <div id="config-form"></div>
             {% for key, group in config.items() %}
                 {% if not key.startswith('_') %}
                     <div class="config-group">
@@ -48,4 +48,8 @@
         </form>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/config-editor.js') }}" type="module"></script>
 {% endblock %}

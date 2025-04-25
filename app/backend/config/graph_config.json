@@ -22,7 +22,7 @@
     },
     "max_rico": {
         "name": "max_rico",
-        "value": 4,
+        "value": 5,
         "unit": "degrees celcius/second",
         "_comment": "Handles how fast temperature can increase or drop. (Tends to be non linear)"
     }
