@@ -103,6 +103,6 @@ class ClimateChamberController:
             except (FileNotFoundError, json.JSONDecodeError) as e:
                 yield f"data: {{\"error\": \"Failed to read sensor data: {str(e)}\"}}\n\n"
 
-            time.sleep(self.app_state.provider_interval)
+            time.sleep(self.app_state.config_manager.control_config.read_delay)
 
         yield "data: {\"status\": \"stopped\"}\n\n"  # Send final message before stopping

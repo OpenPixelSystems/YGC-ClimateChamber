@@ -22,12 +22,12 @@ class AppState:
         self.start_time = None
         self.read_interval = 0.1
         self.provider_interval = 1
+
         # Paths
         self.config_dir = Path('app/backend/config')
         self.graph_config_path = self.config_dir / 'graph_config.json'
         self.control_config_path = self.config_dir / 'control_config.json'
-        self.sensor_data_path = self.config_dir / 'sensor_data.json'
-        self.mcu_config_data_path = self.config_dir / 'raspberry_pi_config.json'
+        self.mcu_config_path = self.config_dir / 'raspberry_pi_config.json'
 
         # Ensure config directory exists
         os.makedirs(self.config_dir, exist_ok=True)
@@ -46,7 +46,7 @@ class AppState:
     def _create_sensor_reader(self):
         """Factory method for creating the sensor reader."""
         from app.backend.services.SensorReader import SensorReader
-        return SensorReader(self.mcu_config_data_path)
+        return SensorReader(self.mcu_config_path)
 
     def _create_temperature_logger(self):
         """Factory method for creating the temperature logger."""
@@ -56,7 +56,7 @@ class AppState:
     def _create_config_manager(self):
         """Factory method for creating the config manager."""
         from app.backend.models.config.ConfigManager import ConfigManager
-        return ConfigManager(str(self.control_config_path))
+        return ConfigManager(self)
 
     def _create_climate_chamber(self):
         """Factory method for creating the climate chamber implementation."""
@@ -74,5 +74,5 @@ class AppState:
         return ClimateChamberController(
             self,
             self.climate_chamber,
-            self.config_manager.pid_config
+            self.config_manager.control_config
         )

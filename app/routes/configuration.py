@@ -41,6 +41,7 @@ def api_save_config():
     config_path = os.path.join(CONFIG_DIR, filename)
     try:
         save_config(config_path, config_data)
+        app_state.config_manager.reload_config()
         return jsonify({'success': True})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
