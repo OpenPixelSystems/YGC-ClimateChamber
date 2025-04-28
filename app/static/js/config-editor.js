@@ -8,18 +8,30 @@ document.addEventListener('DOMContentLoaded', () => {
     let configData = {};
     let filename = fileSelector ? fileSelector.value : null;
 
-    // Helper to recursively render config fields
     function renderConfig(obj, path = []) {
         let html = '';
         for (const key in obj) {
-            if (typeof obj[key] === 'object' && obj[key] !== null && !Array.isArray(obj[key])) {
-                html += `<fieldset class="config-group"><legend>${key}</legend>${renderConfig(obj[key], path.concat(key))}</fieldset>`;
-            } else if (typeof obj[key] === 'number' && Number.isInteger(obj[key])) {
-                const fieldId = [...path, key].join('.');
-                html += `<div class="config-field">
-                    <label for="${fieldId}">${fieldId}</label>
-                    <input type="number" id="${fieldId}" name="${fieldId}" value="${obj[key]}" />
-                </div>`;
+            if (key === 'editable' && typeof obj[key] === 'object' && obj[key] !== null) {
+                // Only render number fields inside 'value'
+                html += '<div class="config-fields">';
+                for (const subKey in obj[key]) {
+                    if (typeof obj[key][subKey] === 'number' && !isNaN(obj[key][subKey])) {
+                        const fieldId = [...path, key, subKey].join('.');
+                        html += `<div class="config-field">
+                            <label for="${fieldId}">${subKey}</label>
+                            <input type="number" id="${fieldId}" name="${fieldId}" value="${obj[key][subKey]}" />
+                        </div>`;
+                    }
+                }
+                html += '</div>';
+            } else if (typeof obj[key] === 'object' && obj[key] !== null && !Array.isArray(obj[key])) {
+                // Group each sensor in a "config-group"
+                html += `<div class="config-group">
+                            <div class="config-header">
+                                <h3>${key}</h3>
+                            </div>
+                            ${renderConfig(obj[key], path.concat(key))}
+                        </div>`;
             }
         }
         return html;
@@ -30,7 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
         for (const key in obj) {
             if (typeof obj[key] === 'object' && obj[key] !== null && !Array.isArray(obj[key])) {
                 updateConfigFromForm(obj[key], path.concat(key));
-            } else if (typeof obj[key] === 'number' && Number.isInteger(obj[key])) {
+            } else if (typeof obj[key] === 'number' && !isNaN(obj[key])) {
                 const fieldId = [...path, key].join('.');
                 const input = document.getElementById(fieldId);
                 if (input) {
@@ -42,7 +54,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function fetchAndRenderConfig() {
         if (!filename) return;
-        fetch(`/config/api/get-config?filename=${encodeURIComponent(filename)}`)
+        fetch(`/api/get-config?filename=${encodeURIComponent(filename)}`)
             .then(res => res.json())
             .then(data => {
                 if (data.config) {
@@ -57,7 +69,7 @@ document.addEventListener('DOMContentLoaded', () => {
     saveBtn.addEventListener('click', function(e) {
         e.preventDefault();
         updateConfigFromForm(configData);
-        fetch('/config/api/save-config', {
+        fetch('/api/save-config', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ filename: filename, config: configData })

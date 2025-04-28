@@ -2,27 +2,37 @@
     "_comment": "This file contains the parameters for the graph used to set the desired temperature profile within the climate chamber.",
     "max_points": {
         "name": "max_points",
-        "value": 100,
+        "editable": {
+            "value": 100
+        },
         "_comment": "Amount of points set by the user onto the graph."
     },
     "min_x": {
         "name": "min_x",
-        "value": 0,
+        "editable": {
+            "value": 0
+        },
         "_comment": "First setpoint x-value cannot be smaller than 0."
     },
     "min_y": {
         "name": "min_y",
-        "value": -10,
+        "editable": {
+            "value": -10
+        },
         "_comment": "Minimum achievable temperature in climate chamber."
     },
     "max_y": {
         "name": "max_y",
-        "value": 120,
+        "editable": {
+            "value": 120
+        },
         "_comment": "Minimum achievable temperature in climate chamber."
     },
     "max_rico": {
         "name": "max_rico",
-        "value": 5,
+        "editable": {
+            "value": 5
+        },
         "unit": "degrees celcius/second",
         "_comment": "Handles how fast temperature can increase or drop. (Tends to be non linear)"
     }

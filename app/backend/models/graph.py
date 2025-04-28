@@ -29,11 +29,11 @@ class Graph:
                 config_data = json.load(f)
                 f.close()
                 return GraphConfig(
-                    max_points=int(config_data["max_points"]["value"]),
-                    min_x=float(config_data["min_x"]["value"]),
-                    min_y=float(config_data["min_y"]["value"]),
-                    max_y=float(config_data["max_y"]["value"]),
-                    max_rico=float(config_data["max_rico"]["value"])
+                    max_points=int(config_data["max_points"]["editable"]["value"]),
+                    min_x=float(config_data["min_x"]["editable"]["value"]),
+                    min_y=float(config_data["min_y"]["editable"]["value"]),
+                    max_y=float(config_data["max_y"]["editable"]["value"]),
+                    max_rico=float(config_data["max_rico"]["editable"]["value"])
                 )
 
         except (FileNotFoundError, KeyError, json.JSONDecodeError, ValueError) as e:
