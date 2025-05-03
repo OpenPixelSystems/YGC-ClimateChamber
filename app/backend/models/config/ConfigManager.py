@@ -114,4 +114,4 @@ class ConfigManager:
     def reload_config(self):
         self.__load_control_config()
         self.__load_graph_config()
-        self.__load_mcu_config()
+        self.__load_mcu_config() #TODO: editing mcu config should only happen if there is no running cycle

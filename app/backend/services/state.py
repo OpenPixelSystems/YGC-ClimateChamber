@@ -18,6 +18,7 @@ class AppState:
 
     def _init_state(self):
         """Initializes instance variables (only runs once)."""
+        # Shared storage between models, controllers and services
         self.desired_flow_graph = None
         self.start_time = None
         self.read_interval = 0.1
@@ -28,9 +29,6 @@ class AppState:
         self.graph_config_path = self.config_dir / 'graph_config.json'
         self.control_config_path = self.config_dir / 'control_config.json'
         self.mcu_config_path = self.config_dir / 'raspberry_pi_config.json'
-
-        # Ensure config directory exists
-        os.makedirs(self.config_dir, exist_ok=True)
 
         # Create components using the factory
         """ Reader instance used to initialise and read sensors """

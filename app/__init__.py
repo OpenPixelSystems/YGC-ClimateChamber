@@ -1,9 +1,9 @@
 import os
 from flask import Flask
+
+"""App_state initialisation."""
 import app.backend.services.state as state
 app_state = state.AppState()
-
-
 
 def create_app():
     app = Flask(__name__, static_url_path='/static')
