@@ -84,19 +84,12 @@ class ClimateChamberController:
 
     def sensor_data_provider(self):
         """Generator function for Server-Sent Events (SSE)."""
-        #TODO
-        # Generator is currently called by stream to supply it with sensor values.
-        # The stream object should rather start an separate task that starts the regulation process based on the provided desired graph (in app_state)
-
         while self.running:
             try:
-                data = self.app_state.database.read_sensors()
-
-                #with open(self.app_state.sensor_data_path, 'r') as file:
-                #    data = json.load(file)
+                data = self.app_state.sensor_reader.read_sensors()
 
                 # If we have a desired temperature profile, apply control
-                if self.desired_graph and 'temperature' in data:
+                if self.desired_graph and 'temperature' in data: #TODO functionality is temporarily skipped
                     current_temp = data['ClimateChamber temperature']
                     target_temp = self.desired_graph.get_current_target()
                     self.apply_control(current_temp, target_temp)

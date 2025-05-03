@@ -27,11 +27,14 @@ class AppState:
         self.graph_config_path = self.config_dir / 'graph_config.json'
         self.control_config_path = self.config_dir / 'control_config.json'
         self.sensor_data_path = self.config_dir / 'sensor_data.json'
+        self.mcu_config_data_path = self.config_dir / 'raspberry_pi_config.json'
 
         # Ensure config directory exists
         os.makedirs(self.config_dir, exist_ok=True)
 
         # Create components using the factory
+        """ Reader instance used to initialise and read sensors """
+        self.sensor_reader = self._create_sensor_reader()
         """ Database instance used to log, retrieve and delete sensors """
         self.database = self._create_temperature_logger()
         """ Config manager instance """
@@ -40,8 +43,13 @@ class AppState:
         self.climate_chamber = self._create_climate_chamber()
         self.controller = self._create_controller()
 
+    def _create_sensor_reader(self):
+        """Factory method for creating the sensor reader."""
+        from app.backend.services.SensorReader import SensorReader
+        return SensorReader(self.mcu_config_data_path)
+
     def _create_temperature_logger(self):
-        """Factory method for creating the config manager."""
+        """Factory method for creating the temperature logger."""
         from database.TemperatureSensorLogger import TemperatureSensorLogger
         return TemperatureSensorLogger(self)
 

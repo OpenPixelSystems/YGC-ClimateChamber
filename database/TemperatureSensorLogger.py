@@ -210,18 +210,14 @@ class TemperatureSensorLogger(DatabaseManager, SensorReader):
         conn.close()
 
         self.logging_active = True
-        self.logging_thread = threading.Thread(target=self.__logging_loop, args=(self.app_state.provider_interval,), daemon=True)
-        self.logging_thread.start()
+
+        self.app_state.sensor_reader.subscribe(self.on_sensor_data)
+
         print(f"Started logging cycle: {cycle_name}")
 
-    def __logging_loop(self, interval):
-        """Background process for logging sensor data at a set interval."""
-        while self.logging_active:
-            self.__log_sensor_data()
-            time.sleep(interval)
+    def on_sensor_data(self, sensor_readings):
+        print(f"Received sensor data through subscription based event: {sensor_readings}")
 
-    def __log_sensor_data(self):
-        """Read temperature data from all configured sensors and log to the database."""
         if not self.current_cycle_id:
             print("No active logging cycle.")
             return
@@ -230,25 +226,12 @@ class TemperatureSensorLogger(DatabaseManager, SensorReader):
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
 
-        for sensor in self.sensors:
-            sensor_id = sensor.get('id')
-            if not sensor_id:
-                print(f"Warning: Sensor missing ID, skipping: {sensor}")
-                continue
-
-            reading = self.read_temperature(sensor)
-            if reading and 'temperature' in reading:
-                temperature = reading['temperature']
-                if temperature is not None:
-                    cursor.execute(
-                        "INSERT INTO sensor_readings (cycle_id, sensor_id, timestamp, temperature) VALUES (?, ?, ?, ?)",
-                        (self.current_cycle_id, sensor_id, timestamp, temperature)
-                    )
-                    print(f"Logged: Sensor {sensor_id}, Temperature: {temperature}°C, Time: {timestamp}")
-                else:
-                    print(f"Warning: Null temperature reading from sensor {sensor_id}")
-            else:
-                print(f"Warning: Failed to get reading from sensor {sensor_id}")
+        for sensor_name, temperature in sensor_readings.items():
+            cursor.execute(
+                "INSERT INTO sensor_readings (cycle_id, sensor_id, timestamp, temperature) VALUES (?, ?, ?, ?)",
+                (self.current_cycle_id, sensor_name, timestamp, temperature)
+            )
+            print(f"Logged: Sensor {sensor_name}, Temperature: {temperature}°C, Time: {timestamp}")
 
         conn.commit()
         conn.close()
@@ -265,5 +248,7 @@ class TemperatureSensorLogger(DatabaseManager, SensorReader):
                        (datetime.now().isoformat(), self.current_cycle_id))
         conn.commit()
         conn.close()
+
+        self.app_state.sensor_reader.unsubscribe(self.on_sensor_data)
         print("Logging cycle stopped.")
         self.current_cycle_id = None

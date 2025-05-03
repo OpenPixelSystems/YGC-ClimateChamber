@@ -9,7 +9,6 @@ sensor_bp = Blueprint('sensor', __name__)
 def stream():
     """Route that streams sensor data to the frontend using the ClimateChamberController instance."""
     app_state.controller.start_sensor_stream()  # Start the stream
-    #TODO stream is currently fed by sensor file, either feed real time sensor data into file or rework functionality
     return Response(app_state.controller.sensor_data_provider(), mimetype='text/event-stream')
 
 
@@ -31,7 +30,6 @@ def start_sensors(logging=True):
             cycle_name = custom_name
         else:
             cycle_name = "Temperature cycle " + app_state.start_time.strftime("%d%m%Y-%H:%M:%S")
-        print(cycle_name)
         app_state.database.start_logging_cycle(cycle_name)
     app_state.controller.set_desired_graph(app_state.desired_flow_graph)
 
