@@ -3,7 +3,7 @@
     "sensor_read_delay": {
         "name": "sensor_read_delay",
         "editable": {
-            "value": 2.5
+            "value": 1
         },
         "unit": "seconds",
         "_comment": "Handles how fast temperature sensors are read out."

@@ -2,35 +2,36 @@ from threading import Lock
 from pathlib import Path
 import os
 
-class AppState:
-    """Global singleton for project-wide state management."""
-    _instance = None
-    _lock = Lock()
+_app_state = None
 
-    def __new__(cls):
-        """Ensures only one instance of AppState is created."""
-        if cls._instance is None:
-            with cls._lock:
-                if cls._instance is None:
-                    cls._instance = super(AppState, cls).__new__(cls)
-                    cls._instance._init_state()
-        return cls._instance
+def get_app_state():
+    global _app_state
+    if _app_state is None:
+        _app_state = AppState()  # or use a default config path
+    return _app_state
 
-    def _init_state(self):
+class SingletonMeta(type):
+    _instances = {}
+    def __call__(cls, *args, **kwargs):
+        if cls not in cls._instances:
+            instance = super().__call__(*args, **kwargs)
+            cls._instances[cls] = instance
+        return cls._instances[cls]
+
+class AppState(metaclass=SingletonMeta):
+    def __init__(self):
         """Initializes instance variables (only runs once)."""
+        # Shared storage between models, controllers and services
         self.desired_flow_graph = None
         self.start_time = None
         self.read_interval = 0.1
         self.provider_interval = 1
+
         # Paths
         self.config_dir = Path('app/backend/config')
         self.graph_config_path = self.config_dir / 'graph_config.json'
         self.control_config_path = self.config_dir / 'control_config.json'
-        self.sensor_data_path = self.config_dir / 'sensor_data.json'
-        self.mcu_config_data_path = self.config_dir / 'raspberry_pi_config.json'
-
-        # Ensure config directory exists
-        os.makedirs(self.config_dir, exist_ok=True)
+        self.mcu_config_path = self.config_dir / 'raspberry_pi_config.json'
 
         # Create components using the factory
         """ Reader instance used to initialise and read sensors """
@@ -46,7 +47,7 @@ class AppState:
     def _create_sensor_reader(self):
         """Factory method for creating the sensor reader."""
         from app.backend.services.SensorReader import SensorReader
-        return SensorReader(self.mcu_config_data_path)
+        return SensorReader(self.mcu_config_path)
 
     def _create_temperature_logger(self):
         """Factory method for creating the temperature logger."""
@@ -56,7 +57,11 @@ class AppState:
     def _create_config_manager(self):
         """Factory method for creating the config manager."""
         from app.backend.models.config.ConfigManager import ConfigManager
-        return ConfigManager(str(self.control_config_path))
+        return ConfigManager(
+            control_config_path=self.control_config_path,
+            graph_config_path=self.graph_config_path,
+            mcu_config_path=self.mcu_config_path,
+        )
 
     def _create_climate_chamber(self):
         """Factory method for creating the climate chamber implementation."""
@@ -74,5 +79,5 @@ class AppState:
         return ClimateChamberController(
             self,
             self.climate_chamber,
-            self.config_manager.pid_config
+            self.config_manager.control_config
         )

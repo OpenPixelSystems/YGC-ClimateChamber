@@ -1,14 +1,16 @@
 import os
 from flask import Flask
-import app.backend.services.state as state
-app_state = state.AppState()
 
-
+"""App_state initialisation."""
+from app.backend.services.app_state import get_app_state
 
 def create_app():
     app = Flask(__name__, static_url_path='/static')
     app.secret_key = os.urandom(24)
     app.config['JSON_AS_ASCII'] = False
+
+    # Initialize AppState singleton
+    app.state = get_app_state()
 
     from app.routes.main import main_bp
     from app.routes.setup_graph import graph_bp

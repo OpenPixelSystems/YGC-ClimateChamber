@@ -2,7 +2,8 @@ from dataclasses import dataclass
 from typing import Optional, Tuple, List, Dict, Any, Union
 from app.backend.models.graph import Graph
 from app.backend.services.config import load_config, get_config_value
-from app import app_state
+from app.backend.services.app_state import get_app_state
+
 
 @dataclass
 class TemperatureValidationResult:
@@ -18,7 +19,7 @@ class TemperatureService:
         """Validate a single temperature value against configuration limits"""
         try:
             temperature = float(temp_value)
-            config = load_config(app_state.graph_config_path)
+            config = load_config(get_app_state().graph_config_path)
             min_temp = float(get_config_value(config, 'min_y', 0))
             max_temp = float(get_config_value(config, 'max_y', 100))
 
@@ -47,7 +48,7 @@ class TemperatureService:
             return validation
             
         try:
-            app_state.desired_flow_graph = Graph('desired_temperature', [(0, float(temperature))])
+            get_app_state().desired_flow_graph = Graph('desired_temperature', [(0, float(temperature))])
             return TemperatureValidationResult(
                 is_valid=True,
                 value=float(temperature),
@@ -76,7 +77,7 @@ class TemperatureService:
             if not is_valid:
                 return False, f"Invalid dataset: {message}", None
 
-            app_state.desired_flow_graph = graph
+            get_app_state().desired_flow_graph = graph
             return True, "Temperature profile set successfully", graph
             
         except (KeyError, TypeError, ValueError) as e:

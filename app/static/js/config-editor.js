@@ -46,7 +46,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const fieldId = [...path, key].join('.');
                 const input = document.getElementById(fieldId);
                 if (input) {
-                    obj[key] = parseInt(input.value, 10);
+                    obj[key] = parseFloat(input.value);
                 }
             }
         }

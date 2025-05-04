@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, jsonify, redirect, url_for, request
 
 from app.backend.services.config import load_config
-from app import app_state
+from app.backend.services.app_state import get_app_state
 from app.backend.services.temperature import temperature_service
 
 graph_bp = Blueprint('graph', __name__)
@@ -23,7 +23,7 @@ def store_graph_data():
         success, message, graph = temperature_service.set_temperature_profile(graph_data[0]['data'])
         
         if success:
-            app_state.desired_flow_graph = graph
+            get_app_state().desired_flow_graph = graph
             return redirect(url_for('graph.display_graph'))
         else:
             return jsonify({"error": message}), 400
@@ -39,14 +39,14 @@ def display_graph():
 @graph_bp.route('/get-stored-graph-data', methods=['GET'])
 def get_stored_graph_data():
     """Get the current graph data for display"""
-    config = load_config(app_state.graph_config_path)
+    config = load_config(get_app_state().graph_config_path)
     
     # Convert Graph object's setpoints to the format expected by frontend
     desired_path = None
-    if app_state.desired_flow_graph:
+    if get_app_state().desired_flow_graph:
         desired_path = [
             {"x": x, "y": y} 
-            for x, y in app_state.desired_flow_graph.setpoints
+            for x, y in get_app_state().desired_flow_graph.setpoints
         ]
         
     return jsonify({
