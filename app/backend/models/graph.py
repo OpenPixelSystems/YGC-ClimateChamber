@@ -1,8 +1,9 @@
 import json
-from app import app_state
 from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Tuple, Union, Any
+from app.backend.services.app_state import get_app_state
+
 
 @dataclass
 class GraphConfig:
@@ -15,7 +16,8 @@ class GraphConfig:
 
 class Graph:
     """Main graph model replicating original helper.py functionality"""
-    def __init__(self, name, setpoints: List[Tuple[Union[int, float, str], Union[int, float, str]]], config_path=app_state.graph_config_path):
+
+    def __init__(self, name, setpoints: List[Tuple[Union[int, float, str], Union[int, float, str]]], config_path=get_app_state().graph_config_path):
         # Convert setpoints to float tuples
         self.name = name
         self.setpoints = [(float(x), float(y)) for x, y in setpoints]

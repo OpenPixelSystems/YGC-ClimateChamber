@@ -1,5 +1,4 @@
 import json
-from pathlib import Path
 from dataclasses import dataclass
 
 
@@ -35,12 +34,15 @@ class McuConfig:
 
 class ConfigManager:
     """Centralized configuration management for the application."""
+    def __init__(self, control_config_path, graph_config_path, mcu_config_path):
+        self.control_config_path = control_config_path
+        self.graph_config_path = graph_config_path
+        self.mcu_config_path = mcu_config_path
 
-    def __init__(self, app_state):
-        self.app_state = app_state
         self.control_config = ControlConfig()
         self.graph_config = GraphConfig()
         self.mcu_config = McuConfig()
+
         self.__load_control_config()
         self.__load_graph_config()
         self.__load_mcu_config()
@@ -48,7 +50,7 @@ class ConfigManager:
     def __load_control_config(self):
         """Load configuration from file."""
         try:
-            with open(self.app_state.control_config_path, 'r') as f:
+            with open(self.control_config_path, 'r') as f:
                 config_data = json.load(f)
 
                 # Load PID configuration and set default if file is corrupted
@@ -68,7 +70,7 @@ class ConfigManager:
     def __load_graph_config(self):
         """Load configuration from file."""
         try:
-            with open(self.app_state.graph_config_path, 'r') as f:
+            with open(self.graph_config_path, 'r') as f:
                 config_data = json.load(f)
 
                 # Load PID configuration and set default if file is corrupted
@@ -88,7 +90,7 @@ class ConfigManager:
     def __load_mcu_config(self):
         """Load MCU configuration from file."""
         try:
-            with open(self.app_state.mcu_config_path, 'r') as f:
+            with open(self.mcu_config_path, 'r') as f:
                 config_data = json.load(f)
 
             sensors = []

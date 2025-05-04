@@ -1,8 +1,7 @@
 from flask import Blueprint, render_template, jsonify
 import sqlite3
 
-from app import app_state
-
+from app.backend.services.app_state import get_app_state
 
 viewer_bp = Blueprint('viewer', __name__, template_folder='templates', static_folder='static')
 
@@ -17,12 +16,12 @@ def view_database():
 
 @viewer_bp.route('/api/cycles')
 def get_cycles():
-    cycles = app_state.database.list_cycle_names()
+    cycles = get_app_state().database.list_cycle_names()
     return jsonify(cycles)
 
 @viewer_bp.route('/api/delete_cycle/<cycle_name>')
 def delete_cycle(cycle_name):
-    success = app_state.database.delete_cycle(cycle_name)
+    success = get_app_state().database.delete_cycle(cycle_name)
     if success:
         result = {"status": "success", "message": "Action performed"}
         return jsonify(result), 200  # HTTP 200 OK
@@ -33,5 +32,5 @@ def delete_cycle(cycle_name):
 
 @viewer_bp.route('/api/data/<cycle_name>')
 def get_cycle_data(cycle_name):
-    readings = app_state.database.read_cycle_data(cycle_name)
+    readings = get_app_state().database.read_cycle_data(cycle_name)
     return jsonify(readings)

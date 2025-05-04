@@ -1,7 +1,6 @@
 import json
 from pathlib import Path
 from typing import Any, Dict, Union
-from app import app_state
 
 def try_convert(value: str) -> Union[int, float, str]:
     """Convert string values to appropriate numeric types if possible"""

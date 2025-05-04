@@ -1,5 +1,5 @@
 from flask import Blueprint, render_template, redirect, url_for, request, flash, jsonify
-from app import app_state
+from app.backend.services.app_state import get_app_state
 from app.backend.services.config import load_config, save_config
 import os
 
@@ -41,7 +41,7 @@ def api_save_config():
     config_path = os.path.join(CONFIG_DIR, filename)
     try:
         save_config(config_path, config_data)
-        app_state.config_manager.reload_config()
+        get_app_state().config_manager.reload_config()
         return jsonify({'success': True})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
