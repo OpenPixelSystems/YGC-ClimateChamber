@@ -41,7 +41,7 @@ class ConfigManager:
 
         self.control_config = ControlConfig()
         self.graph_config = GraphConfig()
-        self.mcu_config = McuConfig()
+        self.mcu_config = McuConfig() #TODO use this configuration instead of reading config json again in climatechambercontroller
 
         self.__load_control_config()
         self.__load_graph_config()
