@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    {% block head %}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/main.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/base.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/buttons.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/forms.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/alerts.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/graphs.css') }}">
+    <script>
+        function toggleDarkMode() {
+            document.body.classList.toggle('dark-mode');
+            // Save preference
+            const isDarkMode = document.body.classList.contains('dark-mode');
+            localStorage.setItem('darkMode', isDarkMode);
+        }
+
+        // Check for saved dark mode preference
+        document.addEventListener('DOMContentLoaded', () => {
+            const isDarkMode = localStorage.getItem('darkMode') === 'true';
+            if (isDarkMode) {
+                document.body.classList.add('dark-mode');
+            }
+        });
+    </script>
+    {% endblock %}
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-links">
+            <a href="{{ url_for('home.index') }}" class="nav-link">Home</a>
+            <a href="{{ url_for('graph.setup_graph') }}" class="nav-link">Graph Setup</a>
+            <a href="{{ url_for('viewer.view_database') }}" class="nav-link">Database viewer</a>
+
+        </div>
+        <div class="nav-controls">
+            <a href="{{ url_for('config.edit_config') }}" class="icon-button" title="System Configuration">
+                ⚙️
+            </a>
+            <button onclick="toggleDarkMode()" class="icon-button" title="Toggle Dark Mode">
+                🌓
+            </button>
+        </div>
+    </nav>
+    {% block content %}{% endblock %}
+    {% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,211 @@
+import sqlite3
+from contextlib import contextmanager
+from typing import List, Optional, Tuple, Any, Dict
+from datetime import datetime
+
+from app.backend.Interfaces.ICalculationService import ICalculationService
+from app.backend.Interfaces.ISensorReader import ISensorReader
+
+
+class DatabaseManager:
+    """Manages database operations for the climate chamber application."""
+    #TODO subscribe to calculation results and log into database
+
+    def __init__(self, db_path: str = 'ClimateChamber_data.db', sensor_reader: Optional[ISensorReader] = None, calculation_service: ICalculationService = None) -> None:
+        self.db_path = db_path
+        self.logging_active = False
+        self.current_cycle_id: Optional[int] = None
+        self.sensor_reader = sensor_reader
+        if sensor_reader:
+            sensor_reader.subscribe(self.on_sensor_data)
+        self.calculation_service = calculation_service
+        if calculation_service:
+            calculation_service.subscribe(self.on_calculation_data)
+        self.setup_database()
+
+    @contextmanager
+    def get_connection(self):
+        """Context manager for database connections."""
+        conn = sqlite3.connect(self.db_path)
+        try:
+            yield conn
+        finally:
+            conn.close()
+
+    def setup_database(self) -> None:
+        """Ensure the database and required tables exist."""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+            CREATE TABLE IF NOT EXISTS cycles (
+                cycle_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT UNIQUE,
+                start_time TEXT,
+                end_time TEXT
+            )
+            ''')
+            cursor.execute('''
+            CREATE TABLE IF NOT EXISTS sensor_readings (
+                reading_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                cycle_id INTEGER,
+                sensor_id TEXT,
+                timestamp TEXT,
+                temperature REAL,
+                FOREIGN KEY (cycle_id) REFERENCES cycles (cycle_id)
+            )
+            ''')
+            cursor.execute('''
+            CREATE TABLE IF NOT EXISTS calculation_data (
+                calculation_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                cycle_id INTEGER,
+                calculation_name TEXT,
+                timestamp TEXT,
+                pid_output REAL,
+                current_temp REAL,
+                target_temp REAL,
+                error REAL,
+                FOREIGN KEY (cycle_id) REFERENCES cycles (cycle_id)
+            )
+            ''')
+
+            conn.commit()
+
+    def start_logging_cycle(self, cycle_name: str) -> bool:
+        """Start a new logging cycle.
+        
+        Args:
+            cycle_name: Name of the logging cycle
+            
+        Returns:
+            bool: True if cycle started successfully, False otherwise
+        """
+        if self.logging_active:
+            print("Logging cycle already in progress.")
+            return False
+
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    "INSERT INTO cycles (name, start_time) VALUES (?, ?)",
+                    (cycle_name, datetime.now().isoformat())
+                )
+                self.current_cycle_id = cursor.lastrowid
+                conn.commit()
+                self.logging_active = True
+                print(f"Started logging cycle: {cycle_name}")
+                return True
+        except Exception as e:
+            print(f"Error starting logging cycle: {str(e)}")
+            return False
+
+    def on_sensor_data(self, sensor_readings: Dict[str, float]) -> None:
+        """Handle incoming sensor data and log it to the database.
+        
+        Args:
+            sensor_readings: Dictionary mapping sensor names to temperature readings
+        """
+        if not self.logging_active or not self.current_cycle_id:
+            print("No active logging cycle.")
+            return
+
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                timestamp = datetime.now().isoformat()
+                for sensor_name, temperature in sensor_readings.items():
+                    cursor.execute(
+                        "INSERT INTO sensor_readings (cycle_id, sensor_id, timestamp, temperature) VALUES (?, ?, ?, ?)",
+                        (self.current_cycle_id, sensor_name, timestamp, temperature)
+                    )
+                    print(f"Logged: Sensor {sensor_name}, Temperature: {temperature}°C")
+                conn.commit()
+        except Exception as e:
+            print(f"Error logging sensor data: {str(e)}")
+
+    def on_calculation_data(self, calculation_readings: Dict[str, float]) -> None:
+        """Handle incoming calculation data and log it to the database.
+
+        Args:
+            calculation_readings: Dictionary mapping sensor names to temperature readings
+        """
+        if not self.logging_active or not self.current_cycle_id:
+            print("No active logging cycle.")
+            return
+
+        print("Logging calculation data, not yet implemented.")
+
+    def stop_logging_cycle(self) -> bool:
+        """Stop the ongoing logging cycle.
+        
+        Returns:
+            bool: True if cycle stopped successfully, False otherwise
+        """
+        if not self.logging_active or not self.current_cycle_id:
+            print("No active logging cycle to stop.")
+            return False
+
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    "UPDATE cycles SET end_time = ? WHERE cycle_id = ?",
+                    (datetime.now().isoformat(), self.current_cycle_id)
+                )
+                conn.commit()
+                self.logging_active = False
+                self.current_cycle_id = None
+                print("Logging cycle stopped.")
+                return True
+        except Exception as e:
+            print(f"Error stopping logging cycle: {str(e)}")
+            return False
+
+    def delete_cycle(self, cycle_name: str) -> bool:
+        """Delete a cycle and its associated sensor data from the database."""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT cycle_id FROM cycles WHERE name = ?", (cycle_name,))
+            cycle = cursor.fetchone()
+            
+            if not cycle:
+                print(f"Cycle '{cycle_name}' not found.")
+                return False
+
+            cycle_id = cycle[0]
+            cursor.execute("DELETE FROM sensor_readings WHERE cycle_id = ?", (cycle_id,))
+            cursor.execute("DELETE FROM cycles WHERE cycle_id = ?", (cycle_id,))
+            conn.commit()
+            print(f"Deleted cycle '{cycle_name}' and associated sensor readings.")
+            return True
+
+    def list_cycles(self) -> List[Tuple[Any, ...]]:
+        """Retrieve a list of all logging cycles."""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM cycles")
+            return cursor.fetchall()
+
+    def list_cycle_names(self) -> List[Tuple[str, ...]]:
+        """Retrieve a list of all cycle names."""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT name FROM cycles")
+            return cursor.fetchall()
+
+    def read_cycle_data(self, cycle_name: str) -> List[Tuple[str, str, float]]:
+        """Read all sensor data for a specific cycle."""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT cycle_id FROM cycles WHERE name = ?", (cycle_name,))
+            cycle = cursor.fetchone()
+            
+            if not cycle:
+                return []
+
+            cycle_id = cycle[0]
+            cursor.execute(
+                "SELECT sensor_id, timestamp, temperature FROM sensor_readings WHERE cycle_id = ?",
+                (cycle_id,)
+            )
+            return cursor.fetchall()

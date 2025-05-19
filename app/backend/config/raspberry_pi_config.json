@@ -110,26 +110,18 @@
         "unit": "degrees",
         "_comment": "Temperature outside of climate chamber"
     },
-    "Peltier1_Inside": {
-        "name": "Peltier1_Inside",
+    "Peltier_240W": {
+        "name": "Peltier_240W",
         "type": "peltier",
         "editable": {
-            "gpio_pin": 22,
+            "gpio_pin_heating": 17,
+            "gpio_pin_cooling": 27,
+            "gpio_pin_pwm": 22,
+            "pwm_frequency": 20000,
             "max_temp": 120,
             "min_temp": -40
         },
         "unit": "degrees",
         "_comment": "Temperature sensor on inside of Peltier element 1"
-    },
-    "Peltier1_Outside": {
-        "name": "Peltier1_Outside",
-        "type": "peltier",
-        "editable": {
-            "gpio_pin": 23,
-            "max_temp": 120,
-            "min_temp": -40
-        },
-        "unit": "degrees",
-        "_comment": "Temperature sensor on outside of Peltier element 1"
     }
 }
