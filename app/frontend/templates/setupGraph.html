@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}Climate Chamber Graph Editor{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="input-section">
+        <h1>Climate Chamber Graph Editor</h1>
+        
+        <div class="control-group">
+            <h3>Add Temperature Points</h3>
+            <form onsubmit="submitPoint(event)" class="point-input-form">
+                <input type="text" id="pointInput" placeholder="Time,Temperature (e.g. 30,25)" required>
+                <div class="button-group">
+                    <button id="submit" class="primary-button">Add Point</button>
+                    <button id="undoButton" class="secondary-button">Undo Last</button>
+                </div>
+            </form>
+            <p class="help-text">Click on the graph or enter points manually (Time in minutes, Temperature in °C)</p>
+        </div>
+
+        <div class="control-group">
+            <h3>Graph Settings</h3>
+            <div class="setting-item">
+                <label for="interpolationMethod">Interpolation Method:</label>
+                <select id="interpolationMethod" class="form-control">
+                    <option value="linear" selected>Linear</option>
+                    <option value="monotone">Smooth (Monotone)</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <h3>Graph Actions</h3>
+            <button id="clearPoints" class="warning-button full-width">Clear All Points</button>
+            <button id="sendPointsToServer" class="success-button full-width">Save Graph to Server</button>
+        </div>
+    </div>
+    <div class="graph-section">
+        <canvas id="myChart" width="600" height="400"></canvas>
+        <div id="connectionStatusCircle" class="status-circle"></div>
+    </div>
+</div>
+
+<style>
+.input-section {
+    background: var(--card-background);
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px var(--shadow-color);
+}
+
+.control-group {
+    margin-bottom: 24px;
+    padding: 16px;
+    background: var(--card-background);
+    border-radius: 6px;
+    border: 1px solid var(--shadow-color);
+}
+
+.control-group h3 {
+    margin-top: 0;
+    margin-bottom: 16px;
+    color: var(--text-color);
+    font-size: 1.1em;
+}
+
+.help-text {
+    font-size: 0.9em;
+    color: var(--text-color);
+    margin-top: 8px;
+}
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1"></script>
+<script src="{{ url_for('static', filename='js/graph-setup.js') }}" type="module"></script>
+{% endblock %}

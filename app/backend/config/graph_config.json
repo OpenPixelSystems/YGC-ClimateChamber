@@ -31,7 +31,7 @@
     "max_rico": {
         "name": "max_rico",
         "editable": {
-            "value": 5
+            "value": 10
         },
         "unit": "degrees celcius/second",
         "_comment": "Handles how fast temperature can increase or drop. (Tends to be non linear)"
