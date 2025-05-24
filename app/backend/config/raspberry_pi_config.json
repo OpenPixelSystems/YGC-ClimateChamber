@@ -27,7 +27,7 @@
         "type": "peltier",
         "editable": {
             "RPWM": 17,
-            "LPWM": 27,
+            "LPWM": 23,
             "R_EN": 22,
             "L_EN": 23,
             "PWM_FREQUENCY": 20000
