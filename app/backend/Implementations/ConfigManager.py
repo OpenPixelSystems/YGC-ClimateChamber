@@ -83,7 +83,7 @@ class ConfigManager(IConfigManager):
                 # Ignore keys that start with '_' (comments)
                 if key.startswith("_"):
                     continue
-                if value["type"] == "temperature":
+                if value["type"] == "temperature" or value["type"] == "humidity":
                     sensors.append(SensorConfig(
                         name=value["name"],
                         type=value["type"],

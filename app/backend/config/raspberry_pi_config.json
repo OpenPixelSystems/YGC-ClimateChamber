@@ -2,7 +2,7 @@
     "_comment": "This file contains the parameters for the raspberry pi, reformatted for unified configuration parsing.",
     "Inside_on_device": {
         "name": "Inside_on_device",
-        "type": "temperature",
+        "type": "humidity",
         "editable": {
             "gpio_pin": 12,
             "max_temp": 120,
@@ -10,105 +10,6 @@
         },
         "unit": "degrees",
         "_comment": "Temperature sensor on device"
-    },
-    "Inside_top_left_back_corner": {
-        "name": "Inside_top_left_back_corner",
-        "type": "temperature",
-        "editable": {
-            "gpio_pin": 13,
-            "max_temp": 120,
-            "min_temp": -40
-        },
-        "unit": "degrees",
-        "_comment": "Temperature top left back corner"
-    },
-    "Inside_top_right_back_corner": {
-        "name": "Inside_top_right_back_corner",
-        "type": "temperature",
-        "editable": {
-            "gpio_pin": 14,
-            "max_temp": 120,
-            "min_temp": -40
-        },
-        "unit": "degrees",
-        "_comment": "Temperature top right back corner"
-    },
-    "Inside_top_left_front_corner": {
-        "name": "Inside_top_left_front_corner",
-        "type": "temperature",
-        "editable": {
-            "gpio_pin": 15,
-            "max_temp": 120,
-            "min_temp": -40
-        },
-        "unit": "degrees",
-        "_comment": "Temperature top left front corner"
-    },
-    "Inside_top_right_front_corner": {
-        "name": "Inside_top_right_front_corner",
-        "type": "temperature",
-        "editable": {
-            "gpio_pin": 16,
-            "max_temp": 120,
-            "min_temp": -40
-        },
-        "unit": "degrees",
-        "_comment": "Temperature top right front corner"
-    },
-    "Inside_bottom_left_back_corner": {
-        "name": "Inside_bottom_left_back_corner",
-        "type": "temperature",
-        "editable": {
-            "gpio_pin": 17,
-            "max_temp": 120,
-            "min_temp": -40
-        },
-        "unit": "degrees",
-        "_comment": "Temperature bottom left back corner"
-    },
-    "Inside_bottom_right_back_corner": {
-        "name": "Inside_bottom_right_back_corner",
-        "type": "temperature",
-        "editable": {
-            "gpio_pin": 18,
-            "max_temp": 120,
-            "min_temp": -40
-        },
-        "unit": "degrees",
-        "_comment": "Temperature bottom right back corner"
-    },
-    "Inside_bottom_left_front_corner": {
-        "name": "Inside_bottom_left_front_corner",
-        "type": "temperature",
-        "editable": {
-            "gpio_pin": 19,
-            "max_temp": 120,
-            "min_temp": -40
-        },
-        "unit": "degrees",
-        "_comment": "Temperature bottom left front corner"
-    },
-    "Inside_bottom_right_front_corner": {
-        "name": "Inside_bottom_right_front_corner",
-        "type": "temperature",
-        "editable": {
-            "gpio_pin": 20,
-            "max_temp": 120,
-            "min_temp": -40
-        },
-        "unit": "degrees",
-        "_comment": "Temperature bottom right front corner"
-    },
-    "Outside_environment": {
-        "name": "Outside_environment",
-        "type": "temperature",
-        "editable": {
-            "gpio_pin": 21,
-            "max_temp": 120,
-            "min_temp": -40
-        },
-        "unit": "degrees",
-        "_comment": "Temperature outside of climate chamber"
     },
     "Peltier_240W": {
         "name": "Peltier_240W",
