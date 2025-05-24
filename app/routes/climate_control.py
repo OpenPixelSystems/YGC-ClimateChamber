@@ -59,6 +59,6 @@ def update_power():
     power_value = data.get('power')
 
     app_state = get_app_state()
-    app_state.climate_chamber.apply_control({"pid_output": power_value})
+    app_state.controller.manual_control(power_value)
 
     return jsonify({'status': 'Peltier power updated'})

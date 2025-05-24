@@ -127,13 +127,34 @@ class DatabaseManager:
         """Handle incoming calculation data and log it to the database.
 
         Args:
-            calculation_readings: Dictionary mapping sensor names to temperature readings
+            calculation_readings: Dictionary with keys: pid_output, current_temp, target_temp, error
         """
         if not self.logging_active or not self.current_cycle_id:
             print("No active logging cycle.")
             return
 
-        print("Logging calculation data, not yet implemented.")
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                timestamp = datetime.now().isoformat()
+
+                # Extract calculation data
+                pid_output = calculation_readings.get("pid_output", 0.0)
+                current_temp = calculation_readings.get("current_temp", 0.0)
+                target_temp = calculation_readings.get("target_temp", 0.0)
+                error = calculation_readings.get("error", 0.0)
+
+                cursor.execute(
+                    "INSERT INTO calculation_data (cycle_id, calculation_name, timestamp, pid_output, current_temp, target_temp, error) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                    (self.current_cycle_id, "PID_Control", timestamp, pid_output, current_temp, target_temp, error)
+                )
+
+                print(
+                    f"Logged calculation data: PID Output: {pid_output}, Current Temp: {current_temp}°C, Target Temp: {target_temp}°C, Error: {error}")
+                conn.commit()
+
+        except Exception as e:
+            print(f"Error logging calculation data: {str(e)}")
 
     def stop_logging_cycle(self) -> bool:
         """Stop the ongoing logging cycle.
@@ -174,10 +195,61 @@ class DatabaseManager:
 
             cycle_id = cycle[0]
             cursor.execute("DELETE FROM sensor_readings WHERE cycle_id = ?", (cycle_id,))
+            cursor.execute("DELETE FROM calculation_data WHERE cycle_id = ?", (cycle_id,))
             cursor.execute("DELETE FROM cycles WHERE cycle_id = ?", (cycle_id,))
             conn.commit()
             print(f"Deleted cycle '{cycle_name}' and associated sensor readings.")
             return True
+
+        def delete_cycle(self, cycle_name: str) -> bool:
+            """Delete a cycle and its associated sensor data from the database."""
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT cycle_id FROM cycles WHERE name = ?", (cycle_name,))
+                cycle = cursor.fetchone()
+
+                if not cycle:
+                    print(f"Cycle '{cycle_name}' not found.")
+                    return False
+
+                cycle_id = cycle[0]
+                cursor.execute("DELETE FROM sensor_readings WHERE cycle_id = ?", (cycle_id,))
+                cursor.execute("DELETE FROM calculation_data WHERE cycle_id = ?", (cycle_id,))
+                cursor.execute("DELETE FROM cycles WHERE cycle_id = ?", (cycle_id,))
+                conn.commit()
+                print(f"Deleted cycle '{cycle_name}' and associated sensor readings.")
+                return True
+
+    def delete_all_cycles(self) -> bool:
+        """Delete all cycles and their associated sensor and calculation data from the database."""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+
+                # Get all cycle IDs first
+                cursor.execute("SELECT cycle_id, name FROM cycles")
+                all_cycles = cursor.fetchall()
+
+                if not all_cycles:
+                    print("No cycles found to delete.")
+                    return True
+
+                # Delete all data in correct order (foreign key constraints)
+                cursor.execute("DELETE FROM sensor_readings")
+                cursor.execute("DELETE FROM calculation_data")
+                cursor.execute("DELETE FROM cycles")
+
+                conn.commit()
+
+                print(f"Deleted {len(all_cycles)} cycles and all associated data.")
+                for cycle_id, cycle_name in all_cycles:
+                    print(f"  - Deleted cycle: '{cycle_name}'")
+
+                return True
+
+        except Exception as e:
+            print(f"Error deleting all cycles: {str(e)}")
+            return False
 
     def list_cycles(self) -> List[Tuple[Any, ...]]:
         """Retrieve a list of all logging cycles."""
@@ -193,19 +265,42 @@ class DatabaseManager:
             cursor.execute("SELECT name FROM cycles")
             return cursor.fetchall()
 
-    def read_cycle_data(self, cycle_name: str) -> List[Tuple[str, str, float]]:
-        """Read all sensor data for a specific cycle."""
+    def read_cycle_data(self, cycle_name: str) -> Dict[str, List[Tuple]]:
+        """Read all sensor data and calculation data for a specific cycle.
+
+        Args:
+            cycle_name: Name of the cycle to read data for
+
+        Returns:
+            Dict containing 'sensor_data' and 'calculation_data' lists
+            sensor_data: List of tuples (sensor_id, timestamp, temperature)
+            calculation_data: List of tuples (calculation_name, timestamp, pid_output, current_temp, target_temp, error)
+        """
         with self.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute("SELECT cycle_id FROM cycles WHERE name = ?", (cycle_name,))
             cycle = cursor.fetchone()
-            
+
             if not cycle:
-                return []
+                return {"sensor_data": [], "calculation_data": []}
 
             cycle_id = cycle[0]
+
+            # Get sensor data
             cursor.execute(
                 "SELECT sensor_id, timestamp, temperature FROM sensor_readings WHERE cycle_id = ?",
                 (cycle_id,)
             )
-            return cursor.fetchall()
+            sensor_data = cursor.fetchall()
+
+            # Get calculation data
+            cursor.execute(
+                "SELECT calculation_name, timestamp, pid_output, current_temp, target_temp, error FROM calculation_data WHERE cycle_id = ?",
+                (cycle_id,)
+            )
+            calculation_data = cursor.fetchall()
+
+            return {
+                "sensor_data": sensor_data,
+                "calculation_data": calculation_data
+            }

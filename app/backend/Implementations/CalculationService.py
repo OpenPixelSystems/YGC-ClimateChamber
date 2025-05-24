@@ -15,6 +15,10 @@ class CalculationService(ICalculationService, Subscriptable):
         self.integral = 0
         self.last_time = None
 
+    def manual_pid_control(self, power):
+        self.notify({"pid_output": power, "current_temp": 0, "target_temp": 0, "error": 0})
+        return power
+
     def calculate_pid_control(self, current_temp, target_temp):
         """Apply PID control based on current and target temperatures."""
         error = target_temp - current_temp
