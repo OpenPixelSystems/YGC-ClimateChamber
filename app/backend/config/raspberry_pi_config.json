@@ -2,7 +2,7 @@
     "_comment": "This file contains the parameters for the raspberry pi, reformatted for unified configuration parsing.",
     "Inside_on_device": {
         "name": "Inside_on_device",
-        "type": "humidity",
+        "type": "DS18B20",
         "editable": {
             "gpio_pin": 12,
             "max_temp": 120,
@@ -11,16 +11,26 @@
         "unit": "degrees",
         "_comment": "Temperature sensor on device"
     },
+    "Current_sensor": {
+        "name": "Current_sensor",
+        "type": "ADS1115",
+        "editable": {
+            "gpio_pin": 1,
+            "max_temp": 120,
+            "min_temp": -40
+        },
+        "unit": "Amps",
+        "_comment": "Current sensor attached to motor driver"
+    },
     "Peltier_240W": {
         "name": "Peltier_240W",
         "type": "peltier",
         "editable": {
-            "gpio_pin_heating": 17,
-            "gpio_pin_cooling": 27,
-            "gpio_pin_pwm": 22,
-            "pwm_frequency": 20000,
-            "max_temp": 120,
-            "min_temp": -40
+            "RPWM": 17,
+            "LPWM": 27,
+            "R_EN": 22,
+            "L_EN": 23,
+            "PWM_FREQUENCY": 20000
         },
         "unit": "degrees",
         "_comment": "Temperature sensor on inside of Peltier element 1"

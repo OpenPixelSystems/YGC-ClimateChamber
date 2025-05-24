@@ -74,7 +74,7 @@ class AppState(metaclass=SingletonMeta):
         """Factory method for creating the climate chamber implementation."""
         # Choose implementation based on environment
         from app.backend.Implementations.ClimateChamber import ClimateChamber
-        return ClimateChamber(self.sensor_reader, self.config_manager)
+        return ClimateChamber(self.sensor_reader, self.config_manager, self.calculation_service)
 
     def _create_controller(self):
         """Factory method for creating the controller."""

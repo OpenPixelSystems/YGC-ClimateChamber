@@ -31,6 +31,7 @@ class SensorReader(ISensorReader, Subscriptable):
         except Exception as e:
             raise RuntimeError(f"Configuration error: {str(e)}")
 
+    """Iterate through all sensors and return their value in json format"""
     def read_sensors(self):
         sensor_readings = {}
         for sensor in self.sensor_list:
