@@ -43,6 +43,10 @@ class ClimateChamberController(IClimateChamberController):
         self.calculation_service.last_time = datetime.now()  # Initialize timestamp
         print("\nClimateChamberController: Sensor stream started.")
 
+    def manual_control(self, power):
+        """Manually steer peltier power"""
+        self.calculation_service.manual_pid_control(power)
+
     def stop_sensor_stream(self):
         """Stop the sensor data stream."""
         self.running = False

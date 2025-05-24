@@ -36,10 +36,10 @@ class AppState(metaclass=SingletonMeta):
         self.config_manager = self._create_config_manager()
         """ Reader instance used to initialise and read Sensors """
         self.sensor_reader = self._create_sensor_reader()
-        """ Database instance used to log, retrieve and delete Sensors """
-        self.database = self._create_database_manager()
         """ Calculation service instance """
         self.calculation_service = self._create_calculation_service()
+        """ Database instance used to log, retrieve and delete Sensors """
+        self.database = self._create_database_manager()
         """ Climate chamber controller used to control Peltier elements based on sensor data and desired graph."""
         self.climate_chamber = self._create_climate_chamber()
         self.controller = self._create_controller()
@@ -63,7 +63,7 @@ class AppState(metaclass=SingletonMeta):
     def _create_database_manager(self):
         """Factory method for creating the temperature logger."""
         from app.backend.Implementations.DatabaseManager import DatabaseManager
-        return DatabaseManager("database.db", self.sensor_reader)
+        return DatabaseManager("database.db", self.sensor_reader, self.calculation_service)
 
     def _create_calculation_service(self):
         """Factory method for creating the temperature logger."""
@@ -74,7 +74,7 @@ class AppState(metaclass=SingletonMeta):
         """Factory method for creating the climate chamber implementation."""
         # Choose implementation based on environment
         from app.backend.Implementations.ClimateChamber import ClimateChamber
-        return ClimateChamber(self.sensor_reader, self.config_manager)
+        return ClimateChamber(self.sensor_reader, self.config_manager, self.calculation_service)
 
     def _create_controller(self):
         """Factory method for creating the controller."""

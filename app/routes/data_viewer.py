@@ -22,6 +22,16 @@ def delete_cycle(cycle_name):
     else:
         result = {"status": "error", "message": "No cycle with name = "+cycle_name}
         return jsonify(result), 500  # Internal Server Error
+
+@viewer_bp.route('/api/delete_all_cycle')
+def delete_all_cycle():
+    success = get_app_state().database.delete_all_cycles()
+    if success:
+        result = {"status": "success", "message": "Action performed"}
+        return jsonify(result), 200  # HTTP 200 OK
+    else:
+        result = {"status": "error", "message": "Deleting cycles failed"}
+        return jsonify(result), 500  # Internal Server Error
     
 
 @viewer_bp.route('/api/data/<cycle_name>')

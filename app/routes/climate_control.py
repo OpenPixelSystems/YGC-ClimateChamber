@@ -51,3 +51,14 @@ def stop_sensors():
     app_state.start_time = None
     app_state.database.stop_logging_cycle()
     return jsonify({'status': 'Sensors stopped'})
+
+@climate_bp.route('/update-power', methods=['POST'])
+def update_power():
+    """Manually steer peltier power"""
+    data = request.get_json(silent=True) or {}
+    power_value = data.get('power')
+
+    app_state = get_app_state()
+    app_state.controller.manual_control(power_value)
+
+    return jsonify({'status': 'Peltier power updated'})

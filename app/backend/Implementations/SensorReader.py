@@ -19,19 +19,19 @@ class SensorReader(ISensorReader, Subscriptable):
         try:
             # Iterate through all Sensors in the config
             for sensor_config in mcu_config.sensors:
-                if sensor_config.type == "temperature":
-                    self.sensor_list.append(Sensor(sensor_config.name, {
-                        "type": sensor_config.type,
-                        "editable": {
-                            "gpio_pin": sensor_config.gpio_pin,
-                            "max_temp": sensor_config.max_temp,
-                            "min_temp": sensor_config.min_temp
-                        },
-                        "unit": sensor_config.unit
-                    }))
+                self.sensor_list.append(Sensor(sensor_config.name, {
+                    "type": sensor_config.type,
+                    "editable": {
+                        "gpio_pin": sensor_config.gpio_pin,
+                        "max_temp": sensor_config.max_temp,
+                        "min_temp": sensor_config.min_temp
+                    },
+                    "unit": sensor_config.unit
+                }))
         except Exception as e:
             raise RuntimeError(f"Configuration error: {str(e)}")
 
+    """Iterate through all sensors and return their value in json format"""
     def read_sensors(self):
         sensor_readings = {}
         for sensor in self.sensor_list:

@@ -31,12 +31,11 @@ class SensorConfig:
 class PeltierConfig:
     name: str = ""
     type: str = ""
-    gpio_pin_heating: int = 1
-    gpio_pin_cooling: int = 1
-    gpio_pin_pwm: int = 1
-    pwm_frequency: int = 1
-    max_temp: float = 1
-    min_temp: float = 1
+    RPWM: int = 1
+    LPWM: int = 1
+    R_EN: int = 1
+    L_EN: int = 1
+    PWM_FREQUENCY: float = 1
 
 @dataclass
 class McuConfig:

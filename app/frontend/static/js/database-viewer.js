@@ -38,30 +38,61 @@ async function loadCycleData(cycle_name) {
         console.log('Raw data received:', data);
 
         const sensors = {};
+        const calculations = {};
 
-        data.forEach(([sensor_id, timestamp, temperature]) => {
-            // Filter based on display type
-            if (displayType !== 'all') {
-                // Skip Sensors that don't match the display type
-                // Assuming Sensors contain either "temperature" or "humidity" in their names
-                const sensorType = sensor_id.toLowerCase();
-                if (displayType === 'temperature' && sensorType.includes('humidity')) return;
-                if (displayType === 'humidity' && !sensorType.includes('humidity')) return;
-            }
+        // Process sensor data
+        if (data.sensor_data && Array.isArray(data.sensor_data)) {
+            data.sensor_data.forEach(([sensor_id, timestamp, temperature]) => {
+                // Filter based on display type
+                if (displayType !== 'all') {
+                    // Skip Sensors that don't match the display type
+                    // Assuming Sensors contain either "temperature" or "humidity" in their names
+                    const sensorType = sensor_id.toLowerCase();
+                    if (displayType === 'temperature' && sensorType.includes('humidity')) return;
+                    if (displayType === 'humidity' && !sensorType.includes('humidity')) return;
+                    if (displayType === 'calculations') return; // Skip sensor data when showing only calculations
+                }
 
-            if (!sensors[sensor_id]) {
-                sensors[sensor_id] = { timestamps: [], values: [] };
-            }
+                if (!sensors[sensor_id]) {
+                    sensors[sensor_id] = { timestamps: [], values: [] };
+                }
 
-            // Store the original timestamp string
-            sensors[sensor_id].timestamps.push(timestamp);
-            sensors[sensor_id].values.push(temperature);
-        });
+                // Store the original timestamp string
+                sensors[sensor_id].timestamps.push(timestamp);
+                sensors[sensor_id].values.push(temperature);
+            });
+        }
+
+        // Process calculation data
+        if (data.calculation_data && Array.isArray(data.calculation_data)) {
+            data.calculation_data.forEach(([calculation_name, timestamp, pid_output, current_temp, target_temp, error]) => {
+                // Filter based on display type - only show calculations if requested
+                if (displayType !== 'all' && displayType !== 'calculations') return;
+
+                // Create separate datasets for each calculation metric
+                const metrics = {
+                    [`${calculation_name}_PID_Output`]: pid_output,
+                    [`${calculation_name}_Current_Temp`]: current_temp,
+                    [`${calculation_name}_Target_Temp`]: target_temp,
+                    [`${calculation_name}_Error`]: error
+                };
+
+                Object.entries(metrics).forEach(([metricName, value]) => {
+                    if (!calculations[metricName]) {
+                        calculations[metricName] = { timestamps: [], values: [] };
+                    }
+                    calculations[metricName].timestamps.push(timestamp);
+                    calculations[metricName].values.push(value);
+                });
+            });
+        }
 
         // Debug output to help troubleshoot
         console.log('Processed sensor data:', sensors);
+        console.log('Processed calculation data:', calculations);
 
-        const datasets = Object.entries(sensors).map(([sensor, data], index) => ({
+        // Create datasets for sensors
+        const sensorDatasets = Object.entries(sensors).map(([sensor, data], index) => ({
             label: sensor,
             data: data.timestamps.map((timestamp, i) => ({
                 x: new Date(timestamp),
@@ -71,13 +102,38 @@ async function loadCycleData(cycle_name) {
             backgroundColor: getRandomColor(0.1),
             fill: false,
             tension: 0.3,
-            pointRadius: 3
+            pointRadius: 3,
+            yAxisID: 'y' // Default y-axis for temperature
         }));
 
-        // Debug output
-        console.log('Chart datasets:', datasets);
+        // Create datasets for calculations
+        const calculationDatasets = Object.entries(calculations).map(([calcName, data], index) => {
+            const isError = calcName.includes('Error');
+            const isPIDOutput = calcName.includes('PID_Output');
 
-        updateChart(datasets);
+            return {
+                label: calcName,
+                data: data.timestamps.map((timestamp, i) => ({
+                    x: new Date(timestamp),
+                    y: data.values[i]
+                })),
+                borderColor: getRandomColor(),
+                backgroundColor: getRandomColor(0.1),
+                fill: false,
+                tension: 0.3,
+                pointRadius: 2,
+                borderDash: isPIDOutput ? [5, 5] : [], // Dashed line for PID output
+                yAxisID: isError ? 'y1' : 'y' // Use separate axis for error values
+            };
+        });
+
+        // Combine all datasets
+        const allDatasets = [...sensorDatasets, ...calculationDatasets];
+
+        // Debug output
+        console.log('Chart datasets:', allDatasets);
+
+        updateChart(allDatasets);
     } catch (error) {
         console.error('Error loading cycle data:', error);
     }
@@ -180,6 +236,27 @@ document.getElementById('deleteData').addEventListener('click', async () => {
 
     // show popup on success
     alert(`✅ Success: ${data.message || 'Cycle deleted successfully'}`);
+
+    } catch (err) {
+        alert(`❌ Error: ${err.message}`);
+    }
+
+});
+
+// Delete data button
+document.getElementById('deleteAllData').addEventListener('click', async () => {
+    try {
+    const res = await fetch(`/api/delete_all_cycle`);
+
+    const data = await res.json(); // parse backend response
+
+    if (!res.ok) {
+        // show popup on error with backend message
+        throw new Error(data.message || 'Failed to delete all cycles');
+    }
+
+    // show popup on success
+    alert(`✅ Success: ${data.message || 'Cycles deleted successfully'}`);
 
     } catch (err) {
         alert(`❌ Error: ${err.message}`);

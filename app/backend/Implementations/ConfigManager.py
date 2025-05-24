@@ -83,7 +83,16 @@ class ConfigManager(IConfigManager):
                 # Ignore keys that start with '_' (comments)
                 if key.startswith("_"):
                     continue
-                if value["type"] == "temperature":
+                if value["type"] == "DS18B20":
+                    sensors.append(SensorConfig(
+                        name=value["name"],
+                        type=value["type"],
+                        gpio_pin=value["editable"]["gpio_pin"],
+                        max_temp=value["editable"]["max_temp"],
+                        min_temp=value["editable"]["min_temp"],
+                        unit=value["unit"]
+                    ))
+                elif value["type"] == "ADS1115":
                     sensors.append(SensorConfig(
                         name=value["name"],
                         type=value["type"],
@@ -96,12 +105,11 @@ class ConfigManager(IConfigManager):
                     peltier_modules.append(PeltierConfig(
                         name=value["name"],
                         type=value["type"],
-                        gpio_pin_heating=value["editable"]["gpio_pin_heating"],
-                        gpio_pin_cooling=value["editable"]["gpio_pin_cooling"],
-                        gpio_pin_pwm=value["editable"]["gpio_pin_pwm"],
-                        pwm_frequency=value["editable"]["pwm_frequency"],
-                        max_temp=value["editable"]["max_temp"],
-                        min_temp=value["editable"]["min_temp"]
+                        RPWM=value["editable"]["RPWM"],
+                        LPWM=value["editable"]["LPWM"],
+                        R_EN=value["editable"]["R_EN"],
+                        L_EN=value["editable"]["L_EN"],
+                        PWM_FREQUENCY=value["editable"]["PWM_FREQUENCY"]
                     ))
 
             self._mcu_config.sensors = sensors
