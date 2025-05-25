@@ -18,6 +18,7 @@ class DS18B20(ISensor):
             max_value: Maximum expected value
             unit: Unit of measurement (should be 'C' for temperature)
         """
+        self._type = 'DS18B20'
         self._name = name
         self._pin = pin
         self._min_value = min_value
@@ -103,39 +104,39 @@ class DS18B20(ISensor):
                                 # Convert the value (1/1000 degrees C)
                                 temp_string = lines[1][temp_pos + 2:]
                                 temp_c = float(temp_string) / 1000.0
-                                json_format[self._name] = temp_c
+                                json_format[self._type] = {self._name: temp_c}
                                 self._last_reading = temp_c  # Store for future reference
                                 print(f"[DS18B20] Read actual sensor value: {temp_c} {self._unit}")
                             else:
                                 # Could not find temperature data, use simulated value
                                 value = self._get_simulated_value()
-                                json_format[self._name] = value
+                                json_format[self._type] = {self._name: value}
                                 print(
                                     f"[DS18B20] Could not find temperature data, using simulated value: {value} {self._unit}")
                         else:
                             # CRC check failed, use simulated value
                             value = self._get_simulated_value()
-                            json_format[self._name] = value
+                            json_format[self._type] = {self._name: value}
                             print(f"[DS18B20] CRC check failed, using simulated value: {value} {self._unit}")
                     else:
                         # No sensor found, use simulated value
                         value = self._get_simulated_value()
-                        json_format[self._name] = value
+                        json_format[self._type] = {self._name: value}
                         print(f"[DS18B20] No sensor found, using simulated value: {value} {self._unit}")
                 except Exception as e:
                     # Error reading sensor, use simulated value
                     value = self._get_simulated_value()
-                    json_format[self._name] = value
+                    json_format[self._type] = {self._name: value}
                     print(f"[DS18B20] Error reading real sensor: {str(e)}, using simulated value: {value} {self._unit}")
             else:
                 # We're in a test environment (using MockGPIO), use a simulated value
                 value = self._get_simulated_value()
-                json_format[self._name] = value
+                json_format[self._type] = {self._name: value}
                 print(f"[DS18B20] In testing environment, using simulated value: {value} {self._unit}")
 
         except Exception as e:
             print(f"[DS18B20] Critical error reading sensor {self._name}: {str(e)}")
-            json_format[self._name] = None
+            json_format[self._type] = {self._name: None}
 
         return json_format
 

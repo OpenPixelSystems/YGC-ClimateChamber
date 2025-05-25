@@ -35,6 +35,13 @@ class SensorReader(ISensorReader, Subscriptable):
     def read_sensors(self):
         sensor_readings = {}
         for sensor in self.sensor_list:
-            sensor_readings.update(sensor.read_sensor())
+            reading = sensor.read_sensor()  # e.g., {'DS18B20': {'outside_on_device': 19.9}}
+
+            for sensor_type, data in reading.items():
+                if sensor_type not in sensor_readings:
+                    sensor_readings[sensor_type] = {}
+
+                sensor_readings[sensor_type].update(data)
+
         self.notify(sensor_readings)
         return sensor_readings

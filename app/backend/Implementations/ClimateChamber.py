@@ -7,7 +7,6 @@ from app.backend.Implementations.PeltierModule import PeltierModule
 
 # Real implementation
 class ClimateChamber(IClimateChamber):
-    #TODO implement Peltier control logic
     def __init__(self, sensor_reader: ISensorReader, config_manager: IConfigManager, calculation_service: ICalculationService):
         self.sensor_reader = sensor_reader
         self.config_manager = config_manager
@@ -50,18 +49,5 @@ class ClimateChamber(IClimateChamber):
             for peltier in self.peltierModules:
                 peltier.stop()
             print("[ClimateChamber] PID output is 0. Stopping all modules.")
-
-    def set_heating(self, power: float):
-        pass
-
-    def set_cooling(self, power: float):
-        pass
-
-    def stop_all(self):
-        pass
-
-    def cleanup(self):
-        return
-
 
 

@@ -9,7 +9,6 @@ from app.backend.Interfaces.ISensorReader import ISensorReader
 
 class DatabaseManager:
     """Manages database operations for the climate chamber application."""
-    #TODO subscribe to calculation results and log into database
 
     def __init__(self, db_path: str = 'ClimateChamber_data.db', sensor_reader: Optional[ISensorReader] = None, calculation_service: ICalculationService = None) -> None:
         self.db_path = db_path
@@ -47,10 +46,11 @@ class DatabaseManager:
             cursor.execute('''
             CREATE TABLE IF NOT EXISTS sensor_readings (
                 reading_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                sensor_type TEXT,
                 cycle_id INTEGER,
                 sensor_id TEXT,
                 timestamp TEXT,
-                temperature REAL,
+                value REAL,
                 FOREIGN KEY (cycle_id) REFERENCES cycles (cycle_id)
             )
             ''')
@@ -67,7 +67,6 @@ class DatabaseManager:
                 FOREIGN KEY (cycle_id) REFERENCES cycles (cycle_id)
             )
             ''')
-
             conn.commit()
 
     def start_logging_cycle(self, cycle_name: str) -> bool:
@@ -99,7 +98,7 @@ class DatabaseManager:
             print(f"Error starting logging cycle: {str(e)}")
             return False
 
-    def on_sensor_data(self, sensor_readings: Dict[str, float]) -> None:
+    def on_sensor_data(self, sensor_readings: Dict[str,Dict[str, float]]) -> None:
         """Handle incoming sensor data and log it to the database.
         
         Args:
@@ -113,12 +112,20 @@ class DatabaseManager:
             with self.get_connection() as conn:
                 cursor = conn.cursor()
                 timestamp = datetime.now().isoformat()
-                for sensor_name, temperature in sensor_readings.items():
+                temperature_readings = sensor_readings['DS18B20']
+                current_readings = sensor_readings['ADS1115']
+                for sensor_name, temperature in temperature_readings.items():
                     cursor.execute(
-                        "INSERT INTO sensor_readings (cycle_id, sensor_id, timestamp, temperature) VALUES (?, ?, ?, ?)",
-                        (self.current_cycle_id, sensor_name, timestamp, temperature)
+                        "INSERT INTO sensor_readings (sensor_type, cycle_id, sensor_id, timestamp, value) VALUES (?, ?, ?, ?, ?)",
+                        ('temperature', self.current_cycle_id, sensor_name, timestamp, temperature)
                     )
                     print(f"Logged: Sensor {sensor_name}, Temperature: {temperature}°C")
+                for sensor_name, current in current_readings.items():
+                    cursor.execute(
+                        "INSERT INTO sensor_readings (sensor_type, cycle_id, sensor_id, timestamp, value) VALUES (?, ?, ?, ?, ?)",
+                        ('current', self.current_cycle_id, sensor_name, timestamp, current)
+                    )
+                    print(f"Logged: Sensor {sensor_name}, Current draw: {current}°C")
                 conn.commit()
         except Exception as e:
             print(f"Error logging sensor data: {str(e)}")
@@ -288,14 +295,22 @@ class DatabaseManager:
 
             # Get sensor data
             cursor.execute(
-                "SELECT sensor_id, timestamp, temperature FROM sensor_readings WHERE cycle_id = ?",
-                (cycle_id,)
+                "SELECT sensor_id, timestamp, value FROM sensor_readings WHERE cycle_id = ? and sensor_type = ?",
+                (cycle_id, 'temperature')
             )
-            sensor_data = cursor.fetchall()
+            sensor_temperature_data = cursor.fetchall()
+
+            cursor.execute(
+                "SELECT sensor_id, timestamp, value FROM sensor_readings WHERE cycle_id = ? and sensor_type = ?",
+                (cycle_id, 'current')
+            )
+            sensor_current_data = cursor.fetchall()
+
+            sensor_data = {'temperature': [sensor_temperature_data], 'current': [sensor_current_data]}
 
             # Get calculation data
             cursor.execute(
-                "SELECT calculation_name, timestamp, pid_output, current_temp, target_temp, error FROM calculation_data WHERE cycle_id = ?",
+                "SELECT calculation_name, timestamp, pid_output FROM calculation_data WHERE cycle_id = ?",
                 (cycle_id,)
             )
             calculation_data = cursor.fetchall()

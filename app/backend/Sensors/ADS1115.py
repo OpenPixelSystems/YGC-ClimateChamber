@@ -18,6 +18,7 @@ class ADS1115(ISensor):
             max_value: Maximum expected current value
             unit: Unit of measurement (should be 'A' for amperes or 'mA' for milliamperes)
         """
+        self._type = 'ADS1115'
         self._name = name
         self._pin = pin  # This represents the analog channel (A0-A3)
         self._min_value = min_value
@@ -170,30 +171,30 @@ class ADS1115(ISensor):
 
                     # Validate reading is within bounds
                     if self._min_value <= current <= self._max_value:
-                        json_format[self._name] = round(current, 3)
+                        json_format[self._type] = {self._name: round(current, 3)}
                         self._last_reading = current
                         print(f"[ADS1115] Read actual sensor value: {current} {self._unit} (voltage: {voltage:.3f}V)")
                     else:
                         # Reading out of bounds, use simulated value
                         value = self._get_simulated_value()
-                        json_format[self._name] = value
+                        json_format[self._type] = {self._name: value}
                         print(
                             f"[ADS1115] Reading out of bounds ({current} {self._unit}), using simulated value: {value} {self._unit}")
 
                 except Exception as e:
                     # Error reading sensor, use simulated value
                     value = self._get_simulated_value()
-                    json_format[self._name] = value
+                    json_format[self._type] = {self._name: value}
                     print(f"[ADS1115] Error reading real sensor: {str(e)}, using simulated value: {value} {self._unit}")
             else:
                 # We're in a test environment or sensor initialization failed
                 value = self._get_simulated_value()
-                json_format[self._name] = value
+                json_format[self._type] = {self._name: value}
                 print(f"[ADS1115] In testing environment, using simulated value: {value} {self._unit}")
 
         except Exception as e:
             print(f"[ADS1115] Critical error reading sensor {self._name}: {str(e)}")
-            json_format[self._name] = None
+            json_format[self._type] = {self._name: None}
 
         return json_format
 

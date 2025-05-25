@@ -37,4 +37,5 @@ def delete_all_cycle():
 @viewer_bp.route('/api/data/<cycle_name>')
 def get_cycle_data(cycle_name):
     readings = get_app_state().database.read_cycle_data(cycle_name)
+    test = jsonify(readings)
     return jsonify(readings)

@@ -11,6 +11,17 @@
         "unit": "degrees",
         "_comment": "Temperature sensor on device"
     },
+    "outside_on_device": {
+        "name": "outside_on_device",
+        "type": "DS18B20",
+        "editable": {
+            "gpio_pin": 13,
+            "max_temp": 120,
+            "min_temp": -40
+        },
+        "unit": "degrees",
+        "_comment": "Temperature sensor outside device"
+    },
     "Current_sensor": {
         "name": "Current_sensor",
         "type": "ADS1115",

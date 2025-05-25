@@ -51,7 +51,6 @@ class ClimateChamberController(IClimateChamberController):
         """Stop the sensor data stream."""
         self.running = False
         print("\nClimateChamberController: Sensor stream stopped.")
-        self.climate_chamber.stop_all()  # Ensure all actuators are off
 
     def sensor_data_provider(self):
         """Generator function for Server-Sent Events (SSE)."""
@@ -60,16 +59,15 @@ class ClimateChamberController(IClimateChamberController):
                 data = self.sensor_reader.read_sensors()
 
                 # If we have a desired temperature profile, apply control
-                if self.desired_graph and data['Inside_on_device']: #TODO currently only uses one sensor, extend to average of applicable sensors
-                    current_temp = data['Inside_on_device']
+                if self.desired_graph and data['DS18B20']: #TODO currently only uses one sensor, extend to average of applicable sensors
+
+                    current_temp = data['DS18B20']['Inside_on_device']
                     target_temp = self.desired_graph.get_temperature_at_time()
                     print("Target temperature is: ", target_temp)
                     output = self.calculation_service.calculate_pid_control(current_temp, target_temp)
 
                     # Add control info to the data
-                    data['target_temperature'] = target_temp
-                    data['pid_output'] = output
-                    data['control_error'] = target_temp - current_temp
+                    data['calculation_data'] = {'pid_output':output,'target_temp': target_temp, 'control_error': target_temp - current_temp}
                     print("PID steering active")
                 print(f"Sending data to webpage {data}")
                 yield f"data: {json.dumps(data)}\n\n"
@@ -78,4 +76,5 @@ class ClimateChamberController(IClimateChamberController):
 
             time.sleep(self.config_manager.control_config.read_delay)
 
-        yield "data: {\"status\": \"stopped\"}\n\n"  # Send final message before stopping
+        self.desired_graph = None
+        yield "data: {\"status\": \"stopped\"}\n\n"
