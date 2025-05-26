@@ -88,8 +88,9 @@ class ConfigManager(IConfigManager):
                         name=value["name"],
                         type=value["type"],
                         gpio_pin=value["editable"]["gpio_pin"],
-                        max_temp=value["editable"]["max_temp"],
-                        min_temp=value["editable"]["min_temp"],
+                        max_value=value["editable"]["max_value"],
+                        min_value=value["editable"]["min_value"],
+                        critical=value["editable"]["safety_critical"],
                         unit=value["unit"]
                     ))
                 elif value["type"] == "ADS1115":
@@ -97,8 +98,20 @@ class ConfigManager(IConfigManager):
                         name=value["name"],
                         type=value["type"],
                         gpio_pin=value["editable"]["gpio_pin"],
-                        max_temp=value["editable"]["max_temp"],
-                        min_temp=value["editable"]["min_temp"],
+                        max_value=value["editable"]["max_value"],
+                        min_value=value["editable"]["min_value"],
+                        critical=value["editable"]["safety_critical"],
+                        unit=value["unit"]
+                    ))
+                elif value["type"] == "MPL3115A2":
+                    sensors.append(SensorConfig(
+                        name=value["name"],
+                        type=value["type"],
+                        SDA=value["editable"]["SDA"],
+                        SCL=value["editable"]["SCL"],
+                        max_value=value["editable"]["max_value"],
+                        min_value=value["editable"]["min_value"],
+                        critical=value["editable"]["safety_critical"],
                         unit=value["unit"]
                     ))
                 elif value["type"] == "peltier":

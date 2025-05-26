@@ -48,8 +48,8 @@ class TestConfigManager(unittest.TestCase):
             self.assertIsNotNone(sensor.name)
             self.assertIsNotNone(sensor.type)
             self.assertIsNotNone(sensor.gpio_pin)
-            self.assertIsNotNone(sensor.max_temp)
-            self.assertIsNotNone(sensor.min_temp)
+            self.assertIsNotNone(sensor.max_value)
+            self.assertIsNotNone(sensor.min_value)
             self.assertIsNotNone(sensor.unit)
 
 if __name__ == '__main__':

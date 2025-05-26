@@ -11,10 +11,13 @@ class ClimateChamber(IClimateChamber):
         self.sensor_reader = sensor_reader
         self.config_manager = config_manager
         self.calculation_service = calculation_service
-
+        self.critical_sensors = []
+        self.get_critical_sensors()
         self.peltierModules = []
         self.initialize_modules()
+        self.sensor_data = None
         calculation_service.subscribe(self.apply_control)
+        sensor_reader.subscribe(self.save_sensor_limits)
 
     def initialize_modules(self):
         try:
@@ -50,4 +53,19 @@ class ClimateChamber(IClimateChamber):
                 peltier.stop()
             print("[ClimateChamber] PID output is 0. Stopping all modules.")
 
+    def save_sensor_limits(self, data):
+        print("[ClimateChamber] [save_sensor_limits]", data)
+        #TODO Check if sensor is safety_critical and store result
+        temperature_readings = data['DS18B20']
+        current_readings = data['ADS1115']
 
+        for sensor_name, temperature in temperature_readings.items():
+            for sensor in self.critical_sensors:
+                if sensor.name == sensor_name:
+                    if temperature > sensor.max_value:
+                        print(f'[ClimateChamber][save_sensor_limits] value for sensor {sensor_name} above threshold limits')
+
+    def get_critical_sensors(self):
+        for sensor in self.config_manager.mcu_config.sensors:
+            if sensor.critical:
+                self.critical_sensors.append(sensor)

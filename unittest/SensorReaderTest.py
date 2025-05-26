@@ -15,16 +15,16 @@ class TestSensorReader(unittest.TestCase):
                 name="Temp_sensor_1",
                 type="temperature",
                 gpio_pin=1,
-                max_temp=20,
-                min_temp=0,
+                max_value=20,
+                min_value=0,
                 unit="degrees"
             ),
             SensorConfig(
                 name="Temp_sensor_2",
                 type="temperature",
                 gpio_pin=12,
-                max_temp=40,
-                min_temp=0,
+                max_value=40,
+                min_value=0,
                 unit="degrees"
             )
         ]
