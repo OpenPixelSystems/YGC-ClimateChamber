@@ -113,6 +113,7 @@ class DatabaseManager:
                 cursor = conn.cursor()
                 timestamp = datetime.now().isoformat()
                 temperature_readings = sensor_readings['DS18B20']
+                temperature_readings.update(sensor_readings['MPL3115A2'])
                 current_readings = sensor_readings['ADS1115']
                 for sensor_name, temperature in temperature_readings.items():
                     cursor.execute(
