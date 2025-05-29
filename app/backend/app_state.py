@@ -68,7 +68,7 @@ class AppState(metaclass=SingletonMeta):
     def _create_calculation_service(self):
         """Factory method for creating the temperature logger."""
         from app.backend.Implementations.CalculationService import CalculationService
-        return CalculationService(self.config_manager)
+        return CalculationService(self.config_manager, True)
 
     def _create_climate_chamber(self):
         """Factory method for creating the climate chamber implementation."""

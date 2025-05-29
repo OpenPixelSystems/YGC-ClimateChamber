@@ -21,7 +21,7 @@ class ClimateChamberController(IClimateChamberController):
         self.sensor_reader = sensor_reader
         self.config_manager = config_manager
         self.climate_chamber = climate_chamber
-        self.calculation_service =  calculation_service
+        self.calculation_service = calculation_service
 
         self.running = False
         self.desired_graph : Graph = None
@@ -60,11 +60,15 @@ class ClimateChamberController(IClimateChamberController):
 
                 # If we have a desired temperature profile, apply control
                 if self.desired_graph and data['DS18B20']: #TODO currently only uses one sensor, extend to average of applicable sensors
-
                     current_temp = data['DS18B20']['Inside_on_device']
                     target_temp = self.desired_graph.get_temperature_at_time()
                     print("Target temperature is: ", target_temp)
-                    output = self.calculation_service.calculate_pid_control(current_temp, target_temp)
+                    if self.climate_chamber.get_guarding_state():
+                        self.calculation_service.pause(current_temp, target_temp)
+                        print("[ClimateChamber] [apply_control] Temperature or current threshold exceeded reached. Steering paused until values return to normal.")
+                        output = 0
+                    else:
+                        output = self.calculation_service.calculate_pid_control(current_temp, target_temp)
 
                     # Add control info to the data
                     data['calculation_data'] = {'pid_output':output,'target_temp': target_temp, 'control_error': target_temp - current_temp}

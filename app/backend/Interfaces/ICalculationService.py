@@ -16,3 +16,8 @@ class ICalculationService(ABC):
             float: The control output value
         """
         pass
+
+    @abstractmethod
+    def pause(self, current_temp: float, target_temp: float):
+        """Pause the calculation."""
+        pass

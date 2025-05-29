@@ -16,6 +16,7 @@ class ClimateChamber(IClimateChamber):
         self.peltierModules = []
         self.initialize_modules()
         self.sensor_data = None
+        self.stop_steering = False
         calculation_service.subscribe(self.apply_control)
         sensor_reader.subscribe(self.save_sensor_limits)
 
@@ -30,7 +31,6 @@ class ClimateChamber(IClimateChamber):
 
     def apply_control(self, data):
         print("[ClimateChamber] [apply_control]", data)
-
         output = data.get("pid_output", 0)
 
         if output > 0:
@@ -58,14 +58,19 @@ class ClimateChamber(IClimateChamber):
         #TODO Check if sensor is safety_critical and store result
         temperature_readings = data['DS18B20']
         current_readings = data['ADS1115']
+        self.stop_steering = False
 
         for sensor_name, temperature in temperature_readings.items():
             for sensor in self.critical_sensors:
                 if sensor.name == sensor_name:
                     if temperature > sensor.max_value:
                         print(f'[ClimateChamber][save_sensor_limits] value for sensor {sensor_name} above threshold limits')
+                        self.stop_steering = True
 
     def get_critical_sensors(self):
         for sensor in self.config_manager.mcu_config.sensors:
             if sensor.critical:
                 self.critical_sensors.append(sensor)
+
+    def get_guarding_state(self):
+        return self.stop_steering

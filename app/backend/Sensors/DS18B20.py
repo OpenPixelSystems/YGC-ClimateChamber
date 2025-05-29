@@ -69,7 +69,7 @@ class DS18B20(ISensor):
         new_value = self._last_reading + variation
 
         # Keep value within specified min and max bounds
-        new_value = max(self._min_value, min(self._max_value, new_value))
+        new_value = max(self._min_value, min(self._max_value+1, new_value))
         self._last_reading = new_value
 
         return round(new_value, 1)
