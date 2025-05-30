@@ -2,11 +2,13 @@ import json
 
 from app.backend.Dataclasses.Config import ControlConfig, GraphConfig, McuConfig, SensorConfig, PeltierConfig
 from app.backend.Interfaces.IConfigManager import IConfigManager
+from app.backend.Technical.Logging import LoggingMixin
 
 
-class ConfigManager(IConfigManager):
+class ConfigManager(IConfigManager, LoggingMixin):
     """Centralized configuration management for the application."""
     def __init__(self, control_config_path, graph_config_path, mcu_config_path):
+        super().__init__()
         self.control_config_path = control_config_path
         self.graph_config_path = graph_config_path
         self.mcu_config_path = mcu_config_path
@@ -44,12 +46,12 @@ class ConfigManager(IConfigManager):
                 self._control_config.read_delay = float(
                     config_data.get("sensor_read_delay", {}).get("editable", {}).get("value", 2.0))
 
-                print(f"[ConfigManager] [__load_control_config] Loaded PID config - kp={self._control_config.kp}, "
+                self.print(f"[ConfigManager] [__load_control_config] Loaded PID config - kp={self._control_config.kp}, "
                       f"ki={self._control_config.ki}, kd={self._control_config.kd}, "
                       f"read_delay={self._control_config.read_delay}")
         except (FileNotFoundError, KeyError, json.JSONDecodeError, ValueError) as e:
-            print(f"[ConfigManager] [__load_control_config] Error loading config: {str(e)}")
-            print("Using default values")
+            self.print_error(f"[ConfigManager] [__load_control_config] Error loading config: {str(e)}")
+            self.print_error("Using default values")
 
     def __load_graph_config(self):
         """Load configuration from file."""
@@ -64,12 +66,12 @@ class ConfigManager(IConfigManager):
                 self._graph_config.max_y = float(config_data.get("max_y", {}).get("editable", {}).get("value", 0.0))
                 self._graph_config.max_rico = float(config_data.get("max_rico", {}).get("editable", {}).get("value", 0.0))
 
-                print(f"[ConfigManager] [__load_graph_config] Loaded graph config - max_points={self._graph_config.max_points}, "
+                self.print(f"[ConfigManager] [__load_graph_config] Loaded graph config - max_points={self._graph_config.max_points}, "
                       f"min_x={self._graph_config.min_x}, min_y={self._graph_config.min_y}, max_y={self._graph_config.max_y}, "
                       f"max_rico={self._graph_config.max_rico}")
         except (FileNotFoundError, KeyError, json.JSONDecodeError, ValueError) as e:
-            print(f"[ConfigManager] [__load_graph_config] Error loading config: {str(e)}")
-            print("Using default values")
+            self.print_error(f"[ConfigManager] [__load_graph_config] Error loading config: {str(e)}")
+            self.print_error("Using default values")
 
     def __load_mcu_config(self):
         """Load MCU configuration from file."""
@@ -88,8 +90,9 @@ class ConfigManager(IConfigManager):
                         name=value["name"],
                         type=value["type"],
                         gpio_pin=value["editable"]["gpio_pin"],
-                        max_temp=value["editable"]["max_temp"],
-                        min_temp=value["editable"]["min_temp"],
+                        max_value=value["editable"]["max_value"],
+                        min_value=value["editable"]["min_value"],
+                        critical=value["editable"]["safety_critical"]==1,
                         unit=value["unit"]
                     ))
                 elif value["type"] == "ADS1115":
@@ -97,8 +100,20 @@ class ConfigManager(IConfigManager):
                         name=value["name"],
                         type=value["type"],
                         gpio_pin=value["editable"]["gpio_pin"],
-                        max_temp=value["editable"]["max_temp"],
-                        min_temp=value["editable"]["min_temp"],
+                        max_value=value["editable"]["max_value"],
+                        min_value=value["editable"]["min_value"],
+                        critical=value["editable"]["safety_critical"]==1,
+                        unit=value["unit"]
+                    ))
+                elif value["type"] == "MPL3115A2":
+                    sensors.append(SensorConfig(
+                        name=value["name"],
+                        type=value["type"],
+                        SDA=value["editable"]["SDA"],
+                        SCL=value["editable"]["SCL"],
+                        max_value=value["editable"]["max_value"],
+                        min_value=value["editable"]["min_value"],
+                        critical=value["editable"]["safety_critical"]==1,
                         unit=value["unit"]
                     ))
                 elif value["type"] == "peltier":
@@ -113,11 +128,11 @@ class ConfigManager(IConfigManager):
                     ))
 
             self._mcu_config.sensors = sensors
-            print(f"[ConfigManager] [__load_mcu_config] Loaded {len(sensors)} sensors/devices into MCU config.")
+            self.print(f"[ConfigManager] [__load_mcu_config] Loaded {len(sensors)} sensors/devices into MCU config.")
             self._mcu_config.peltierModules = peltier_modules
-            print(f"[ConfigManager] [__load_mcu_config] Loaded {len(peltier_modules)} Peltier module(s) into MCU config.")
+            self.print(f"[ConfigManager] [__load_mcu_config] Loaded {len(peltier_modules)} Peltier module(s) into MCU config.")
         except (FileNotFoundError, KeyError, json.JSONDecodeError, ValueError) as e:
-            print(f"[ConfigManager] [__load_mcu_config] Error loading MCU config: {str(e)}")
+            self.print_error(f"[ConfigManager] [__load_mcu_config] Error loading MCU config: {str(e)}")
             self._mcu_config.sensors = []
 
     def reload_config(self):

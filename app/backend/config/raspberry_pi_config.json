@@ -5,19 +5,46 @@
         "type": "DS18B20",
         "editable": {
             "gpio_pin": 12,
-            "max_temp": 120,
-            "min_temp": -40
+            "max_value": 21,
+            "min_value": -40,
+            "safety_critical": 0
         },
         "unit": "degrees",
         "_comment": "Temperature sensor on device"
+    },
+    "temporary_sensor": {
+        "name": "temporary_sensor",
+        "type": "MPL3115A2",
+        "editable": {
+            "SDA": 2,
+            "SCL": 3,
+            "min_value": -40,
+            "max_value": 120,
+            "safety_critical": 1
+        },
+        "unit": "degrees",
+        "_comment": "Temperature sensor on device"
+    },
+    "outside_on_device": {
+        "name": "outside_on_device",
+        "type": "DS18B20",
+        "editable": {
+            "gpio_pin": 13,
+            "max_value": 120,
+            "min_value": -40,
+            "safety_critical": 1
+        },
+        "unit": "degrees",
+        "_comment": "Temperature sensor outside device"
     },
     "Current_sensor": {
         "name": "Current_sensor",
         "type": "ADS1115",
         "editable": {
             "gpio_pin": 1,
-            "max_temp": 120,
-            "min_temp": -40
+            "max_value": 120,
+            "min_value": -40,
+            "safety_critical": 1
         },
         "unit": "Amps",
         "_comment": "Current sensor attached to motor driver"

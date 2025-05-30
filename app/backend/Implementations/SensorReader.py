@@ -1,7 +1,9 @@
-from app.backend.Implementations.Sensor import Sensor
+
 from app.backend.Dataclasses.Config import McuConfig
 from app.backend.Interfaces.ISensorReader import ISensorReader
-from app.backend.Interfaces.ISubscribe import ISubscriptable
+from app.backend.Sensors.ADS1115 import ADS1115
+from app.backend.Sensors.DS18B20 import DS18B20
+from app.backend.Sensors.MPL3115A2 import MPL3115A2
 from app.backend.Services.Subscribe import Subscriptable
 
 
@@ -19,15 +21,13 @@ class SensorReader(ISensorReader, Subscriptable):
         try:
             # Iterate through all Sensors in the config
             for sensor_config in mcu_config.sensors:
-                self.sensor_list.append(Sensor(sensor_config.name, {
-                    "type": sensor_config.type,
-                    "editable": {
-                        "gpio_pin": sensor_config.gpio_pin,
-                        "max_temp": sensor_config.max_temp,
-                        "min_temp": sensor_config.min_temp
-                    },
-                    "unit": sensor_config.unit
-                }))
+                # Create the appropriate sensor instance
+                if sensor_config.type == "DS18B20":
+                    self.sensor_list.append(DS18B20(sensor_config.name, sensor_config.gpio_pin, sensor_config.min_value, sensor_config.max_value, sensor_config.unit))
+                elif sensor_config.type == "ADS1115":
+                    self.sensor_list.append(ADS1115(sensor_config.name, sensor_config.gpio_pin, sensor_config.min_value, sensor_config.max_value, sensor_config.unit))
+                elif sensor_config.type == "MPL3115A2":
+                    self.sensor_list.append(MPL3115A2(sensor_config.name, sensor_config.SDA,sensor_config.SCL, sensor_config.min_value, sensor_config.max_value, sensor_config.unit))
         except Exception as e:
             raise RuntimeError(f"Configuration error: {str(e)}")
 
@@ -35,6 +35,13 @@ class SensorReader(ISensorReader, Subscriptable):
     def read_sensors(self):
         sensor_readings = {}
         for sensor in self.sensor_list:
-            sensor_readings.update(sensor.read_sensor())
+            reading = sensor.read()  # e.g., {'DS18B20': {'outside_on_device': 19.9}}
+
+            for sensor_type, data in reading.items():
+                if sensor_type not in sensor_readings:
+                    sensor_readings[sensor_type] = {}
+
+                sensor_readings[sensor_type].update(data)
+
         self.notify(sensor_readings)
         return sensor_readings

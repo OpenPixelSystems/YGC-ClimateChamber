@@ -50,25 +50,66 @@ export default class SensorManager {
       return;
     }
 
-    this.updateSensorList(data);
+    // Flatten the nested sensor data structure
+    const flattenedData = this.flattenSensorData(data);
+
+    this.updateSensorList(flattenedData);
 
     if (this.sensorGraph.chartManager.chartInstance) {
       const elapsedSeconds = (Date.now() - startTime) / 1000;
-      this.sensorGraph.chartManager.updateChartData(data, elapsedSeconds, this.selectedSensors);
+      this.sensorGraph.chartManager.updateChartData(flattenedData, elapsedSeconds, this.selectedSensors);
       this.sensorGraph.chartManager.updateChartXAxisRange(elapsedSeconds);
     }
   }
 
   /**
+   * Flattens the nested sensor data structure into a flat object
+   * @param {Object} data - The nested sensor data
+   * @returns {Object} Flattened sensor data
+   */
+  flattenSensorData(data) {
+    const flattened = {};
+
+    // Process sensor chip data (ADS1115, DS18B20, etc.)
+    Object.entries(data).forEach(([chipType, chipData]) => {
+      if (chipType === 'calculation_data') {
+        // Handle calculation data separately
+        if (typeof chipData === 'object' && chipData !== null) {
+          Object.entries(chipData).forEach(([calcName, calcValue]) => {
+            // Prefix calculation data to distinguish from sensor data
+            flattened[`calc_${calcName}`] = calcValue;
+          });
+        }
+      } else if (typeof chipData === 'object' && chipData !== null) {
+        // Handle sensor data from chips
+        Object.entries(chipData).forEach(([sensorName, sensorValue]) => {
+          if (typeof sensorValue === 'number') {
+            // Use the sensor name directly, or prefix with chip type if needed for clarity
+            // You can choose either approach based on your preferences:
+
+            // Option 1: Use sensor name directly (simpler)
+            flattened[sensorName] = sensorValue;
+
+            // Option 2: Prefix with chip type (more explicit)
+            // flattened[`${chipType}_${sensorName}`] = sensorValue;
+          }
+        });
+      }
+    });
+
+    return flattened;
+  }
+
+  /**
    * Updates the sensor list UI and manages sensor selection
-   * @param {Object} data - Sensor data
+   * @param {Object} data - Flattened sensor data
    */
   updateSensorList(data) {
     const currentSensors = new Set(
       Object.keys(data).filter(key => typeof data[key] === 'number')
     );
 
-    // Remove inactive Sensors
+    // Remove inactive sensors
     for (const sensor of this.availableSensors) {
       if (!currentSensors.has(sensor)) {
         this.availableSensors.delete(sensor);
@@ -76,7 +117,7 @@ export default class SensorManager {
       }
     }
 
-    // Add new Sensors
+    // Add new sensors
     currentSensors.forEach(sensor => {
       if (!this.availableSensors.has(sensor)) {
         this.availableSensors.add(sensor);
@@ -88,43 +129,90 @@ export default class SensorManager {
   }
 
   /**
-   * Renders the sensor list UI
+   * Renders the sensor list UI with better organization
    */
   renderSensorList() {
     const sensorList = document.getElementById('sensorList');
     sensorList.innerHTML = '';
 
-    Array.from(this.availableSensors).sort().forEach(sensorName => {
-      const div = document.createElement('div');
-      div.className = 'sensor-checkbox';
+    // Separate sensors by type for better organization
+    const sensorsByType = this.categorizeSensors();
 
-      const checkbox = document.createElement('input');
-      checkbox.type = 'checkbox';
-      checkbox.id = sensorName;
-      checkbox.checked = this.selectedSensors.has(sensorName);
-      checkbox.addEventListener('change', (e) => {
-        if (e.target.checked) {
-          this.selectedSensors.add(sensorName);
-        } else {
-          this.selectedSensors.delete(sensorName);
-        }
-        // Update dataset visibility
-        this.sensorGraph.chartManager.updateDatasetVisibility(sensorName, e.target.checked);
-      });
+    Object.entries(sensorsByType).forEach(([category, sensors]) => {
+      if (sensors.length > 0) {
+        // Create category header
+        const categoryHeader = document.createElement('div');
+        categoryHeader.className = 'sensor-category-header';
+        categoryHeader.textContent = category;
+        categoryHeader.style.fontWeight = 'bold';
+        categoryHeader.style.marginTop = '10px';
+        categoryHeader.style.marginBottom = '5px';
+        sensorList.appendChild(categoryHeader);
 
-      const label = document.createElement('label');
-      label.htmlFor = sensorName;
-      label.textContent = sensorName;
+        // Add sensors in this category
+        sensors.forEach(sensorName => {
+          const div = document.createElement('div');
+          div.className = 'sensor-checkbox';
+          div.style.marginLeft = '15px';
 
-      div.appendChild(checkbox);
-      div.appendChild(label);
-      sensorList.appendChild(div);
+          const checkbox = document.createElement('input');
+          checkbox.type = 'checkbox';
+          checkbox.id = sensorName;
+          checkbox.checked = this.selectedSensors.has(sensorName);
+          checkbox.addEventListener('change', (e) => {
+            if (e.target.checked) {
+              this.selectedSensors.add(sensorName);
+            } else {
+              this.selectedSensors.delete(sensorName);
+            }
+            // Update dataset visibility
+            this.sensorGraph.chartManager.updateDatasetVisibility(sensorName, e.target.checked);
+          });
+
+          const label = document.createElement('label');
+          label.htmlFor = sensorName;
+          label.textContent = sensorName;
+
+          div.appendChild(checkbox);
+          div.appendChild(label);
+          sensorList.appendChild(div);
+        });
+      }
     });
   }
 
   /**
-   * Gets the current set of selected Sensors
-   * @returns {Set} The selected Sensors
+   * Categorizes sensors by type for better UI organization
+   * @returns {Object} Sensors grouped by category
+   */
+  categorizeSensors() {
+    const categories = {
+      'Temperature Sensors': [],
+      'Current Sensors': [],
+      'Calculations': [],
+      'Other': []
+    };
+
+    Array.from(this.availableSensors).sort().forEach(sensorName => {
+      const lowerName = sensorName.toLowerCase();
+
+      if (lowerName.includes('temp') || lowerName.includes('inside') || lowerName.includes('outside')) {
+        categories['Temperature Sensors'].push(sensorName);
+      } else if (lowerName.includes('current')) {
+        categories['Current Sensors'].push(sensorName);
+      } else if (lowerName.startsWith('calc_')) {
+        categories['Calculations'].push(sensorName);
+      } else {
+        categories['Other'].push(sensorName);
+      }
+    });
+
+    return categories;
+  }
+
+  /**
+   * Gets the current set of selected sensors
+   * @returns {Set} The selected sensors
    */
   getSelectedSensors() {
     return this.selectedSensors;

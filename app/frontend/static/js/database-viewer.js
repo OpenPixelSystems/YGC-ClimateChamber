@@ -40,30 +40,40 @@ async function loadCycleData(cycle_name) {
         const sensors = {};
         const calculations = {};
 
-        // Process sensor data
-        if (data.sensor_data && Array.isArray(data.sensor_data)) {
-            data.sensor_data.forEach(([sensor_id, timestamp, temperature]) => {
-                // Filter based on display type
-                if (displayType !== 'all') {
-                    // Skip Sensors that don't match the display type
-                    // Assuming Sensors contain either "temperature" or "humidity" in their names
-                    const sensorType = sensor_id.toLowerCase();
-                    if (displayType === 'temperature' && sensorType.includes('humidity')) return;
-                    if (displayType === 'humidity' && !sensorType.includes('humidity')) return;
-                    if (displayType === 'calculations') return; // Skip sensor data when showing only calculations
-                }
+        // Process sensor data - handle the nested structure
+        if (data.sensor_data && typeof data.sensor_data === 'object') {
+            // Iterate through sensor types (current, temperature, etc.)
+            Object.entries(data.sensor_data).forEach(([sensorType, sensorArrays]) => {
+                if (Array.isArray(sensorArrays)) {
+                    // Each sensor type contains arrays of sensor readings
+                    sensorArrays.forEach(sensorArray => {
+                        if (Array.isArray(sensorArray)) {
+                            sensorArray.forEach(([sensor_id, timestamp, value]) => {
+                                // Filter based on display type
+                                if (displayType !== 'all') {
+                                    // Skip sensors that don't match the display type
+                                    const sensorTypeLower = sensorType.toLowerCase();
+                                    if (displayType === 'temperature' && sensorTypeLower !== 'temperature') return;
+                                    if (displayType === 'humidity' && sensorTypeLower !== 'humidity') return;
+                                    if (displayType === 'current' && sensorTypeLower !== 'current') return;
+                                    if (displayType === 'calculations') return; // Skip sensor data when showing only calculations
+                                }
 
-                if (!sensors[sensor_id]) {
-                    sensors[sensor_id] = { timestamps: [], values: [] };
-                }
+                                if (!sensors[sensor_id]) {
+                                    sensors[sensor_id] = { timestamps: [], values: [] };
+                                }
 
-                // Store the original timestamp string
-                sensors[sensor_id].timestamps.push(timestamp);
-                sensors[sensor_id].values.push(temperature);
+                                // Store the original timestamp string and value
+                                sensors[sensor_id].timestamps.push(timestamp);
+                                sensors[sensor_id].values.push(value);
+                            });
+                        }
+                    });
+                }
             });
         }
 
-        // Process calculation data
+        // Process calculation data - this structure looks correct
         if (data.calculation_data && Array.isArray(data.calculation_data)) {
             data.calculation_data.forEach(([calculation_name, timestamp, pid_output, current_temp, target_temp, error]) => {
                 // Filter based on display type - only show calculations if requested
@@ -103,7 +113,7 @@ async function loadCycleData(cycle_name) {
             fill: false,
             tension: 0.3,
             pointRadius: 3,
-            yAxisID: 'y' // Default y-axis for temperature
+            yAxisID: 'y' // Default y-axis for temperature/current
         }));
 
         // Create datasets for calculations

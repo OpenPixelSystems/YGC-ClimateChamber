@@ -36,6 +36,8 @@ class AppState(metaclass=SingletonMeta):
         self.config_manager = self._create_config_manager()
         """ Reader instance used to initialise and read Sensors """
         self.sensor_reader = self._create_sensor_reader()
+        """ Guarding service instance """
+        self.guarding_service = self._create_guarding_service()
         """ Calculation service instance """
         self.calculation_service = self._create_calculation_service()
         """ Database instance used to log, retrieve and delete Sensors """
@@ -65,10 +67,15 @@ class AppState(metaclass=SingletonMeta):
         from app.backend.Implementations.DatabaseManager import DatabaseManager
         return DatabaseManager("database.db", self.sensor_reader, self.calculation_service)
 
+    def _create_guarding_service(self):
+        """Factory method for creating the temperature logger."""
+        from app.backend.Services.GuardingService import GuardingService
+        return GuardingService(self.sensor_reader, self.config_manager)
+
     def _create_calculation_service(self):
         """Factory method for creating the temperature logger."""
         from app.backend.Implementations.CalculationService import CalculationService
-        return CalculationService(self.config_manager)
+        return CalculationService(self.config_manager, True)
 
     def _create_climate_chamber(self):
         """Factory method for creating the climate chamber implementation."""
@@ -80,5 +87,4 @@ class AppState(metaclass=SingletonMeta):
         """Factory method for creating the controller."""
         from app.backend.Implementations.ClimateChamberController import ClimateChamberController
         return ClimateChamberController(
-            self.sensor_reader, self.config_manager, self.climate_chamber, self.calculation_service
-        )
+            self.sensor_reader, self.config_manager, self.climate_chamber, self.calculation_service, self.guarding_service)

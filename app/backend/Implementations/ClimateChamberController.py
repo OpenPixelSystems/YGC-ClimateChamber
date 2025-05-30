@@ -2,6 +2,8 @@ import json
 import time
 from datetime import datetime
 
+from app.backend.Interfaces.IGuardingService import IGuardingService
+from app.backend.Technical.Logging import LoggingMixin
 from app.backend.graph import Graph
 from app.backend.Implementations.CalculationService import CalculationService
 from app.backend.Interfaces.IClimateChamber import IClimateChamber
@@ -10,25 +12,28 @@ from app.backend.Interfaces.IConfigManager import IConfigManager
 from app.backend.Interfaces.ISensorReader import ISensorReader
 
 
-class ClimateChamberController(IClimateChamberController):
+class ClimateChamberController(IClimateChamberController, LoggingMixin):
     """
     Handles the control logic of the climate chamber separately from hardware management.
     Entry point into backend application controlling the climate chamber
     """
 
-    def __init__(self, sensor_reader: ISensorReader, config_manager: IConfigManager, climate_chamber: IClimateChamber, calculation_service : CalculationService):
+    def __init__(self, sensor_reader: ISensorReader, config_manager: IConfigManager, climate_chamber: IClimateChamber,
+                 calculation_service: CalculationService, guarding_service: IGuardingService):
         """Initialize the controller with the climate chamber instance and config."""
+        super().__init__()
         self.sensor_reader = sensor_reader
         self.config_manager = config_manager
         self.climate_chamber = climate_chamber
-        self.calculation_service =  calculation_service
+        self.calculation_service = calculation_service
+        self.guarding_service = guarding_service
 
         self.running = False
         self.desired_graph : Graph = None
 
     def set_desired_graph(self, graph):
         """Set the desired temperature profile."""
-        print("Desired flow graph set for climate chamber control")
+        self.print("Desired flow graph set for climate chamber control")
         self.desired_graph = graph
 
     def set_start_time(self, start_time):
@@ -41,7 +46,7 @@ class ClimateChamberController(IClimateChamberController):
         """Start the sensor data stream."""
         self.running = True
         self.calculation_service.last_time = datetime.now()  # Initialize timestamp
-        print("\nClimateChamberController: Sensor stream started.")
+        self.print("\nClimateChamberController: Sensor stream started.")
 
     def manual_control(self, power):
         """Manually steer peltier power"""
@@ -50,8 +55,7 @@ class ClimateChamberController(IClimateChamberController):
     def stop_sensor_stream(self):
         """Stop the sensor data stream."""
         self.running = False
-        print("\nClimateChamberController: Sensor stream stopped.")
-        self.climate_chamber.stop_all()  # Ensure all actuators are off
+        self.print("\nClimateChamberController: Sensor stream stopped.")
 
     def sensor_data_provider(self):
         """Generator function for Server-Sent Events (SSE)."""
@@ -60,22 +64,25 @@ class ClimateChamberController(IClimateChamberController):
                 data = self.sensor_reader.read_sensors()
 
                 # If we have a desired temperature profile, apply control
-                if self.desired_graph and data['Inside_on_device']: #TODO currently only uses one sensor, extend to average of applicable sensors
-                    current_temp = data['Inside_on_device']
+                if self.desired_graph and data['DS18B20']: #TODO currently only uses one sensor, extend to average of applicable sensors
+                    current_temp = data['DS18B20']['Inside_on_device']
                     target_temp = self.desired_graph.get_temperature_at_time()
-                    print("Target temperature is: ", target_temp)
-                    output = self.calculation_service.calculate_pid_control(current_temp, target_temp)
+                    self.print("Target temperature is: ", target_temp)
+                    if self.guarding_service.get_guarding_state():
+                        self.calculation_service.pause(current_temp, target_temp)
+                        output = 0
+                    else:
+                        output = self.calculation_service.calculate_pid_control(current_temp, target_temp)
+                        self.print("PID steering active")
 
                     # Add control info to the data
-                    data['target_temperature'] = target_temp
-                    data['pid_output'] = output
-                    data['control_error'] = target_temp - current_temp
-                    print("PID steering active")
-                print(f"Sending data to webpage {data}")
+                    data['calculation_data'] = {'pid_output':output,'target_temp': target_temp, 'control_error': target_temp - current_temp}
+                self.print(f"Sending data to webpage {data}")
                 yield f"data: {json.dumps(data)}\n\n"
             except (FileNotFoundError, json.JSONDecodeError) as e:
                 yield f"data: {{\"error\": \"Failed to read sensor data: {str(e)}\"}}\n\n"
 
             time.sleep(self.config_manager.control_config.read_delay)
 
-        yield "data: {\"status\": \"stopped\"}\n\n"  # Send final message before stopping
+        self.desired_graph = None
+        yield "data: {\"status\": \"stopped\"}\n\n"

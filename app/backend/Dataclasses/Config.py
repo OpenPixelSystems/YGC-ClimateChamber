@@ -23,9 +23,12 @@ class SensorConfig:
     name: str = ""
     type: str = ""
     gpio_pin: int = 1
-    max_temp: float = 1
-    min_temp: float = 1
+    SDA: int = 1
+    SCL: int = 1
+    max_value: float = 1
+    min_value: float = 1
     unit: str = ""
+    critical: bool = False
 
 @dataclass
 class PeltierConfig:
