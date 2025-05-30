@@ -30,6 +30,7 @@ class ClimateChamberController(IClimateChamberController, LoggingMixin):
 
         self.running = False
         self.desired_graph : Graph = None
+        self.current_power = 0
 
     def set_desired_graph(self, graph):
         """Set the desired temperature profile."""
@@ -50,12 +51,20 @@ class ClimateChamberController(IClimateChamberController, LoggingMixin):
 
     def manual_control(self, power):
         """Manually steer peltier power"""
-        self.calculation_service.manual_pid_control(power)
+        if self.guarding_service.get_guarding_state():
+            self.print()
+            self.current_power = self.calculation_service.manual_pid_control(0)
+            self.print(f"\n[ClimateChamberController] [manual_control] Control sensor value exceeded reset peltier power: {self.current_power}")
+        else:
+            self.current_power = self.calculation_service.manual_pid_control(power)
+            self.print(f"\n[ClimateChamberController] [manual_control] Manually steer peltier power {power}")
 
     def stop_sensor_stream(self):
         """Stop the sensor data stream."""
         self.running = False
-        self.print("\nClimateChamberController: Sensor stream stopped.")
+        self.current_power = 0
+        self.calculation_service.stop()
+        self.print("\n[ClimateChamberController] [stop_sensor_stream] Sensor stream stopped.")
 
     def sensor_data_provider(self):
         """Generator function for Server-Sent Events (SSE)."""
@@ -75,8 +84,11 @@ class ClimateChamberController(IClimateChamberController, LoggingMixin):
                         output = self.calculation_service.calculate_pid_control(current_temp, target_temp)
                         self.print("PID steering active")
 
+                    self.current_power = output
                     # Add control info to the data
                     data['calculation_data'] = {'pid_output':output,'target_temp': target_temp, 'control_error': target_temp - current_temp}
+                else:
+                    data['calculation_data'] = {'Peltier power':self.current_power}
                 self.print(f"Sending data to webpage {data}")
                 yield f"data: {json.dumps(data)}\n\n"
             except (FileNotFoundError, json.JSONDecodeError) as e:

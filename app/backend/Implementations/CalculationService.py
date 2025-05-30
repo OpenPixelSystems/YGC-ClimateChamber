@@ -275,3 +275,6 @@ class CalculationService(ICalculationService, Subscriptable, LoggingMixin):
 
         self.notify({"pid_output": 0, "current_temp": current_temp, "target_temp": target_temp,
                      "error": target_temp - current_temp})
+    def stop(self):
+        """Stop the PID controller."""
+        self.notify({"pid_output": 0})

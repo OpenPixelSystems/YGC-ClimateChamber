@@ -21,3 +21,6 @@ class ICalculationService(ABC):
     def pause(self, current_temp: float, target_temp: float):
         """Pause the calculation."""
         pass
+
+    def stop(self):
+        pass
