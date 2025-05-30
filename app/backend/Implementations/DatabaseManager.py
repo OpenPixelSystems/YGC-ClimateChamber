@@ -115,9 +115,13 @@ class DatabaseManager(LoggingMixin):
             with self.get_connection() as conn:
                 cursor = conn.cursor()
                 timestamp = datetime.now().isoformat()
-                temperature_readings = sensor_readings['DS18B20']
-                temperature_readings.update(sensor_readings['MPL3115A2'])
-                current_readings = sensor_readings['ADS1115']
+                temperature_readings = {
+                    **sensor_readings.get('DS18B20', {}),
+                    **sensor_readings.get('MPL3115A2', {})
+                }
+                current_readings = {
+                    **sensor_readings.get('ADS1115', {})
+                }
                 for sensor_name, temperature in temperature_readings.items():
                     cursor.execute(
                         "INSERT INTO sensor_readings (sensor_type, cycle_id, sensor_id, timestamp, value) VALUES (?, ?, ?, ?, ?)",
