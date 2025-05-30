@@ -4,11 +4,13 @@ from datetime import datetime
 from app.backend.Interfaces.ICalculationService import ICalculationService
 from app.backend.Interfaces.IConfigManager import IConfigManager
 from app.backend.Services.Subscribe import Subscriptable
+from app.backend.Technical.Logging import LoggingMixin
 
 
-class CalculationService(ICalculationService, Subscriptable):
+class CalculationService(ICalculationService, Subscriptable, LoggingMixin):
     def __init__(self, config_manager: IConfigManager, use_adaptive_control: bool = False):
-        super().__init__()
+        Subscriptable.__init__(self)
+        LoggingMixin.__init__(self)
         self.was_paused = None
         self.config_manager = config_manager
         self.use_adaptive_control = use_adaptive_control
@@ -90,8 +92,10 @@ class CalculationService(ICalculationService, Subscriptable):
     def calculate_pid_control(self, current_temp, target_temp):
         """Apply PID control - either standard or adaptive based on initialization."""
         if self.use_adaptive_control:
+            self.print("[CalculationService] [calculate_pid_control] Using adaptive pid control")
             return self._calculate_adaptive_pid_control(current_temp, target_temp)
         else:
+            self.print("[CalculationService] [calculate_pid_control] Using standard pid control")
             return self._calculate_standard_pid_control(current_temp, target_temp)
 
     def _calculate_standard_pid_control(self, current_temp, target_temp):
@@ -264,30 +268,10 @@ class CalculationService(ICalculationService, Subscriptable):
         """Pause the PID controller and mark the pause state."""
         # Set the pause flag so the next calculate_pid_control call knows we were paused
         self.was_paused = True
+        self.print("[CalculationService] [pause] Temperature or current threshold exceeded reached. Steering paused until values return to normal.")
 
         # Update the last_time to current time to prevent huge dt calculations
         self.last_time = datetime.now()
 
         self.notify({"pid_output": 0, "current_temp": current_temp, "target_temp": target_temp,
                      "error": target_temp - current_temp})
-
-    def get_system_status(self):
-        """Get detailed system status for monitoring."""
-        if not self.use_adaptive_control:
-            return "Standard PID mode - no trend data available"
-
-        if len(self.temp_history) < 2:
-            return "Insufficient data"
-
-        rise_rate, is_rising = self._calculate_temperature_trend()
-        current_temp = self.temp_history[-1] if self.temp_history else 0
-
-        status = {
-            "current_temp": current_temp,
-            "rise_rate_per_sec": rise_rate,
-            "rise_rate_per_min": rise_rate * 60,
-            "is_rising_consistently": is_rising,
-            "recent_outputs": list(self.output_history),
-            "temp_trend": "Rising" if rise_rate > 0.01 else "Stable" if abs(rise_rate) <= 0.01 else "Falling"
-        }
-        return status

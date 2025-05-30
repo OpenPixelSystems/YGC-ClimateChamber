@@ -7,7 +7,7 @@
             "gpio_pin": 12,
             "max_value": 21,
             "min_value": -40,
-            "safety_critical": true
+            "safety_critical": 0
         },
         "unit": "degrees",
         "_comment": "Temperature sensor on device"
@@ -20,7 +20,7 @@
             "SCL": 3,
             "min_value": -40,
             "max_value": 120,
-            "safety_critical": true
+            "safety_critical": 1
         },
         "unit": "degrees",
         "_comment": "Temperature sensor on device"
@@ -32,7 +32,7 @@
             "gpio_pin": 13,
             "max_value": 120,
             "min_value": -40,
-            "safety_critical": true
+            "safety_critical": 1
         },
         "unit": "degrees",
         "_comment": "Temperature sensor outside device"
@@ -44,7 +44,7 @@
             "gpio_pin": 1,
             "max_value": 120,
             "min_value": -40,
-            "safety_critical": true
+            "safety_critical": 1
         },
         "unit": "Amps",
         "_comment": "Current sensor attached to motor driver"

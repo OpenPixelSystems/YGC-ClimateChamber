@@ -6,7 +6,3 @@ class IClimateChamber(ABC):
     @abstractmethod
     def initialize_modules(self):
         pass
-
-    @abstractmethod
-    def get_guarding_state(self) -> None:
-        pass

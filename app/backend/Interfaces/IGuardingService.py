@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from typing import Dict, Callable
 
 class IGuardingService(ABC):
     @abstractmethod
@@ -8,4 +7,8 @@ class IGuardingService(ABC):
 
     @abstractmethod
     def monitor_current(self, current_data):
+        pass
+
+    @abstractmethod
+    def get_guarding_state(self):
         pass

@@ -5,12 +5,15 @@ from datetime import datetime
 
 from app.backend.Interfaces.ICalculationService import ICalculationService
 from app.backend.Interfaces.ISensorReader import ISensorReader
+from app.backend.Technical.Logging import LoggingMixin
 
 
-class DatabaseManager:
+class DatabaseManager(LoggingMixin):
     """Manages database operations for the climate chamber application."""
 
-    def __init__(self, db_path: str = 'ClimateChamber_data.db', sensor_reader: Optional[ISensorReader] = None, calculation_service: ICalculationService = None) -> None:
+    def __init__(self, db_path: str = 'ClimateChamber_data.db', sensor_reader: Optional[ISensorReader] = None,
+                 calculation_service: ICalculationService = None, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
         self.db_path = db_path
         self.logging_active = False
         self.current_cycle_id: Optional[int] = None
@@ -79,7 +82,7 @@ class DatabaseManager:
             bool: True if cycle started successfully, False otherwise
         """
         if self.logging_active:
-            print("Logging cycle already in progress.")
+            self.print("Logging cycle already in progress.")
             return False
 
         try:
@@ -92,10 +95,10 @@ class DatabaseManager:
                 self.current_cycle_id = cursor.lastrowid
                 conn.commit()
                 self.logging_active = True
-                print(f"Started logging cycle: {cycle_name}")
+                self.print(f"Started logging cycle: {cycle_name}")
                 return True
         except Exception as e:
-            print(f"Error starting logging cycle: {str(e)}")
+            self.print_error(f"Error starting logging cycle: {str(e)}")
             return False
 
     def on_sensor_data(self, sensor_readings: Dict[str,Dict[str, float]]) -> None:
@@ -105,7 +108,7 @@ class DatabaseManager:
             sensor_readings: Dictionary mapping sensor names to temperature readings
         """
         if not self.logging_active or not self.current_cycle_id:
-            print("No active logging cycle.")
+            self.print("No active logging cycle.")
             return
 
         try:
@@ -120,16 +123,16 @@ class DatabaseManager:
                         "INSERT INTO sensor_readings (sensor_type, cycle_id, sensor_id, timestamp, value) VALUES (?, ?, ?, ?, ?)",
                         ('temperature', self.current_cycle_id, sensor_name, timestamp, temperature)
                     )
-                    print(f"Logged: Sensor {sensor_name}, Temperature: {temperature}°C")
+                    self.print(f"Logged: Sensor {sensor_name}, Temperature: {temperature}°C")
                 for sensor_name, current in current_readings.items():
                     cursor.execute(
                         "INSERT INTO sensor_readings (sensor_type, cycle_id, sensor_id, timestamp, value) VALUES (?, ?, ?, ?, ?)",
                         ('current', self.current_cycle_id, sensor_name, timestamp, current)
                     )
-                    print(f"Logged: Sensor {sensor_name}, Current draw: {current}°C")
+                    self.print(f"Logged: Sensor {sensor_name}, Current draw: {current}°C")
                 conn.commit()
         except Exception as e:
-            print(f"Error logging sensor data: {str(e)}")
+            self.print_error(f"Error logging sensor data: {str(e)}")
 
     def on_calculation_data(self, calculation_readings: Dict[str, float]) -> None:
         """Handle incoming calculation data and log it to the database.
@@ -138,7 +141,7 @@ class DatabaseManager:
             calculation_readings: Dictionary with keys: pid_output, current_temp, target_temp, error
         """
         if not self.logging_active or not self.current_cycle_id:
-            print("No active logging cycle.")
+            self.print("No active logging cycle.")
             return
 
         try:
@@ -157,12 +160,12 @@ class DatabaseManager:
                     (self.current_cycle_id, "PID_Control", timestamp, pid_output, current_temp, target_temp, error)
                 )
 
-                print(
+                self.print(
                     f"Logged calculation data: PID Output: {pid_output}, Current Temp: {current_temp}°C, Target Temp: {target_temp}°C, Error: {error}")
                 conn.commit()
 
         except Exception as e:
-            print(f"Error logging calculation data: {str(e)}")
+            self.print_error(f"Error logging calculation data: {str(e)}")
 
     def stop_logging_cycle(self) -> bool:
         """Stop the ongoing logging cycle.
@@ -171,7 +174,7 @@ class DatabaseManager:
             bool: True if cycle stopped successfully, False otherwise
         """
         if not self.logging_active or not self.current_cycle_id:
-            print("No active logging cycle to stop.")
+            self.print("No active logging cycle to stop.")
             return False
 
         try:
@@ -184,10 +187,10 @@ class DatabaseManager:
                 conn.commit()
                 self.logging_active = False
                 self.current_cycle_id = None
-                print("Logging cycle stopped.")
+                self.print("Logging cycle stopped.")
                 return True
         except Exception as e:
-            print(f"Error stopping logging cycle: {str(e)}")
+            self.print_error(f"Error stopping logging cycle: {str(e)}")
             return False
 
     def delete_cycle(self, cycle_name: str) -> bool:
@@ -198,7 +201,7 @@ class DatabaseManager:
             cycle = cursor.fetchone()
             
             if not cycle:
-                print(f"Cycle '{cycle_name}' not found.")
+                self.print(f"Cycle '{cycle_name}' not found.")
                 return False
 
             cycle_id = cycle[0]
@@ -206,7 +209,7 @@ class DatabaseManager:
             cursor.execute("DELETE FROM calculation_data WHERE cycle_id = ?", (cycle_id,))
             cursor.execute("DELETE FROM cycles WHERE cycle_id = ?", (cycle_id,))
             conn.commit()
-            print(f"Deleted cycle '{cycle_name}' and associated sensor readings.")
+            self.print(f"Deleted cycle '{cycle_name}' and associated sensor readings.")
             return True
 
         def delete_cycle(self, cycle_name: str) -> bool:
@@ -217,7 +220,7 @@ class DatabaseManager:
                 cycle = cursor.fetchone()
 
                 if not cycle:
-                    print(f"Cycle '{cycle_name}' not found.")
+                    self.print(f"Cycle '{cycle_name}' not found.")
                     return False
 
                 cycle_id = cycle[0]
@@ -225,7 +228,7 @@ class DatabaseManager:
                 cursor.execute("DELETE FROM calculation_data WHERE cycle_id = ?", (cycle_id,))
                 cursor.execute("DELETE FROM cycles WHERE cycle_id = ?", (cycle_id,))
                 conn.commit()
-                print(f"Deleted cycle '{cycle_name}' and associated sensor readings.")
+                self.print(f"Deleted cycle '{cycle_name}' and associated sensor readings.")
                 return True
 
     def delete_all_cycles(self) -> bool:
@@ -239,7 +242,7 @@ class DatabaseManager:
                 all_cycles = cursor.fetchall()
 
                 if not all_cycles:
-                    print("No cycles found to delete.")
+                    self.print("No cycles found to delete.")
                     return True
 
                 # Delete all data in correct order (foreign key constraints)
@@ -249,14 +252,14 @@ class DatabaseManager:
 
                 conn.commit()
 
-                print(f"Deleted {len(all_cycles)} cycles and all associated data.")
+                self.print(f"Deleted {len(all_cycles)} cycles and all associated data.")
                 for cycle_id, cycle_name in all_cycles:
-                    print(f"  - Deleted cycle: '{cycle_name}'")
+                    self.print(f"  - Deleted cycle: '{cycle_name}'")
 
                 return True
 
         except Exception as e:
-            print(f"Error deleting all cycles: {str(e)}")
+            self.print_error(f"Error deleting all cycles: {str(e)}")
             return False
 
     def list_cycles(self) -> List[Tuple[Any, ...]]:
