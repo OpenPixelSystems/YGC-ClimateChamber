@@ -5,7 +5,7 @@ class ISensorReader(ABC):
     """Interface for sensor reading functionality."""
 
     @abstractmethod
-    def read_sensors(self) -> Dict[str, float]:
+    def read_sensors(self) -> Dict[str,Dict[str, float]]:
         """Read all connected Sensors.
         
         Returns:
