@@ -57,7 +57,8 @@
             "LPWM": 23,
             "R_EN": 22,
             "L_EN": 23,
-            "PWM_FREQUENCY": 20000
+            "PWM_FREQUENCY": 20000,
+            "Duty cycle limit": 30
         },
         "unit": "degrees",
         "_comment": "Temperature sensor on inside of Peltier element 1"

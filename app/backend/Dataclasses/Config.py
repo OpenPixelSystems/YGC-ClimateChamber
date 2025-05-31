@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 
-
 @dataclass
 class ControlConfig:
     """Configuration for PID controller parameters."""
@@ -22,11 +21,11 @@ class GraphConfig:
 class SensorConfig:
     name: str = ""
     type: str = ""
-    gpio_pin: int = 1
-    SDA: int = 1
-    SCL: int = 1
-    max_value: float = 1
-    min_value: float = 1
+    gpio_pin: int = None
+    SDA: int = None
+    SCL: int = None
+    max_value: float = None
+    min_value: float = None
     unit: str = ""
     critical: bool = False
 
@@ -34,11 +33,12 @@ class SensorConfig:
 class PeltierConfig:
     name: str = ""
     type: str = ""
-    RPWM: int = 1
-    LPWM: int = 1
-    R_EN: int = 1
-    L_EN: int = 1
-    PWM_FREQUENCY: float = 1
+    RPWM: int = None
+    LPWM: int = None
+    R_EN: int = None
+    L_EN: int = None
+    PWM_FREQUENCY: float = None
+    Duty_cycle_limit: int = None
 
 @dataclass
 class McuConfig:

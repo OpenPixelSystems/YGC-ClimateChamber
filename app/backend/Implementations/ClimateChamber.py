@@ -39,15 +39,15 @@ class ClimateChamber(IClimateChamber, LoggingMixin):
             # Positive output = need to heat
             duty_cycle = min(abs(output), 100)
             for peltier in self.peltierModules:
-                peltier.heat(duty_cycle)
-            self.print(f"[ClimateChamber] Heating with duty cycle: {duty_cycle}%")
+                actual_duty_cycle = peltier.heat(duty_cycle)
+                self.print(f"[ClimateChamber] Heating with duty cycle: {actual_duty_cycle}%")
 
         elif output < 0:
             # Negative output = need to cool
             duty_cycle = min(abs(output), 100)
             for peltier in self.peltierModules:
-                peltier.cool(duty_cycle)
-            self.print(f"[ClimateChamber] Cooling with duty cycle: {duty_cycle}%")
+                actual_duty_cycle = peltier.cool(duty_cycle)
+                self.print(f"[ClimateChamber] Cooling with duty cycle: {actual_duty_cycle}%")
 
         else:
             # Zero output = stop

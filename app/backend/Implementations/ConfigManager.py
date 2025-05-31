@@ -124,11 +124,16 @@ class ConfigManager(IConfigManager, LoggingMixin):
                         LPWM=value["editable"]["LPWM"],
                         R_EN=value["editable"]["R_EN"],
                         L_EN=value["editable"]["L_EN"],
-                        PWM_FREQUENCY=value["editable"]["PWM_FREQUENCY"]
+                        PWM_FREQUENCY=value["editable"]["PWM_FREQUENCY"],
+                        Duty_cycle_limit=value["editable"]["Duty cycle limit"]
                     ))
 
+            for sensor in sensors:
+                print("[ConfigManager] [__load_mcu_config]" + str(sensor))
             self._mcu_config.sensors = sensors
             self.print(f"[ConfigManager] [__load_mcu_config] Loaded {len(sensors)} sensors/devices into MCU config.")
+            for peltier in peltier_modules:
+                print("[ConfigManager] [__load_mcu_config]" + str(peltier))
             self._mcu_config.peltierModules = peltier_modules
             self.print(f"[ConfigManager] [__load_mcu_config] Loaded {len(peltier_modules)} Peltier module(s) into MCU config.")
         except (FileNotFoundError, KeyError, json.JSONDecodeError, ValueError) as e:
