@@ -25,9 +25,6 @@ export function createBaseChart(ctx, initialData) {
     });
 }
 
-export function getRandomColor() {
-    return `hsl(${Math.random() * 360}, 100%, 70%)`;
-}
 
 export function updateChartInterpolation(chart, method) {
     chart.data.datasets.forEach(dataset => {
