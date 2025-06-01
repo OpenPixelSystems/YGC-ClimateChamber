@@ -214,9 +214,9 @@ function updateChart(datasets) {
 }
 
 function getRandomColor(alpha = 1) {
-    const r = Math.floor(Math.random() * 255);
-    const g = Math.floor(Math.random() * 255);
-    const b = Math.floor(Math.random() * 255);
+    const r = Math.floor(Math.random() * 120) + 80;
+    const g = Math.floor(Math.random() * 120) + 80;
+    const b = Math.floor(Math.random() * 120) + 80;
     return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 

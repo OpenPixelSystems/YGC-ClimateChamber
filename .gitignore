@@ -1,3 +1,4 @@
 *.db
 /callgraph.png
 *.log
+.idea/
