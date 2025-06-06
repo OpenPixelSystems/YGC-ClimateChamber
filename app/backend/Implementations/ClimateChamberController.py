@@ -53,10 +53,10 @@ class ClimateChamberController(IClimateChamberController, LoggingMixin):
         """Manually steer peltier power"""
         if self.guarding_service.get_guarding_state():
             self.print()
-            self.current_power = self.calculation_service.manual_pid_control(0)
+            self.current_power = 0
             self.print(f"\n[ClimateChamberController] [manual_control] Control sensor value exceeded reset peltier power: {self.current_power}")
         else:
-            self.current_power = self.calculation_service.manual_pid_control(power)
+            self.current_power = power
             self.print(f"\n[ClimateChamberController] [manual_control] Manually steer peltier power {power}")
 
     def stop_sensor_stream(self):
@@ -73,8 +73,8 @@ class ClimateChamberController(IClimateChamberController, LoggingMixin):
                 data = self.sensor_reader.read_sensors()
 
                 # If we have a desired temperature profile, apply control
-                if self.desired_graph and data['DS18B20']: #TODO currently only uses one sensor, extend to average of applicable sensors
-                    current_temp = data['DS18B20']['Inside_on_device']
+                if self.desired_graph and data['MPL3115A2']['temporary_sensor'] is not None: #TODO currently only uses one sensor, extend to average of applicable sensors
+                    current_temp = data['MPL3115A2']['temporary_sensor']
                     target_temp = self.desired_graph.get_temperature_at_time()
                     self.print("Target temperature is: ", target_temp)
                     if self.guarding_service.get_guarding_state():
@@ -88,6 +88,7 @@ class ClimateChamberController(IClimateChamberController, LoggingMixin):
                     # Add control info to the data
                     data['calculation_data'] = {'pid_output':output,'target_temp': target_temp, 'control_error': target_temp - current_temp}
                 else:
+                    self.calculation_service.manual_pid_control(self.current_power)
                     data['calculation_data'] = {'Peltier power':self.current_power}
                 self.print(f"Sending data to webpage {data}")
                 yield f"data: {json.dumps(data)}\n\n"

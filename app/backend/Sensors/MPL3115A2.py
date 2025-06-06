@@ -1,8 +1,6 @@
 import os
 import random
-import time
 from typing import Dict, Optional
-from app.backend.Providers.gpio_provider import gpio
 from app.backend.Interfaces.ISensor import ISensor
 
 
@@ -63,6 +61,7 @@ class MPL3115A2(ISensor):
         except ImportError:
             libs_available = False
 
+        print(f"is_mock {is_mock}, is_not_pi {is_not_pi}, libs_available {libs_available}")
         return is_mock or is_not_pi or not libs_available
 
     def initialize(self) -> None:
@@ -162,7 +161,13 @@ class MPL3115A2(ISensor):
                     print(f"[MPL3115A2] Read actual sensor {measurement_type}: {value:.2f} {self._unit}")
 
                 except Exception as e:
-                    # Error reading sensor, use simulated values
+                    # Error reading sensor, return None instead of simulated values
+                    json_format[self._type] = {self._name: None}
+                    print(f"[MPL3115A2] Error reading real sensor: {str(e)}, returning None")
+            else:
+                # We're in a test environment or sensor initialization failed
+                # Only use simulated values in testing environment
+                if self._is_testing:
                     simulated_values = self._get_simulated_values()
 
                     if self._unit.lower() == 'hpa':
@@ -175,23 +180,11 @@ class MPL3115A2(ISensor):
                         value = simulated_values['pressure']
 
                     json_format[self._type] = {self._name: value}
-                    print(
-                        f"[MPL3115A2] Error reading real sensor: {str(e)}, using simulated value: {value} {self._unit}")
-            else:
-                # We're in a test environment, use simulated values
-                simulated_values = self._get_simulated_values()
-
-                if self._unit.lower() == 'hpa':
-                    value = simulated_values['pressure']
-                elif self._unit.lower() == 'm':
-                    value = simulated_values['altitude']
-                elif self._unit.lower() == 'degrees':
-                    value = simulated_values['temperature']
+                    print(f"[MPL3115A2] In testing environment, using simulated value: {value} {self._unit}")
                 else:
-                    value = simulated_values['pressure']
-
-                json_format[self._type] = {self._name: value}
-                print(f"[MPL3115A2] In testing environment, using simulated value: {value} {self._unit}")
+                    # On real hardware but sensor failed to initialize
+                    json_format[self._type] = {self._name: None}
+                    print(f"[MPL3115A2] Sensor initialization failed on real hardware, returning None")
 
         except Exception as e:
             print(f"[MPL3115A2] Critical error reading sensor {self._name}: {str(e)}")
@@ -225,23 +218,32 @@ class MPL3115A2(ISensor):
                         f"[MPL3115A2] Read all actual sensor values - P: {pressure} hPa, A: {altitude} m, T: {temperature} C")
 
                 except Exception as e:
-                    # Error reading sensor, use simulated values
+                    # Error reading sensor, return None values instead of simulated values
+                    json_format[self._type] = {
+                        f"{self._name}_pressure": None,
+                        f"{self._name}_altitude": None,
+                        f"{self._name}_temperature": None
+                    }
+                    print(f"[MPL3115A2] Error reading real sensor: {str(e)}, returning None values")
+            else:
+                # We're in a test environment or sensor initialization failed
+                # Only use simulated values in testing environment
+                if self._is_testing:
                     simulated_values = self._get_simulated_values()
                     json_format[self._type] = {
                         f"{self._name}_pressure": simulated_values['pressure'],
                         f"{self._name}_altitude": simulated_values['altitude'],
                         f"{self._name}_temperature": simulated_values['temperature']
                     }
-                    print(f"[MPL3115A2] Error reading real sensor: {str(e)}, using simulated values")
-            else:
-                # Use simulated values
-                simulated_values = self._get_simulated_values()
-                json_format[self._type] = {
-                    f"{self._name}_pressure": simulated_values['pressure'],
-                    f"{self._name}_altitude": simulated_values['altitude'],
-                    f"{self._name}_temperature": simulated_values['temperature']
-                }
-                print(f"[MPL3115A2] In testing environment, using simulated values")
+                    print(f"[MPL3115A2] In testing environment, using simulated values")
+                else:
+                    # On real hardware but sensor failed to initialize
+                    json_format[self._type] = {
+                        f"{self._name}_pressure": None,
+                        f"{self._name}_altitude": None,
+                        f"{self._name}_temperature": None
+                    }
+                    print(f"[MPL3115A2] Sensor initialization failed on real hardware, returning None values")
 
         except Exception as e:
             print(f"[MPL3115A2] Critical error reading sensor {self._name}: {str(e)}")
