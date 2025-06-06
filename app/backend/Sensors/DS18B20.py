@@ -108,31 +108,32 @@ class DS18B20(ISensor):
                                 self._last_reading = temp_c  # Store for future reference
                                 print(f"[DS18B20] Read actual sensor value: {temp_c} {self._unit}")
                             else:
-                                # Could not find temperature data, use simulated value
-                                value = self._get_simulated_value()
-                                json_format[self._type] = {self._name: value}
-                                print(
-                                    f"[DS18B20] Could not find temperature data, using simulated value: {value} {self._unit}")
+                                # Could not find temperature data, return None instead of simulated value
+                                json_format[self._type] = {self._name: None}
+                                print(f"[DS18B20] Could not find temperature data, returning None")
                         else:
-                            # CRC check failed, use simulated value
-                            value = self._get_simulated_value()
-                            json_format[self._type] = {self._name: value}
-                            print(f"[DS18B20] CRC check failed, using simulated value: {value} {self._unit}")
+                            # CRC check failed, return None instead of simulated value
+                            json_format[self._type] = {self._name: None}
+                            print(f"[DS18B20] CRC check failed, returning None")
                     else:
-                        # No sensor found, use simulated value
-                        value = self._get_simulated_value()
-                        json_format[self._type] = {self._name: value}
-                        print(f"[DS18B20] No sensor found, using simulated value: {value} {self._unit}")
+                        # No sensor found, return None instead of simulated value
+                        json_format[self._type] = {self._name: None}
+                        print(f"[DS18B20] No sensor found, returning None")
                 except Exception as e:
-                    # Error reading sensor, use simulated value
+                    # Error reading sensor, return None instead of simulated value
+                    json_format[self._type] = {self._name: None}
+                    print(f"[DS18B20] Error reading real sensor: {str(e)}, returning None")
+            else:
+                # We're in a test environment or sensor initialization failed
+                # Only use simulated values in testing environment
+                if self._is_testing:
                     value = self._get_simulated_value()
                     json_format[self._type] = {self._name: value}
-                    print(f"[DS18B20] Error reading real sensor: {str(e)}, using simulated value: {value} {self._unit}")
-            else:
-                # We're in a test environment (using MockGPIO), use a simulated value
-                value = self._get_simulated_value()
-                json_format[self._type] = {self._name: value}
-                print(f"[DS18B20] In testing environment, using simulated value: {value} {self._unit}")
+                    print(f"[DS18B20] In testing environment, using simulated value: {value} {self._unit}")
+                else:
+                    # On real hardware but 1-Wire interface not available
+                    json_format[self._type] = {self._name: None}
+                    print(f"[DS18B20] 1-Wire interface not available on real hardware, returning None")
 
         except Exception as e:
             print(f"[DS18B20] Critical error reading sensor {self._name}: {str(e)}")

@@ -1,8 +1,20 @@
 from datetime import datetime
 from app.backend.Interfaces.IConfigManager import IConfigManager
-
 from typing import List, Tuple, Union
-import numpy as np
+import math
+import bisect
+
+
+def linear_interp(x, xp, fp):
+    """Mimics numpy.interp: linearly interpolates a value at x based on xp, fp"""
+    i = bisect.bisect_left(xp, x)
+    if i == 0:
+        return fp[0]
+    elif i >= len(xp):
+        return fp[-1]
+    x0, x1 = xp[i - 1], xp[i]
+    y0, y1 = fp[i - 1], fp[i]
+    return y0 + (y1 - y0) * (x - x0) / (x1 - x0)
 
 
 class Graph:
@@ -64,13 +76,13 @@ class Graph:
 
         # Get the first and last time points (rounded to integers)
         start_time = int(times[0])
-        end_time = int(np.ceil(times[-1]))
+        end_time = int(math.ceil(times[-1]))
 
         # Create array of integer seconds
         interp_times = list(range(start_time, end_time + 1))
 
-        # Use numpy's interp function for linear interpolation
-        interp_temps = np.interp(interp_times, times, temps)
+        # Interpolate each time
+        interp_temps = [linear_interp(t, times, temps) for t in interp_times]
 
         # Combine into tuples and return
         return [(int(t), float(temp)) for t, temp in zip(interp_times, interp_temps)]
@@ -97,16 +109,14 @@ class Graph:
             if t == time:
                 return temp
 
-        # This should never happen if interpolation is done correctly
-        # but included for robustness
-        return np.interp([time],
-                         [t for t, _ in self.interpolated_setpoints],
-                         [temp for _, temp in self.interpolated_setpoints])[0]
+        # Fallback to interpolation
+        return linear_interp(time,
+                             [t for t, _ in self.interpolated_setpoints],
+                             [temp for _, temp in self.interpolated_setpoints])
 
     def get_current_target(self):
-
         elapsed_seconds = round((datetime.now() - self.start_time).total_seconds())
         if len(self.setpoints) <= elapsed_seconds:
-            return self.setpoints[len(self.setpoints)-1][1]
+            return self.setpoints[len(self.setpoints) - 1][1]
         else:
             return self.setpoints[elapsed_seconds][1]

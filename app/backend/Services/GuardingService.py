@@ -31,6 +31,11 @@ class GuardingService(IGuardingService, LoggingMixin):
         for sensor_name, temperature in temperature_data.items():
             for sensor in self.critical_sensors:
                 if sensor.name == sensor_name:
+                    if temperature is None:
+                        self.print(
+                            f'[GuardingService][monitor_temperature] value missing for sensor {sensor_name}')
+                        self.stop_steering_current = True
+                        continue
                     if temperature > sensor.max_value:
                         self.print(
                             f'[GuardingService][monitor_temperature] value for sensor {sensor_name} above threshold limits')
@@ -43,6 +48,11 @@ class GuardingService(IGuardingService, LoggingMixin):
         for sensor_name, current in current_data.items():
             for sensor in self.critical_sensors:
                 if sensor.name == sensor_name:
+                    if current is None:
+                        self.print(
+                            f'[GuardingService][monitor_current] value missing for sensor {sensor_name}')
+                        self.stop_steering_current = True
+                        continue
                     if current > sensor.max_value:
                         self.print(
                             f'[GuardingService][monitor_current] value for sensor {sensor_name} above threshold limits')

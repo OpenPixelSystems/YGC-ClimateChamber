@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import List, Optional
 
 @dataclass
 class ControlConfig:
@@ -42,5 +43,5 @@ class PeltierConfig:
 
 @dataclass
 class McuConfig:
-    sensors: list[SensorConfig] = None
-    peltierModules: list[PeltierConfig] = None
+    sensors: Optional[List[SensorConfig]] = None
+    peltierModules: Optional[List[PeltierConfig]] = None
