@@ -234,23 +234,33 @@ displayTypeDropdown.addEventListener('change', () => {
 // Delete data button
 document.getElementById('deleteData').addEventListener('click', async () => {
     try {
-    const cycleName = dropdown.value;
-    const res = await fetch(`/api/delete_cycle/${cycleName}`);
+        const cycleName = dropdown.value;
+        const res = await fetch(`/api/delete_cycle/${cycleName}`);
+        const data = await res.json();
 
-    const data = await res.json(); // parse backend response
+        if (!res.ok) {
+            throw new Error(data.message || 'Failed to delete cycle');
+        }
 
-    if (!res.ok) {
-        // show popup on error with backend message
-        throw new Error(data.message || 'Failed to delete cycle');
+        // Verwijder optie uit de dropdown
+        const optionToRemove = Array.from(dropdown.options).find(opt => opt.value === cycleName);
+        if (optionToRemove) {
+            optionToRemove.remove();
+        }
+
+        // Reset dropdown of toon placeholder
+        if (dropdown.options.length > 0) {
+            dropdown.selectedIndex = 0;
+            loadCycleData(dropdown.value); // Laad nieuwe eerste cycle
+        } else {
+            // Optioneel: leeg maken of melding tonen
+            document.getElementById('chart-container').innerHTML = "<p>No data available.</p>";
+        }
+
+        alert(`Cycle ${cycleName} deleted successfully.`);
+    } catch (error) {
+        alert(error.message);
     }
-
-    // show popup on success
-    alert(`✅ Success: ${data.message || 'Cycle deleted successfully'}`);
-
-    } catch (err) {
-        alert(`❌ Error: ${err.message}`);
-    }
-
 });
 
 // Delete data button
