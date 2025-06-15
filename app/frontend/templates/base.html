@@ -1,6 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <script>
+        (function() {
+            const isDarkMode = localStorage.getItem('darkMode') === 'true';
+            if (isDarkMode) {
+                document.documentElement.classList.add('dark-mode');
+            }
+        })();
+    </script>
     {% block head %}
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -13,17 +21,17 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='styles/graphs.css') }}">
     <script>
         function toggleDarkMode() {
-            document.body.classList.toggle('dark-mode');
-            // Save preference
-            const isDarkMode = document.body.classList.contains('dark-mode');
+            document.documentElement.classList.toggle('dark-mode');
+            const isDarkMode = document.documentElement.classList.contains('dark-mode');
             localStorage.setItem('darkMode', isDarkMode);
         }
 
-        // Check for saved dark mode preference
         document.addEventListener('DOMContentLoaded', () => {
             const isDarkMode = localStorage.getItem('darkMode') === 'true';
             if (isDarkMode) {
-                document.body.classList.add('dark-mode');
+                document.documentElement.classList.add('dark-mode');
+            } else {
+                document.documentElement.classList.remove('dark-mode');
             }
         });
     </script>
@@ -35,7 +43,6 @@
             <a href="{{ url_for('home.index') }}" class="nav-link">Home</a>
             <a href="{{ url_for('graph.setup_graph') }}" class="nav-link">Graph Setup</a>
             <a href="{{ url_for('viewer.view_database') }}" class="nav-link">Database viewer</a>
-
         </div>
         <div class="nav-controls">
             <a href="{{ url_for('config.edit_config') }}" class="icon-button" title="System Configuration">
