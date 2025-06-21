@@ -36,11 +36,51 @@ class SensorGraph {
       // Setup sliders
       this.setupSliders();
 
+      // Setup Peltier checkbox
+      this.setupPeltierCheckbox();
+
       // Automatically start sensor stream
       this.toggleSensorStream();
     } catch (error) {
       console.error('Initialization failed:', error);
     }
+  }
+
+  /**
+   * Setup Peltier checkbox with event listener
+   */
+  setupPeltierCheckbox() {
+    const peltierCheckbox = document.getElementById('peltierCheckbox');
+
+    peltierCheckbox.addEventListener('change', () => {
+      this.updatePeltierState(peltierCheckbox.checked);
+    });
+  }
+
+  /**
+   * Updates Peltier elements state based on checkbox
+   * @param {boolean} enabled - Whether Peltier elements should be enabled
+   */
+  updatePeltierState(enabled) {
+    // Send Peltier state to server
+    fetch('/enable_peltier', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ enabled: enabled })
+    })
+    .then(response => {
+      if (!response.ok) {
+        throw new Error('Failed to update Peltier state');
+      }
+      console.log(`Peltier elements ${enabled ? 'enabled' : 'disabled'}`);
+    })
+    .catch(error => {
+      console.error('Error updating Peltier state:', error);
+      // Revert checkbox state on error
+      document.getElementById('peltierCheckbox').checked = !enabled;
+    });
   }
 
   /**

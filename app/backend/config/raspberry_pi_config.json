@@ -1,10 +1,12 @@
 {
     "_comment": "This file contains the parameters for the raspberry pi, reformatted for unified configuration parsing.",
-    "Inside_on_device": {
-        "name": "Inside_on_device",
+    "Outside_somewhere": {
+        "name": "Outside_somewhere",
         "type": "DS18B20",
         "editable": {
-            "gpio_pin": 12,
+            "gpio_pin": 4,
+            "rom_address": 1234,
+            "sensor_group": "Environment",
             "max_value": 21,
             "min_value": -40,
             "safety_critical": 0
@@ -12,38 +14,57 @@
         "unit": "degrees",
         "_comment": "Temperature sensor on device"
     },
-    "temporary_sensor": {
-        "name": "temporary_sensor",
-        "type": "MPL3115A2",
-        "editable": {
-            "SDA": 2,
-            "SCL": 3,
-            "min_value": -40,
-            "max_value": 120,
-            "safety_critical": 1
-        },
-        "unit": "degrees",
-        "_comment": "Temperature sensor on device"
-    },
-    "outside_on_device": {
-        "name": "outside_on_device",
+    "Inside_somewhere": {
+        "name": "Inside_somewhere",
         "type": "DS18B20",
         "editable": {
-            "gpio_pin": 13,
+            "gpio_pin": 4,
+            "sensor_group": "Inside",
+            "rom_address": "00000054e526",
             "max_value": 120,
             "min_value": -40,
-            "safety_critical": 1
+            "safety_critical": 0
         },
         "unit": "degrees",
         "_comment": "Temperature sensor outside device"
+    },
+    "outside_on_peltier": {
+        "name": "outside_on_peltier",
+        "type": "DS18B20",
+        "editable": {
+            "gpio_pin": 4,
+            "sensor_group": "Peltier",
+            "rom_address": "00000055267f",
+            "max_value": 120,
+            "min_value": -40,
+            "safety_critical": 1
+        },
+        "unit": "degrees",
+        "_comment": "Temperature sensor outside peltier device"
+    },
+    "inside_on_peltier": {
+        "name": "inside_on_peltier",
+        "type": "DS18B20",
+        "editable": {
+            "gpio_pin": 4,
+            "sensor_group": "Peltier",
+            "rom_address": "00000050dab2",
+            "max_value": 120,
+            "min_value": -40,
+            "safety_critical": 0
+        },
+        "unit": "degrees",
+        "_comment": "Temperature sensor inside peltier device"
     },
     "Current_sensor": {
         "name": "Current_sensor",
         "type": "ADS1115",
         "editable": {
-            "gpio_pin": 1,
-            "max_value": 120,
-            "min_value": -40,
+            "SDA": 2,
+            "SCL": 3,
+            "read_pin": 0,
+            "max_value": 4,
+            "min_value": -4,
             "safety_critical": 1
         },
         "unit": "Amps",
@@ -53,14 +74,26 @@
         "name": "Peltier_240W",
         "type": "peltier",
         "editable": {
-            "RPWM": 17,
-            "LPWM": 23,
-            "R_EN": 22,
-            "L_EN": 23,
-            "PWM_FREQUENCY": 20000,
+            "driver_type": "BTS7960",
+            "RPWM": 18,
+            "LPWM": 22,
+            "R_EN": 5,
+            "L_EN": 6,
+            "PWM_FREQUENCY": 5000,
             "Duty cycle limit": 30
         },
         "unit": "degrees",
         "_comment": "Temperature sensor on inside of Peltier element 1"
+    },
+    "Fan_top": {
+        "name": "Fan_top",
+        "type": "fanModule",
+        "editable": {
+            "name": "only fans",
+            "type": "TB6612FNG",
+            "EN": 27
+        },
+        "unit": "degrees",
+        "_comment": "Fans located outside of climate chamber"
     }
 }

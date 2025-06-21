@@ -12,3 +12,7 @@ class ISensorReader(ABC):
             Dictionary mapping sensor names to their readings
         """
         pass
+
+    @abstractmethod
+    def subscribe(self,callback):
+        pass

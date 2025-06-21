@@ -23,8 +23,3 @@ class IConfigManager(ABC):
     def mcu_config(self) -> McuConfig:
         """Get the MCU configuration."""
         pass
-
-    @abstractmethod
-    def reload_config(self) -> None:
-        """Reload all configurations from their respective files."""
-        pass

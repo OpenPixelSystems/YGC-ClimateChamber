@@ -1,24 +1,24 @@
 from abc import ABC, abstractmethod
 
-from app.backend.Dataclasses.Config import PeltierConfig
+from app.backend.Dataclasses.Config import FanConfig
 
-
-class IPeltierModule(ABC):
+class IFanModule(ABC):
     """Interface for sensor implementations."""
 
     @abstractmethod
-    def __init__(self, peltier_config: PeltierConfig):
+    def __init__(self, fan_config: FanConfig):
         """Initialize the peltier module."""
         pass
 
+    @abstractmethod
     def initialize(self) -> None:
         """Initialize the peltier hardware."""
         pass
 
     @abstractmethod
-    def enable(self):
+    def activate(self) -> None:
         pass
 
     @abstractmethod
-    def disable(self):
+    def deactivate(self) -> None:
         pass

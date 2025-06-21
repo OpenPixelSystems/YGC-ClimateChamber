@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import patch
 
-from app.backend.Implementations.PeltierModule import PeltierModule
+from app.backend.Modules.PeltierModule import PeltierModule
 from app.backend.Dataclasses.Config import PeltierConfig
 
 

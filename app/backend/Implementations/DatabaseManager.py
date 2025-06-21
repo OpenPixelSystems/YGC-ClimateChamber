@@ -101,39 +101,55 @@ class DatabaseManager(LoggingMixin):
             self.print_error(f"Error starting logging cycle: {str(e)}")
             return False
 
-    def on_sensor_data(self, sensor_readings: Dict[str,Dict[str, float]]) -> None:
+    def on_sensor_data(self, sensor_readings: Dict[str, Dict[str, float]]) -> None:
         """Handle incoming sensor data and log it to the database.
-        
+
         Args:
-            sensor_readings: Dictionary mapping sensor names to temperature readings
+            sensor_readings: Dictionary mapping sensor types to readings (DS18B20 has nested groups, others are flat)
         """
         if not self.logging_active or not self.current_cycle_id:
             self.print("No active logging cycle.")
             return
-
+        print(f"[DatabaseManager][on_sensor_data] Received sensor data {sensor_readings}")
         try:
             with self.get_connection() as conn:
                 cursor = conn.cursor()
                 timestamp = datetime.now().isoformat()
-                temperature_readings = {
-                    **sensor_readings.get('DS18B20', {}),
-                    **sensor_readings.get('MPL3115A2', {})
-                }
-                current_readings = {
-                    **sensor_readings.get('ADS1115', {})
-                }
+
+                # Handle DS18B20 temperature sensors (nested structure)
+                temperature_readings = {}
+                if 'DS18B20' in sensor_readings:
+                    for group_name, readings in sensor_readings['DS18B20'].items():
+                        for sensor_name, temperature in readings.items():
+                            temperature_readings[f"{group_name}_{sensor_name}"] = temperature
+
+                # Handle MPL3115A2 temperature sensors (flat structure)
+                if 'MPL3115A2' in sensor_readings:
+                    for sensor_name, temperature in sensor_readings['MPL3115A2'].items():
+                        temperature_readings[sensor_name] = temperature
+
+                # Handle ADS1115 current sensors (flat structure)
+                current_readings = {}
+                if 'ADS1115' in sensor_readings:
+                    for sensor_name, current in sensor_readings['ADS1115'].items():
+                        current_readings[sensor_name] = current
+
+                # Insert temperature readings
                 for sensor_name, temperature in temperature_readings.items():
                     cursor.execute(
                         "INSERT INTO sensor_readings (sensor_type, cycle_id, sensor_id, timestamp, value) VALUES (?, ?, ?, ?, ?)",
                         ('temperature', self.current_cycle_id, sensor_name, timestamp, temperature)
                     )
-                    self.print(f"Logged: Sensor {sensor_name}, Temperature: {temperature}°C")
+                    self.print(f"[DatabaseManager] [on_sensor_data]Logged: Sensor {sensor_name}, Temperature: {temperature}°C")
+
+                # Insert current readings
                 for sensor_name, current in current_readings.items():
                     cursor.execute(
                         "INSERT INTO sensor_readings (sensor_type, cycle_id, sensor_id, timestamp, value) VALUES (?, ?, ?, ?, ?)",
                         ('current', self.current_cycle_id, sensor_name, timestamp, current)
                     )
-                    self.print(f"Logged: Sensor {sensor_name}, Current draw: {current}°C")
+                    self.print(f"[DatabaseManager] [on_sensor_data]Logged: Sensor {sensor_name}, Current draw: {current}A")
+
                 conn.commit()
         except Exception as e:
             self.print_error(f"Error logging sensor data: {str(e)}")
@@ -165,7 +181,7 @@ class DatabaseManager(LoggingMixin):
                 )
 
                 self.print(
-                    f"Logged calculation data: PID Output: {pid_output}, Current Temp: {current_temp}°C, Target Temp: {target_temp}°C, Error: {error}")
+                    f"[DatabaseManager] [on_calculation_data]Logged calculation data: PID Output: {pid_output}, Current Temp: {current_temp}°C, Target Temp: {target_temp}°C, Error: {error}")
                 conn.commit()
 
         except Exception as e:

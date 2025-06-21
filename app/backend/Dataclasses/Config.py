@@ -19,6 +19,35 @@ class GraphConfig:
     max_rico: float = 10
 
 @dataclass
+class ISensorConfig:
+    """Configuration for ISensor parameters."""
+    name: str = ""
+    type: str = ""
+    max_value: float = None
+    min_value: float = None
+    unit: str = ""
+    critical: bool = False
+
+
+@dataclass
+class DS18B20Config(ISensorConfig):
+    """Configuration for DS18B20 parameters."""
+    group_name: str = ""
+    rom_address: str = ""
+    gpio_pin: int = 4
+
+@dataclass
+class ADS1115Config(ISensorConfig):
+    read_pin: int = None
+    SDA: int = None
+    SCL: int = None
+
+@dataclass
+class MPL3115A2Config(ISensorConfig):
+    SDA: int = None
+    SCL: int = None
+
+@dataclass
 class SensorConfig:
     name: str = ""
     type: str = ""
@@ -33,7 +62,7 @@ class SensorConfig:
 @dataclass
 class PeltierConfig:
     name: str = ""
-    type: str = ""
+    driver_type: str = ""
     RPWM: int = None
     LPWM: int = None
     R_EN: int = None
@@ -42,6 +71,19 @@ class PeltierConfig:
     Duty_cycle_limit: int = None
 
 @dataclass
+class FanConfig:
+    name: str = ""
+    type: str = ""
+    EN: int = None
+
+@dataclass
+class DriverConfig:
+    name: str = ""
+    type: str = ""
+    EN: int = None
+
+@dataclass
 class McuConfig:
-    sensors: Optional[List[SensorConfig]] = None
+    sensors: Optional[List[ISensorConfig]] = None
     peltierModules: Optional[List[PeltierConfig]] = None
+    fanModules: Optional[List[FanConfig]] = None

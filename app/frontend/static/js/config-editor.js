@@ -7,25 +7,61 @@ document.addEventListener('DOMContentLoaded', () => {
     const fileSelector = document.getElementById('filename');
     let configData = {};
     let filename = fileSelector ? fileSelector.value : null;
+    const SENSOR_GROUPS = ["Environment", "Inside", "Peltier", "External", "System"];
+    const PELTIER_DRIVERS = ["BTS7960", "TB6612FNG"]
+
 
     function renderConfig(obj, path = []) {
         let html = '';
         for (const key in obj) {
             if (key === 'editable' && typeof obj[key] === 'object' && obj[key] !== null) {
-                // Only render number fields inside 'value'
                 html += '<div class="config-fields">';
                 for (const subKey in obj[key]) {
-                    if (typeof obj[key][subKey] === 'number' && !isNaN(obj[key][subKey])) {
-                        const fieldId = [...path, key, subKey].join('.');
+                    const fieldId = [...path, key, subKey].join('.');
+
+                    if (subKey === 'sensor_group') {
+                        // Render dropdown for sensor_group
+                        html += `<div class="config-field">
+                            <label for="${fieldId}">${subKey}</label>
+                            <select id="${fieldId}" name="${fieldId}">`;
+
+                        for (const group of SENSOR_GROUPS) {
+                            const selected = obj[key][subKey] === group ? 'selected' : '';
+                            html += `<option value="${group}" ${selected}>${group}</option>`;
+                        }
+
+                        html += `</select>
+                        </div>`;
+                    }
+                    else if (subKey === 'driver_type') {
+                        // Render dropdown for peltier_types
+                        html += `<div class="config-field">
+                            <label for="${fieldId}">${subKey}</label>
+                            <select id="${fieldId}" name="${fieldId}">`;
+
+                        for (const group of PELTIER_DRIVERS) {
+                            const selected = obj[key][subKey] === group ? 'selected' : '';
+                            html += `<option value="${group}" ${selected}>${group}</option>`;
+                        }
+
+                        html += `</select>
+                        </div>`;
+                    }
+                    else if (typeof obj[key][subKey] === 'number' && !isNaN(obj[key][subKey])) {
                         html += `<div class="config-field">
                             <label for="${fieldId}">${subKey}</label>
                             <input type="number" id="${fieldId}" name="${fieldId}" value="${obj[key][subKey]}" />
                         </div>`;
                     }
+                    else if (typeof obj[key][subKey] === 'string') {
+                        html += `<div class="config-field">
+                            <label for="${fieldId}">${subKey}</label>
+                            <input type="text" id="${fieldId}" name="${fieldId}" value="${obj[key][subKey]}" />
+                        </div>`;
+                    }
                 }
                 html += '</div>';
             } else if (typeof obj[key] === 'object' && obj[key] !== null && !Array.isArray(obj[key])) {
-                // Group each sensor in a "config-group"
                 html += `<div class="config-group">
                             <div class="config-header">
                                 <h3>${key}</h3>
@@ -37,7 +73,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return html;
     }
 
-    // Helper to recursively update configData from form fields
+   // Helper to recursively update configData from form fields
     function updateConfigFromForm(obj, path = []) {
         for (const key in obj) {
             if (typeof obj[key] === 'object' && obj[key] !== null && !Array.isArray(obj[key])) {
@@ -47,6 +83,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 const input = document.getElementById(fieldId);
                 if (input) {
                     obj[key] = parseFloat(input.value);
+                }
+            } else if (typeof obj[key] === 'string') {
+                const fieldId = [...path, key].join('.');
+                const input = document.getElementById(fieldId);
+                if (input) {
+                    obj[key] = input.value; // For both text inputs and select dropdowns
                 }
             }
         }

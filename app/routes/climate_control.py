@@ -62,3 +62,23 @@ def update_power():
     app_state.controller.manual_control(power_value)
 
     return jsonify({'status': 'Peltier power updated'})
+
+
+@climate_bp.route('/enable_peltier', methods=['POST'])
+def enable_peltier():
+    """Enable/disable peltier elements"""
+    data = request.get_json(silent=True) or {}
+    enabled = data.get('enabled', False)
+
+    app_state = get_app_state()
+
+    if enabled:
+        # Enable Peltier elements through the controller
+        app_state.controller.enable_peltier_driver()
+        status_message = 'Peltier elements enabled'
+    else:
+        # Disable Peltier elements through the controller
+        app_state.controller.disable_peltier_driver()
+        status_message = 'Peltier elements disabled'
+
+    return jsonify({'status': status_message, 'enabled': enabled})
