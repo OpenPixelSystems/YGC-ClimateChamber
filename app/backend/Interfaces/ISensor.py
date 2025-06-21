@@ -31,33 +31,3 @@ class ISensor(ABC):
             Dictionary mapping sensor name to its reading value
         """
         pass
-
-    @property
-    @abstractmethod
-    def name(self) -> str:
-        """Get the sensor name."""
-        pass
-
-    @property
-    @abstractmethod
-    def pin(self) -> int:
-        """Get the GPIO pin number."""
-        pass
-
-    @property
-    @abstractmethod
-    def min_value(self) -> float:
-        """Get the minimum expected value."""
-        pass
-
-    @property
-    @abstractmethod
-    def max_value(self) -> float:
-        """Get the maximum expected value."""
-        pass
-
-    @property
-    @abstractmethod
-    def unit(self) -> str:
-        """Get the unit of measurement."""
-        pass

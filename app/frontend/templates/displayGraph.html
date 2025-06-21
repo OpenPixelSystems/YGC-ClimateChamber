@@ -7,6 +7,12 @@
     <h2>Control Panel</h2>
     <form class="vertical-form">
       <label for="cycleName">Cycle Name (optional):</label>
+      <div class="checkbox-container">
+        <label class="checkbox-wrapper">
+          <input type="checkbox" id="peltierCheckbox">
+          <span class="checkbox-label">Enable Peltier Elements</span>
+        </label>
+      </div>
       <input type="text" id="cycleName" name="cycleName" placeholder="Enter custom cycle name">
       <button type="button" id="StartCycle">Start cycle</button>
       <div class="sensor-list-container">

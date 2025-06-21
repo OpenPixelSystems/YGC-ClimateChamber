@@ -24,3 +24,7 @@ class ICalculationService(ABC):
 
     def stop(self):
         pass
+
+    @abstractmethod
+    def subscribe(self, callback):
+        pass

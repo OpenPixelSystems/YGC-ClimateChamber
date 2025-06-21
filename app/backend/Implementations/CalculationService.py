@@ -278,3 +278,6 @@ class CalculationService(ICalculationService, Subscriptable, LoggingMixin):
     def stop(self):
         """Stop the PID controller."""
         self.notify({"pid_output": 0})
+
+    def subscribe(self, callback):
+        Subscriptable.subscribe(self,callback)

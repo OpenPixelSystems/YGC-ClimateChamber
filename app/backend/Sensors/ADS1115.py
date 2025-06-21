@@ -1,6 +1,8 @@
 import os
 import random
 from typing import Dict, Optional
+
+from app.backend.Dataclasses.Config import ADS1115Config
 from app.backend.Providers.gpio_provider import gpio
 from app.backend.Interfaces.ISensor import ISensor
 
@@ -8,22 +10,17 @@ from app.backend.Interfaces.ISensor import ISensor
 class ADS1115(ISensor):
     """Implementation of the ADS1115 current sensor using I2C interface."""
 
-    def __init__(self, name: str, pin: int, min_value: float, max_value: float, unit: str):
-        """Initialize the ADS1115 current sensor.
+    def __init__(self, config: ADS1115Config):
+        """Initialize the ADS1115 current sensor."""
 
-        Args:
-            name: Name of the sensor
-            pin: Analog channel number (0-3 for ADS1115)
-            min_value: Minimum expected current value
-            max_value: Maximum expected current value
-            unit: Unit of measurement (should be 'A' for amperes or 'mA' for milliamperes)
-        """
         self._type = 'ADS1115'
-        self._name = name
-        self._pin = pin  # This represents the analog channel (A0-A3)
-        self._min_value = min_value
-        self._max_value = max_value
-        self._unit = unit
+        self._name = config.name
+        self._sda_pin = config.SDA
+        self._scl_pin = config.SCL
+        self._pin = config.read_pin
+        self._min_value = config.min_value
+        self._max_value = config.max_value
+        self._unit = config.unit
         self._is_testing = self._detect_testing_environment()
         self._last_reading = None
         self._ads = None
@@ -160,7 +157,7 @@ class ADS1115(ISensor):
         json_format = {}
 
         try:
-            if not self._is_testing and self._ads is not None:
+            if not self._is_testing:
                 # Read from actual ADS1115 sensor
                 try:
                     # Read voltage from the specified channel
@@ -169,16 +166,10 @@ class ADS1115(ISensor):
                     # Convert voltage to current
                     current = self._voltage_to_current(voltage)
 
-                    # Validate reading is within bounds
-                    if self._min_value <= current <= self._max_value:
-                        json_format[self._type] = {self._name: round(current, 3)}
-                        self._last_reading = current
-                        print(f"[ADS1115] Read actual sensor value: {current} {self._unit} (voltage: {voltage:.3f}V)")
-                    else:
-                        # Reading out of bounds, return None instead of simulated value
-                        json_format[self._type] = {self._name: None}
-                        print(
-                            f"[ADS1115] Reading out of bounds ({current} {self._unit}), returning None")
+                    json_format[self._type] = {self._name: round(current, 3)}
+                    self._last_reading = current
+                    print(f"[ADS1115] Read actual sensor value: {current} {self._unit} (voltage: {voltage:.3f}V)")
+
 
                 except Exception as e:
                     # Error reading sensor, return None instead of simulated value
@@ -201,81 +192,3 @@ class ADS1115(ISensor):
             json_format[self._type] = {self._name: None}
 
         return json_format
-
-    def set_calibration(self, voltage_offset: float, sensitivity: float) -> None:
-        """Set calibration parameters for the current sensor.
-
-        Args:
-            voltage_offset: Offset voltage in volts (typically Vcc/2 for bidirectional sensors)
-            sensitivity: Sensitivity in V/A (depends on current sensor model)
-        """
-        self._voltage_offset = voltage_offset
-        self._sensitivity = sensitivity
-        print(f"[ADS1115] Updated calibration: offset={voltage_offset}V, sensitivity={sensitivity}V/A")
-
-    def set_gain(self, gain: int) -> None:
-        """Set the programmable gain amplifier setting.
-
-        Args:
-            gain: Gain setting (1=±4.096V, 2=±2.048V, 4=±1.024V, 8=±0.512V, 16=±0.256V)
-        """
-        if not self._is_testing and self._ads is not None:
-            self._ads.gain = gain
-            self._gain = gain
-            print(f"[ADS1115] Set gain to {gain}")
-
-    def get_raw_voltage(self) -> Optional[float]:
-        """Get raw voltage reading from the ADS1115.
-
-        Returns:
-            Raw voltage reading or None if in testing mode
-        """
-        if not self._is_testing and self._ads is not None:
-            try:
-                return self._channel.voltage
-            except Exception as e:
-                print(f"[ADS1115] Error reading raw voltage: {e}")
-                return None
-        return None
-
-    @property
-    def name(self) -> str:
-        return self._name
-
-    @property
-    def pin(self) -> int:
-        return self._pin
-
-    @property
-    def min_value(self) -> float:
-        return self._min_value
-
-    @property
-    def max_value(self) -> float:
-        return self._max_value
-
-    @property
-    def unit(self) -> str:
-        return self._unit
-
-    @property
-    def is_testing(self) -> bool:
-        return self._is_testing
-
-    @property
-    def i2c_address(self) -> int:
-        return self._i2c_address
-
-    @property
-    def channel(self) -> int:
-        """Return the analog channel being used (0-3)."""
-        return self._pin
-
-    @property
-    def calibration_info(self) -> Dict[str, float]:
-        """Return current calibration parameters."""
-        return {
-            'voltage_offset': self._voltage_offset,
-            'sensitivity': self._sensitivity,
-            'gain': self._gain
-        }

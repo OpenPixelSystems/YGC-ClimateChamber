@@ -61,7 +61,6 @@ class MPL3115A2(ISensor):
         except ImportError:
             libs_available = False
 
-        print(f"is_mock {is_mock}, is_not_pi {is_not_pi}, libs_available {libs_available}")
         return is_mock or is_not_pi or not libs_available
 
     def initialize(self) -> None:

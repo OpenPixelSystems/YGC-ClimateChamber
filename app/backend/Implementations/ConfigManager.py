@@ -1,6 +1,7 @@
 import json
 
-from app.backend.Dataclasses.Config import ControlConfig, GraphConfig, McuConfig, SensorConfig, PeltierConfig
+from app.backend.Dataclasses.Config import ControlConfig, GraphConfig, McuConfig, PeltierConfig, \
+    MPL3115A2Config, ADS1115Config, DS18B20Config, FanConfig
 from app.backend.Interfaces.IConfigManager import IConfigManager
 from app.backend.Technical.Logging import LoggingMixin
 
@@ -81,14 +82,17 @@ class ConfigManager(IConfigManager, LoggingMixin):
 
             sensors = []
             peltier_modules = []
+            fan_modules = []
             for key, value in config_data.items():
                 # Ignore keys that start with '_' (comments)
                 if key.startswith("_"):
                     continue
                 if value["type"] == "DS18B20":
-                    sensors.append(SensorConfig(
+                    sensors.append(DS18B20Config(
                         name=value["name"],
                         type=value["type"],
+                        group_name=value["editable"]["sensor_group"],
+                        rom_address=value["editable"]["rom_address"],
                         gpio_pin=value["editable"]["gpio_pin"],
                         max_value=value["editable"]["max_value"],
                         min_value=value["editable"]["min_value"],
@@ -96,17 +100,19 @@ class ConfigManager(IConfigManager, LoggingMixin):
                         unit=value["unit"]
                     ))
                 elif value["type"] == "ADS1115":
-                    sensors.append(SensorConfig(
+                    sensors.append(ADS1115Config(
                         name=value["name"],
                         type=value["type"],
-                        gpio_pin=value["editable"]["gpio_pin"],
+                        SDA=value["editable"]["SDA"],
+                        SCL=value["editable"]["SCL"],
+                        read_pin=value["editable"]["read_pin"],
                         max_value=value["editable"]["max_value"],
                         min_value=value["editable"]["min_value"],
                         critical=value["editable"]["safety_critical"]==1,
                         unit=value["unit"]
                     ))
                 elif value["type"] == "MPL3115A2":
-                    sensors.append(SensorConfig(
+                    sensors.append(MPL3115A2Config(
                         name=value["name"],
                         type=value["type"],
                         SDA=value["editable"]["SDA"],
@@ -119,7 +125,7 @@ class ConfigManager(IConfigManager, LoggingMixin):
                 elif value["type"] == "peltier":
                     peltier_modules.append(PeltierConfig(
                         name=value["name"],
-                        type=value["type"],
+                        driver_type=value["editable"]["driver_type"],
                         RPWM=value["editable"]["RPWM"],
                         LPWM=value["editable"]["LPWM"],
                         R_EN=value["editable"]["R_EN"],
@@ -127,21 +133,29 @@ class ConfigManager(IConfigManager, LoggingMixin):
                         PWM_FREQUENCY=value["editable"]["PWM_FREQUENCY"],
                         Duty_cycle_limit=value["editable"]["Duty cycle limit"]
                     ))
+                elif value["type"] == "fanModule":
+                    fan_modules.append(FanConfig(
+                        name=value["name"],
+                        type=value["type"],
+                        EN=value["editable"]["EN"]
+                    ))
+
 
             for sensor in sensors:
-                print("[ConfigManager] [__load_mcu_config]" + str(sensor))
+                print("[ConfigManager] [__load_mcu_config] " + str(sensor))
             self._mcu_config.sensors = sensors
             self.print(f"[ConfigManager] [__load_mcu_config] Loaded {len(sensors)} sensors/devices into MCU config.")
+
             for peltier in peltier_modules:
                 print("[ConfigManager] [__load_mcu_config]" + str(peltier))
             self._mcu_config.peltierModules = peltier_modules
             self.print(f"[ConfigManager] [__load_mcu_config] Loaded {len(peltier_modules)} Peltier module(s) into MCU config.")
+
+            for fan in fan_modules:
+                print("[ConfigManager] [__load_mcu_config] " + str(fan))
+            self._mcu_config.fanModules = fan_modules
+            self.print(f"[ConfigManager] [__load_mcu_config] Loaded {len(fan_modules)} fan module(s) into MCU config.")
+
         except (FileNotFoundError, KeyError, json.JSONDecodeError, ValueError) as e:
             self.print_error(f"[ConfigManager] [__load_mcu_config] Error loading MCU config: {str(e)}")
             self._mcu_config.sensors = []
-
-    def reload_config(self):
-        """Reload all configurations from their respective files."""
-        self.__load_control_config()
-        self.__load_graph_config()
-        self.__load_mcu_config()  # TODO: editing mcu config should only happen if there is no running cycle

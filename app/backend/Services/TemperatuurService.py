@@ -3,7 +3,7 @@ from typing import Optional, Tuple, List, Dict, Any, Union
 
 from app.backend.Interfaces.IConfigManager import IConfigManager
 from app.backend.Implementations.ClimateChamberController import ClimateChamberController
-from app.backend.graph import Graph
+from app.routes.Helper.graph import Graph
 
 @dataclass
 class TemperatureValidationResult:

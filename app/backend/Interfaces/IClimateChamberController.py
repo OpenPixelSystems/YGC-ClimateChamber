@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Generator
 
-from app.backend.graph import Graph
+from app.routes.Helper.graph import Graph
 
 
 class IClimateChamberController(ABC):

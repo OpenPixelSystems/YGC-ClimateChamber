@@ -3,6 +3,7 @@ from app.backend.Dataclasses.Config import McuConfig
 from app.backend.Interfaces.ISensorReader import ISensorReader
 from app.backend.Sensors.ADS1115 import ADS1115
 from app.backend.Sensors.DS18B20 import DS18B20
+from app.backend.Sensors.DS18B20Cluster import DS18B20Cluster
 from app.backend.Sensors.MPL3115A2 import MPL3115A2
 from app.backend.Services.Subscribe import Subscriptable
 
@@ -23,9 +24,17 @@ class SensorReader(ISensorReader, Subscriptable):
             for sensor_config in mcu_config.sensors:
                 # Create the appropriate sensor instance
                 if sensor_config.type == "DS18B20":
-                    self.sensor_list.append(DS18B20(sensor_config.name, sensor_config.gpio_pin, sensor_config.min_value, sensor_config.max_value, sensor_config.unit))
+                    existing_cluster = None
+                    for sensor in self.sensor_list:
+                        if isinstance(sensor, DS18B20Cluster) and sensor.group_name == sensor_config.group_name:
+                            existing_cluster = sensor
+                            break
+                    if existing_cluster:
+                        existing_cluster.append(sensor_config)
+                    else:
+                        self.sensor_list.append(DS18B20Cluster(sensor_config))
                 elif sensor_config.type == "ADS1115":
-                    self.sensor_list.append(ADS1115(sensor_config.name, sensor_config.gpio_pin, sensor_config.min_value, sensor_config.max_value, sensor_config.unit))
+                    self.sensor_list.append(ADS1115(sensor_config))
                 elif sensor_config.type == "MPL3115A2":
                     self.sensor_list.append(MPL3115A2(sensor_config.name, sensor_config.SDA,sensor_config.SCL, sensor_config.min_value, sensor_config.max_value, sensor_config.unit))
         except Exception as e:
@@ -45,3 +54,6 @@ class SensorReader(ISensorReader, Subscriptable):
 
         self.notify(sensor_readings)
         return sensor_readings
+
+    def subscribe(self, callback):
+        Subscriptable.subscribe(self,callback)

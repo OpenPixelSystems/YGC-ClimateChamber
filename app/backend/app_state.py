@@ -1,6 +1,5 @@
 from pathlib import Path
-
-from app.backend.temperature import TemperatureService
+from app.backend.Providers.gpio_provider import GPIO
 
 _app_state = None
 
@@ -31,6 +30,9 @@ class AppState(metaclass=SingletonMeta):
         self.control_config_path = self.config_dir / 'control_config.json'
         self.mcu_config_path = self.config_dir / 'raspberry_pi_config.json'
 
+        self.__climate_chamber_factory()
+
+    def __climate_chamber_factory(self):
         # Create components using the factory
         """ Config manager instance """
         self.config_manager = self._create_config_manager()
@@ -42,11 +44,13 @@ class AppState(metaclass=SingletonMeta):
         self.calculation_service = self._create_calculation_service()
         """ Database instance used to log, retrieve and delete Sensors """
         self.database = self._create_database_manager()
+        """ Fan controller instance to control fan speeds."""
+        self.fan_controller = self._create_fan_controller()
         """ Climate chamber controller used to control Peltier elements based on sensor data and desired graph."""
         self.climate_chamber = self._create_climate_chamber()
         self.controller = self._create_controller()
         """ Reader instance used to validate temperature input """
-        self.temperature_service = TemperatureService(self.config_manager, self.controller)
+        self.temperature_service = self._create_temperature_service()
 
     def _create_config_manager(self):
         """Factory method for creating the config manager."""
@@ -77,14 +81,29 @@ class AppState(metaclass=SingletonMeta):
         from app.backend.Implementations.CalculationService import CalculationService
         return CalculationService(self.config_manager, False)
 
+    def _create_fan_controller(self):
+        from app.backend.Implementations.FanController import FanController
+        return FanController(self.config_manager.mcu_config)
+
     def _create_climate_chamber(self):
         """Factory method for creating the climate chamber implementation."""
-        # Choose implementation based on environment
         from app.backend.Implementations.ClimateChamber import ClimateChamber
-        return ClimateChamber(self.sensor_reader, self.config_manager, self.calculation_service)
+        return ClimateChamber(self.sensor_reader, self.config_manager, self.calculation_service, self.fan_controller)
 
     def _create_controller(self):
         """Factory method for creating the controller."""
         from app.backend.Implementations.ClimateChamberController import ClimateChamberController
         return ClimateChamberController(
             self.sensor_reader, self.config_manager, self.climate_chamber, self.calculation_service, self.guarding_service)
+
+    def _create_temperature_service(self):
+        """Factory method for creating the temperature logger."""
+        from app.backend.Services.TemperatuurService import TemperatureService
+        return TemperatureService(self.config_manager, self.controller)
+
+    def reload_climate_chamber(self):
+        print("[app_state] [reload_climate_chamber] Reloading climate chamber")
+        #TODO check new config before loading in climate chamber, check should happen in config manager
+        #TODO reload struggles with overwriting PWM configured pin
+        GPIO.cleanup()
+        self.__climate_chamber_factory()

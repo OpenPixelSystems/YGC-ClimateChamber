@@ -68,37 +68,45 @@ export default class SensorManager {
    * @returns {Object} Flattened sensor data
    */
   flattenSensorData(data) {
-    const flattened = {};
+      const flattened = {};
 
-    // Process sensor chip data (ADS1115, DS18B20, etc.)
-    Object.entries(data).forEach(([chipType, chipData]) => {
-      if (chipType === 'calculation_data') {
-        // Handle calculation data separately
-        if (typeof chipData === 'object' && chipData !== null) {
-          Object.entries(chipData).forEach(([calcName, calcValue]) => {
-            // Prefix calculation data to distinguish from sensor data
-            flattened[`calc_${calcName}`] = calcValue;
+      // Process sensor chip data (ADS1115, DS18B20, etc.)
+      Object.entries(data).forEach(([chipType, chipData]) => {
+        if (chipType === 'calculation_data') {
+          // Handle calculation data separately
+          if (typeof chipData === 'object' && chipData !== null) {
+            Object.entries(chipData).forEach(([calcName, calcValue]) => {
+              // Prefix calculation data to distinguish from sensor data
+              flattened[`calc_${calcName}`] = calcValue;
+            });
+          }
+        } else if (chipType === 'DS18B20') {
+          // Handle DS18B20's nested structure: chipType -> groupName -> sensorName -> value
+          if (typeof chipData === 'object' && chipData !== null) {
+            Object.entries(chipData).forEach(([groupName, groupData]) => {
+              if (typeof groupData === 'object' && groupData !== null) {
+                Object.entries(groupData).forEach(([sensorName, sensorValue]) => {
+                  if (typeof sensorValue === 'number') {
+                    // Combine group name and sensor name for DS18B20
+                    flattened[`${groupName}_${sensorName}`] = sensorValue;
+                  }
+                });
+              }
+            });
+          }
+        } else if (typeof chipData === 'object' && chipData !== null) {
+          // Handle other sensor data from chips (MPL3115A2, ADS1115, etc.) - flat structure
+          Object.entries(chipData).forEach(([sensorName, sensorValue]) => {
+            if (typeof sensorValue === 'number') {
+              // Use the sensor name directly for non-DS18B20 sensors
+              flattened[sensorName] = sensorValue;
+            }
           });
         }
-      } else if (typeof chipData === 'object' && chipData !== null) {
-        // Handle sensor data from chips
-        Object.entries(chipData).forEach(([sensorName, sensorValue]) => {
-          if (typeof sensorValue === 'number') {
-            // Use the sensor name directly, or prefix with chip type if needed for clarity
-            // You can choose either approach based on your preferences:
+      });
 
-            // Option 1: Use sensor name directly (simpler)
-            flattened[sensorName] = sensorValue;
-
-            // Option 2: Prefix with chip type (more explicit)
-            // flattened[`${chipType}_${sensorName}`] = sensorValue;
-          }
-        });
-      }
-    });
-
-    return flattened;
-  }
+      return flattened;
+    }
 
   /**
    * Updates the sensor list UI and manages sensor selection

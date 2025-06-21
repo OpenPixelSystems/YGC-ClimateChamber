@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, redirect, url_for, request, flash
 
 from app import get_app_state
-from app.backend.graph import Graph
+from app.routes.Helper.graph import Graph
 
 home_bp = Blueprint('home', __name__, template_folder='templates', static_folder='static')
 
