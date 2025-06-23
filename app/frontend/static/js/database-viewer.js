@@ -39,6 +39,7 @@ class DatabaseViewer {
         document.getElementById('deleteData').addEventListener('click', () => this.deleteCycle());
         document.getElementById('deleteAllData').addEventListener('click', () => this.deleteAllCycles());
         document.getElementById('exportData').addEventListener('click', () => this.exportData());
+        document.getElementById('importData').addEventListener('click', () => this.importData());
     }
 
     async loadCycles() {
@@ -564,6 +565,449 @@ class DatabaseViewer {
         
         // Show success message
         alert(`✅ Export successful! File "${fileName}" has been downloaded.`);
+    }
+
+    async importData() {
+        try {
+            // Create file input element
+            const fileInput = document.createElement('input');
+            fileInput.type = 'file';
+            fileInput.accept = '.csv,.json,.txt,.xlsx,.xls';
+            fileInput.style.display = 'none';
+            
+            document.body.appendChild(fileInput);
+            
+            // Promise to handle file selection
+            const file = await new Promise((resolve) => {
+                let isResolved = false;
+                
+                const cleanup = () => {
+                    if (fileInput && fileInput.parentNode) {
+                        fileInput.parentNode.removeChild(fileInput);
+                    }
+                };
+                
+                fileInput.onchange = (e) => {
+                    if (isResolved) return;
+                    isResolved = true;
+                    
+                    const selectedFile = e.target.files[0];
+                    cleanup();
+                    resolve(selectedFile);
+                };
+                
+                // Handle case where user cancels file dialog
+                const handleCancel = () => {
+                    setTimeout(() => {
+                        if (!isResolved && (!fileInput.files || fileInput.files.length === 0)) {
+                            isResolved = true;
+                            cleanup();
+                            resolve(null);
+                        }
+                    }, 1000);
+                };
+                
+                // Listen for focus return (indicates dialog was closed)
+                window.addEventListener('focus', handleCancel, { once: true });
+                
+                fileInput.click();
+            });
+            
+            if (!file) return; // User cancelled
+            
+            // Get cycle name from user
+            const cycleName = await this.getCycleNameDialog(file.name);
+            if (!cycleName) return; // User cancelled
+            
+            // Read and parse file
+            const fileContent = await this.readFile(file);
+            const parsedData = await this.parseImportFile(file, fileContent);
+            
+            if (!parsedData) {
+                alert('❌ Failed to parse file. Please check the format and try again.');
+                return;
+            }
+            
+            // Send data to server
+            await this.sendImportData(cycleName, parsedData);
+            
+            // Refresh cycles list
+            await this.loadCycles();
+            
+            // Select the imported cycle
+            this.dropdown.value = cycleName;
+            await this.loadCycleData(cycleName);
+            
+            alert(`✅ Import successful! Cycle "${cycleName}" has been imported.`);
+            
+        } catch (error) {
+            console.error('Error importing data:', error);
+            alert('❌ Failed to import data. Please try again.');
+        }
+    }
+
+    async getCycleNameDialog(fileName) {
+        return new Promise((resolve) => {
+            const modal = document.createElement('div');
+            modal.style.cssText = `
+                position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+                background: rgba(0,0,0,0.5); display: flex; justify-content: center;
+                align-items: center; z-index: 1000;
+            `;
+            
+            const dialog = document.createElement('div');
+            dialog.style.cssText = `
+                background: var(--card-background); 
+                color: var(--text-color);
+                padding: 20px; 
+                border-radius: 8px;
+                box-shadow: 0 4px 8px var(--shadow-color); 
+                max-width: 400px; 
+                width: 90%;
+                border: 1px solid var(--border-color);
+            `;
+            
+            const defaultName = fileName.replace(/\.[^/.]+$/, ''); // Remove extension
+            
+            dialog.innerHTML = `
+                <h3 style="margin-top: 0; color: var(--text-color);">Import Cycle Data</h3>
+                <p style="color: var(--text-color);">Enter a name for the imported cycle:</p>
+                <input type="text" id="cycleNameInput" value="${defaultName}" style="
+                    width: 100%;
+                    padding: 8px;
+                    margin: 10px 0;
+                    border: 1px solid var(--border-color);
+                    border-radius: 4px;
+                    background: var(--card-background);
+                    color: var(--text-color);
+                    box-sizing: border-box;
+                ">
+                <p style="color: var(--text-color); font-size: 0.9em; margin: 10px 0;">
+                    File: ${fileName}
+                </p>
+                <div style="text-align: right; margin-top: 20px;">
+                    <button id="importCancel" style="
+                        margin-right: 10px; 
+                        padding: 8px 16px; 
+                        border: 1px solid var(--border-color); 
+                        background: var(--card-background); 
+                        color: var(--text-color);
+                        border-radius: 4px; 
+                        cursor: pointer;
+                    ">Cancel</button>
+                    <button id="importConfirm" style="
+                        padding: 8px 16px; 
+                        background: var(--warning-color); 
+                        color: white; 
+                        border: none; 
+                        border-radius: 4px; 
+                        cursor: pointer;
+                    ">Import</button>
+                </div>
+            `;
+            
+            modal.appendChild(dialog);
+            document.body.appendChild(modal);
+            
+            const nameInput = document.getElementById('cycleNameInput');
+            const cancelButton = document.getElementById('importCancel');
+            const confirmButton = document.getElementById('importConfirm');
+            
+            // Focus and select text in input
+            nameInput.focus();
+            nameInput.select();
+            
+            // Add hover effects
+            cancelButton.addEventListener('mouseenter', () => {
+                cancelButton.style.background = 'var(--nav-hover)';
+            });
+            cancelButton.addEventListener('mouseleave', () => {
+                cancelButton.style.background = 'var(--card-background)';
+            });
+            
+            confirmButton.addEventListener('mouseenter', () => {
+                confirmButton.style.background = '#e67e22'; // Darker orange
+            });
+            confirmButton.addEventListener('mouseleave', () => {
+                confirmButton.style.background = 'var(--warning-color)';
+            });
+            
+            // Handle form submission
+            const submitForm = () => {
+                const cycleName = nameInput.value.trim();
+                if (!cycleName) {
+                    alert('Please enter a cycle name.');
+                    nameInput.focus();
+                    return;
+                }
+                document.body.removeChild(modal);
+                resolve(cycleName);
+            };
+            
+            // Event listeners
+            cancelButton.onclick = () => {
+                document.body.removeChild(modal);
+                resolve(null);
+            };
+            
+            confirmButton.onclick = submitForm;
+            
+            nameInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    submitForm();
+                }
+            });
+            
+            // Close on background click
+            modal.onclick = (e) => {
+                if (e.target === modal) {
+                    document.body.removeChild(modal);
+                    resolve(null);
+                }
+            };
+        });
+    }
+
+    readFile(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => resolve(e.target.result);
+            reader.onerror = (e) => reject(e);
+            reader.readAsText(file);
+        });
+    }
+
+    async parseImportFile(file, content) {
+        const fileName = file.name.toLowerCase();
+        
+        try {
+            if (fileName.endsWith('.json')) {
+                return this.parseJSONImport(content);
+            } else if (fileName.endsWith('.csv')) {
+                return this.parseCSVImport(content);
+            } else if (fileName.endsWith('.txt')) {
+                return this.parseTXTImport(content);
+            } else if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
+                return this.parseExcelImport(content);
+            } else {
+                throw new Error('Unsupported file format');
+            }
+        } catch (error) {
+            console.error('Parse error:', error);
+            return null;
+        }
+    }
+
+    parseJSONImport(content) {
+        const data = JSON.parse(content);
+        
+        // Check if it's our export format
+        if (data.sensorData && data.calculationData) {
+            return {
+                sensor_data: this.convertSensorDataToAPI(data.sensorData),
+                calculation_data: this.convertCalculationDataToAPI(data.calculationData)
+            };
+        }
+        
+        throw new Error('Invalid JSON format');
+    }
+
+    parseCSVImport(content) {
+        const lines = content.split('\n').map(line => line.trim()).filter(line => line);
+        const result = { sensor_data: {}, calculation_data: [] };
+        
+        let currentSection = '';
+        let headerProcessed = false;
+        
+        for (const line of lines) {
+            if (line === 'SENSOR DATA') {
+                currentSection = 'sensor';
+                headerProcessed = false;
+                continue;
+            } else if (line === 'CALCULATION DATA') {
+                currentSection = 'calculation';
+                headerProcessed = false;
+                continue;
+            } else if (line.startsWith('Sensor Type,') || line.startsWith('Calculation Name,')) {
+                headerProcessed = true;
+                continue;
+            }
+            
+            if (!headerProcessed || !line) continue;
+            
+            if (currentSection === 'sensor') {
+                const [sensorType, sensorId, timestamp, value, unit] = this.parseCSVLine(line);
+                if (!result.sensor_data[sensorType]) {
+                    result.sensor_data[sensorType] = [];
+                }
+                if (!result.sensor_data[sensorType][0]) {
+                    result.sensor_data[sensorType][0] = [];
+                }
+                result.sensor_data[sensorType][0].push([sensorId, timestamp, parseFloat(value)]);
+            } else if (currentSection === 'calculation') {
+                const [calcName, timestamp, pidOutput, currentTemp, targetTemp, error] = this.parseCSVLine(line);
+                result.calculation_data.push([calcName, timestamp, parseFloat(pidOutput), parseFloat(currentTemp), parseFloat(targetTemp), parseFloat(error)]);
+            }
+        }
+        
+        return result;
+    }
+
+    parseCSVLine(line) {
+        const result = [];
+        let current = '';
+        let inQuotes = false;
+        
+        for (let i = 0; i < line.length; i++) {
+            const char = line[i];
+            
+            if (char === '"') {
+                inQuotes = !inQuotes;
+            } else if (char === ',' && !inQuotes) {
+                result.push(current.trim());
+                current = '';
+            } else {
+                current += char;
+            }
+        }
+        
+        result.push(current.trim());
+        return result;
+    }
+
+    parseTXTImport(content) {
+        // Simple text parsing - look for patterns in the data
+        const lines = content.split('\n').map(line => line.trim()).filter(line => line);
+        const result = { sensor_data: {}, calculation_data: [] };
+        
+        let currentSection = '';
+        
+        for (const line of lines) {
+            if (line === 'SENSOR DATA' || line.includes('SENSOR DATA')) {
+                currentSection = 'sensor';
+                continue;
+            } else if (line === 'CALCULATION DATA' || line.includes('CALCULATION DATA')) {
+                currentSection = 'calculation';
+                continue;
+            } else if (line.includes('|') && currentSection) {
+                const parts = line.split('|').map(p => p.trim());
+                
+                if (currentSection === 'sensor' && parts.length >= 4) {
+                    const [timestamp, sensorType, sensorId, valueWithUnit] = parts;
+                    const value = parseFloat(valueWithUnit.split(' ')[0]);
+                    
+                    if (!result.sensor_data[sensorType]) {
+                        result.sensor_data[sensorType] = [];
+                    }
+                    if (!result.sensor_data[sensorType][0]) {
+                        result.sensor_data[sensorType][0] = [];
+                    }
+                    result.sensor_data[sensorType][0].push([sensorId, timestamp, value]);
+                } else if (currentSection === 'calculation' && parts.length >= 6) {
+                    const [timestamp, calcName, pid, current, target, error] = parts;
+                    const pidOutput = parseFloat(pid.split(':')[1].trim());
+                    const currentTemp = parseFloat(current.split(':')[1].trim());
+                    const targetTemp = parseFloat(target.split(':')[1].trim());
+                    const errorVal = parseFloat(error.split(':')[1].trim());
+                    
+                    result.calculation_data.push([calcName, timestamp, pidOutput, currentTemp, targetTemp, errorVal]);
+                }
+            }
+        }
+        
+        return result;
+    }
+
+    parseExcelImport(content) {
+        // Parse tab-separated values (our Excel export format)
+        const lines = content.split('\n').map(line => line.trim()).filter(line => line);
+        const result = { sensor_data: {}, calculation_data: [] };
+        
+        let currentSection = '';
+        let headerProcessed = false;
+        
+        for (const line of lines) {
+            if (line.includes('SENSOR DATA')) {
+                currentSection = 'sensor';
+                headerProcessed = false;
+                continue;
+            } else if (line.includes('CALCULATION DATA')) {
+                currentSection = 'calculation';
+                headerProcessed = false;
+                continue;
+            } else if (line.includes('Sensor Type\t') || line.includes('Calculation Name\t')) {
+                headerProcessed = true;
+                continue;
+            }
+            
+            if (!headerProcessed || !line) continue;
+            
+            const parts = line.split('\t');
+            
+            if (currentSection === 'sensor' && parts.length >= 4) {
+                const [sensorType, sensorId, timestamp, value] = parts;
+                if (!result.sensor_data[sensorType]) {
+                    result.sensor_data[sensorType] = [];
+                }
+                if (!result.sensor_data[sensorType][0]) {
+                    result.sensor_data[sensorType][0] = [];
+                }
+                result.sensor_data[sensorType][0].push([sensorId, timestamp, parseFloat(value)]);
+            } else if (currentSection === 'calculation' && parts.length >= 6) {
+                const [calcName, timestamp, pidOutput, currentTemp, targetTemp, error] = parts;
+                result.calculation_data.push([calcName, timestamp, parseFloat(pidOutput), parseFloat(currentTemp), parseFloat(targetTemp), parseFloat(error)]);
+            }
+        }
+        
+        return result;
+    }
+
+    convertSensorDataToAPI(sensorData) {
+        const result = {};
+        
+        sensorData.forEach(item => {
+            if (!result[item.sensorType]) {
+                result[item.sensorType] = [];
+            }
+            if (!result[item.sensorType][0]) {
+                result[item.sensorType][0] = [];
+            }
+            result[item.sensorType][0].push([item.sensorId, item.timestamp, item.value]);
+        });
+        
+        return result;
+    }
+
+    convertCalculationDataToAPI(calculationData) {
+        return calculationData.map(item => [
+            item.calculationName,
+            item.timestamp,
+            item.pidOutput,
+            item.currentTemp,
+            item.targetTemp,
+            item.error
+        ]);
+    }
+
+    async sendImportData(cycleName, data) {
+        const response = await fetch('/api/import_cycle', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                cycle_name: cycleName,
+                sensor_data: data.sensor_data,
+                calculation_data: data.calculation_data
+            })
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Failed to import data');
+        }
+        
+        return await response.json();
     }
 
     getRandomColor(alpha = 1) {
