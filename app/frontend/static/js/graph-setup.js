@@ -1,209 +1,258 @@
-const ctx = document.getElementById('myChart').getContext('2d');
-const points = [];
-const history = [];
-let startTime = null;
-let xRange = 2 * 60; // Default x-range in seconds (12 hours)
-let unsavedChanges = false;
-let measurementInterval = null;
+/**
+ * Graph Setup - Temperature Profile Editor
+ * Simplified and cleaned up version
+ */
 
-const myChart = new Chart(ctx, {
-    type: 'line',
-    data: { labels: [], datasets: [] },
-    options: {
-        responsive: true,
-        animation: { duration: 0 },
-        scales: {
-            x: {
-                type: 'linear',
-                position: 'bottom',
-                min: 0,
-                max: xRange,
-                title: { display: true, text: 'Time (seconds)' }
+class GraphSetup {
+    constructor() {
+        this.points = [];
+        this.unsavedChanges = false;
+        this.initChart();
+        this.bindEvents();
+        this.updateUndoButton();
+    }
+
+    initChart() {
+        const ctx = document.getElementById('myChart').getContext('2d');
+        this.chart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                datasets: [{
+                    label: 'Temperature Profile',
+                    data: [],
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.1)',
+                    borderWidth: 2,
+                    fill: false,
+                    tension: 0,
+                    pointRadius: 6,
+                    pointHoverRadius: 8
+                }]
             },
-            y: {
-                min: -20,
-                max: 180,
-                title: { display: true, text: 'Temperature (°C)' }
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: { duration: 0 },
+                interaction: {
+                    intersect: false,
+                    mode: 'index'
+                },
+                scales: {
+                    x: {
+                        type: 'linear',
+                        position: 'bottom',
+                        min: 0,
+                        max: 120,
+                        title: { 
+                            display: true, 
+                            text: 'Time (minutes)',
+                            font: { size: 14 }
+                        },
+                        grid: { color: 'rgba(0,0,0,0.1)' }
+                    },
+                    y: {
+                        min: -20,
+                        max: 180,
+                        title: { 
+                            display: true, 
+                            text: 'Temperature (°C)',
+                            font: { size: 14 }
+                        },
+                        grid: { color: 'rgba(0,0,0,0.1)' }
+                    }
+                },
+                onClick: (event) => this.handleChartClick(event),
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top'
+                    }
+                }
             }
-        },
-        onClick: (event) => {
-            const canvasPosition = Chart.helpers.getRelativePosition(event, myChart);
-            let x = myChart.scales.x.getValueForPixel(canvasPosition.x);
-            let y = myChart.scales.y.getValueForPixel(canvasPosition.y);
-
-            x = Math.round(x / 5) * 5;
-            y = Math.round(y / 1) * 1;
-
-            addPoints(x, y);
-        }
-    }
-});
-
-window.addEventListener('beforeunload', function (event) {
-    if (unsavedChanges) {
-        const message = "You have unsaved changes. Are you sure you want to leave?";
-        event.returnValue = message; // Standard for most browsers
-        return message; // Some browsers require returning the message
-    }
-});
-
-document.addEventListener('DOMContentLoaded', updateUndoButtonState);
-document.getElementById('submit').addEventListener('click', submitPoint);
-document.getElementById('interpolationMethod').addEventListener('change', updateChart);
-document.getElementById('undoButton').addEventListener('click', undoLastPoint);
-document.getElementById('clearPoints').addEventListener('click', clearPoints);
-document.getElementById('sendPointsToServer').addEventListener('click', sendPointsToServer);
-document.getElementById('pointInput').addEventListener('input', updateUndoButtonState);
-
-function updateChart() {
-    const interpolationMethod = document.getElementById('interpolationMethod').value;
-    myChart.data.datasets.forEach(dataset => {
-        dataset.cubicInterpolationMode = interpolationMethod;
-        dataset.data.sort((a, b) => a.x - b.x); // Sort by x value
-    });
-    myChart.update();
-}
-
-function updateXRange() {
-    const xRangeInput = document.getElementById('xRange').value;
-    xRange = xRangeInput * 60; // Convert hours to seconds
-    myChart.options.scales.x.max = xRange;
-    updateChart();
-}
-
-function submitPoint(event) {
-    event.preventDefault();
-    const input = document.getElementById('pointInput').value.trim();
-    const [x, y] = input.split(',').map(Number);
-    addPoints(x, y);
-}
-
-function addPoints(x, y) {
-    if (isNaN(x) || isNaN(y)) return;
-
-    const validationMessage = document.getElementById('validationMessage');
-    points.push({ x, y });
-    history.push({ x, y });
-    points.sort((a, b) => a.x - b.x);
-
-    if (!myChart.data.datasets.find(ds => ds.label === 'Desired flow')) {
-        myChart.data.datasets.push({
-            label: 'Desired flow',
-            data: [],
-            borderColor: 'rgba(75, 192, 192, 1)',
-            borderWidth: 1,
-            fill: false,
-            cubicInterpolationMode: 'default'
         });
     }
 
-    const userDataSet = myChart.data.datasets.find(ds => ds.label === 'Desired flow');
-    userDataSet.data.push({ x, y });
-    updateChart();
-    updateUndoButtonState();
-}
+    bindEvents() {
+        // Form submission
+        document.getElementById('pointForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            this.addPointFromInput();
+        });
 
-function undoLastPoint() {
-    if (history.length > 0) {
-        const lastPoint = history.pop();
-        const userDataSet = myChart.data.datasets.find(ds => ds.label === 'Desired flow');
+        // Buttons
+        document.getElementById('undoButton').addEventListener('click', () => this.undoLastPoint());
+        document.getElementById('clearPoints').addEventListener('click', () => this.clearAllPoints());
+        document.getElementById('sendPointsToServer').addEventListener('click', () => this.saveToServer());
+        
+        // Interpolation change
+        document.getElementById('interpolationMethod').addEventListener('change', () => this.updateInterpolation());
 
-        if (userDataSet) {
-            const index = userDataSet.data.findIndex(p => p.x === lastPoint.x && p.y === lastPoint.y);
-            if (index !== -1) {
-                userDataSet.data.splice(index, 1);
-                points.splice(points.findIndex(p => p.x === lastPoint.x && p.y === lastPoint.y), 1);
+        // Warn about unsaved changes
+        window.addEventListener('beforeunload', (event) => {
+            if (this.unsavedChanges) {
+                event.returnValue = "You have unsaved changes. Are you sure you want to leave?";
+                return event.returnValue;
             }
-        }
-
-        if (history.length === 0) unsavedChanges = false;
-
-        updateChart();
-    } else {
-        alert('No points to undo.');
+        });
     }
 
-    updateUndoButtonState();
-}
+    handleChartClick(event) {
+        const canvasPosition = Chart.helpers.getRelativePosition(event, this.chart);
+        const x = this.chart.scales.x.getValueForPixel(canvasPosition.x);
+        const y = this.chart.scales.y.getValueForPixel(canvasPosition.y);
 
-function updateUndoButtonState() {
-    const undoButton = document.getElementById('undoButton');
-    undoButton.disabled = history.length === 0;
-}
+        // Round to reasonable increments
+        const roundedX = Math.round(x / 5) * 5;
+        const roundedY = Math.round(y);
 
-function clearPoints() {
-    points.length = 0;
-    history.length = 0;
-    myChart.data.datasets.forEach(dataset => dataset.data = []);
-    startTime = null;
+        this.addPoint(roundedX, roundedY);
+    }
 
-    updateChart();
-    updateUndoButtonState();
-    unsavedChanges = false;
-}
+    addPointFromInput() {
+        const input = document.getElementById('pointInput').value.trim();
+        if (!input) return;
 
-function exportGraphToJSON() {
-    const graphData = {
-        interpolationMethod: document.getElementById('interpolationMethod').value,
-        datasets: myChart.data.datasets.map(dataset => ({
-            label: dataset.label,
-            data: dataset.data,
-            borderColor: dataset.borderColor,
-            borderWidth: dataset.borderWidth,
-            cubicInterpolationMode: dataset.cubicInterpolationMode
-        }))
-    };
+        const [x, y] = input.split(',').map(Number);
+        if (isNaN(x) || isNaN(y)) {
+            alert('Please enter valid numbers in format: time,temperature');
+            return;
+        }
 
-    const jsonString = JSON.stringify(graphData, null, 2);
-    const blob = new Blob([jsonString], { type: 'application/json' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    unsavedChanges = false;
-    link.download = 'graph_data.json';
-    link.click();
-}
+        this.addPoint(x, y);
+        document.getElementById('pointInput').value = '';
+    }
 
-function importGraphFromJSON(event) {
-    const file = event.target.files[0];
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            const jsonData = JSON.parse(e.target.result);
-            document.getElementById('interpolationMethod').value = jsonData.interpolationMethod;
-            myChart.data.datasets = jsonData.datasets.map(dataset => ({
-                label: dataset.label,
-                data: dataset.data,
-                borderColor: dataset.borderColor,
-                borderWidth: dataset.borderWidth,
-                cubicInterpolationMode: dataset.cubicInterpolationMode
-            }));
-            updateChart();
-        };
-        reader.readAsText(file);
+    addPoint(x, y) {
+        // Validate ranges
+        if (x < 0 || x > 120) {
+            alert('Time must be between 0 and 120 minutes');
+            return;
+        }
+        if (y < -20 || y > 180) {
+            alert('Temperature must be between -20 and 180°C');
+            return;
+        }
+
+        // Check for duplicate time points
+        const existingIndex = this.points.findIndex(point => point.x === x);
+        if (existingIndex !== -1) {
+            // Update existing point
+            this.points[existingIndex].y = y;
+        } else {
+            // Add new point
+            this.points.push({ x, y });
+        }
+
+        this.updateChart();
+        this.markUnsaved();
+    }
+
+    undoLastPoint() {
+        if (this.points.length === 0) {
+            alert('No points to undo');
+            return;
+        }
+
+        this.points.pop();
+        this.updateChart();
+        
+        if (this.points.length === 0) {
+            this.unsavedChanges = false;
+        }
+    }
+
+    clearAllPoints() {
+        if (this.points.length === 0) return;
+        
+        if (confirm('Are you sure you want to clear all points?')) {
+            this.points = [];
+            this.updateChart();
+            this.unsavedChanges = false;
+        }
+    }
+
+    updateChart() {
+        // Sort points by time
+        this.points.sort((a, b) => a.x - b.x);
+        
+        // Update chart data
+        this.chart.data.datasets[0].data = [...this.points];
+        this.chart.update('none'); // No animation for better performance
+        
+        this.updateUndoButton();
+    }
+
+    updateInterpolation() {
+        const method = document.getElementById('interpolationMethod').value;
+        const dataset = this.chart.data.datasets[0];
+        
+        if (method === 'linear') {
+            dataset.tension = 0;
+            dataset.cubicInterpolationMode = 'default';
+        } else {
+            dataset.tension = 0.4;
+            dataset.cubicInterpolationMode = 'monotone';
+        }
+        
+        this.chart.update();
+    }
+
+    updateUndoButton() {
+        const button = document.getElementById('undoButton');
+        button.disabled = this.points.length === 0;
+        button.textContent = this.points.length === 0 ? 'Undo Last' : `Undo Last (${this.points.length})`;
+    }
+
+    markUnsaved() {
+        this.unsavedChanges = true;
+        this.updateStatusIndicator();
+    }
+
+    updateStatusIndicator() {
+        const indicator = document.getElementById('connectionStatusCircle');
+        if (this.unsavedChanges) {
+            indicator.style.backgroundColor = 'orange';
+            indicator.title = 'Unsaved changes';
+        } else {
+            indicator.style.backgroundColor = 'green';
+            indicator.title = 'All changes saved';
+        }
+    }
+
+    async saveToServer() {
+        if (this.points.length === 0) {
+            alert('No points to save');
+            return;
+        }
+
+        try {
+            const response = await fetch('/store-graph-data', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify([{
+                    label: 'Temperature Profile',
+                    data: this.points
+                }])
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Failed to save');
+            }
+
+            this.unsavedChanges = false;
+            this.updateStatusIndicator();
+            
+            if (confirm('Graph saved successfully! Would you like to view it?')) {
+                window.location.href = '/display-graph';
+            }
+        } catch (error) {
+            alert(`Error saving graph: ${error.message}`);
+        }
     }
 }
 
-function getGraphData() {
-    return myChart.data.datasets.map(dataset => ({
-        label: dataset.label,
-        data: dataset.data
-    }));
-}
-
-function sendPointsToServer() {
-    const graphData = getGraphData();
-    fetch('/store-graph-data', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(graphData)
-    })
-    .then(response => {
-        if (!response.ok) {
-            return response.json().then(errorData => alert(errorData.error));
-        }
-        window.location.href = '/display-graph';
-    })
-    .catch(console.error);
-}
-
-checkServerConnection();
+// Initialize when page loads
+document.addEventListener('DOMContentLoaded', () => {
+    new GraphSetup();
+});
