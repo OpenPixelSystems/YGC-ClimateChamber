@@ -20,7 +20,6 @@ class GraphSetup {
 
     initChart() {
         this.chartManager.init();
-        this.updateStatusIndicator();
     }
 
     bindEvents() {
@@ -60,7 +59,6 @@ class GraphSetup {
         this.chartManager.addPoint(x, y);
         this.unsavedChanges = this.chartManager.unsavedChanges;
         this.updateUndoButton();
-        this.updateStatusIndicator();
         document.getElementById('pointInput').value = '';
     }
 
@@ -76,7 +74,6 @@ class GraphSetup {
         
         if (this.chartManager.points.length === 0) {
             this.unsavedChanges = false;
-            this.updateStatusIndicator();
         }
     }
 
@@ -87,7 +84,6 @@ class GraphSetup {
             this.chartManager.clearData();
             this.unsavedChanges = false;
             this.updateUndoButton();
-            this.updateStatusIndicator();
         }
     }
 

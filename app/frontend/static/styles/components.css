@@ -126,6 +126,37 @@
     letter-spacing: 0.5px;
 }
 
+/* Sensor checkbox styling */
+.sensor-checkbox {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 8px;
+    margin: 2px 0;
+    border-radius: 4px;
+    transition: background-color 0.2s ease;
+}
+
+.sensor-checkbox:hover {
+    background-color: var(--nav-hover);
+}
+
+.sensor-checkbox label {
+    margin-left: 8px;
+    cursor: pointer;
+    font-size: 0.9em;
+    color: var(--text-color);
+}
+
+.sensor-reading {
+    font-weight: bold;
+    color: #0066cc;
+    font-size: 0.85em;
+    font-family: monospace;
+    min-width: 80px;
+    text-align: right;
+}
+
 /* Status animations for sensors */
 @keyframes pulseRed {
     0% { 
