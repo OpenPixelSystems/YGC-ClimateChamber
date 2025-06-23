@@ -1,69 +1,108 @@
-const dropdown = document.getElementById('cycleDropdown');
-const displayTypeDropdown = document.getElementById('displayType');
-const ctx = document.getElementById('temperatureChart').getContext('2d');
-let chart;
+/**
+ * Database Viewer - Using Universal Chart Manager
+ */
 
-async function loadCycles() {
-    try {
-        const res = await fetch('/api/cycles');
-        if (!res.ok) throw new Error('Failed to fetch cycles');
-        const data = await res.json();
+import UniversalChartManager from './universal-chart-manager.js';
 
-        dropdown.innerHTML = '';
-        data.forEach(cycle => {
-            const option = document.createElement('option');
-            option.textContent = cycle;
-            option.value = cycle;
-            dropdown.appendChild(option);
+class DatabaseViewer {
+    constructor() {
+        this.chartManager = new UniversalChartManager({
+            canvasId: 'temperatureChart',
+            type: 'database'
+        });
+        
+        this.dropdown = document.getElementById('cycleDropdown');
+        this.displayTypeDropdown = document.getElementById('displayType');
+        
+        this.initChart();
+        this.bindEvents();
+        this.loadCycles();
+    }
+
+    initChart() {
+        this.chartManager.init();
+    }
+
+    bindEvents() {
+        // Dropdown changes
+        this.dropdown.addEventListener('change', () => {
+            const cycleId = this.dropdown.value;
+            this.loadCycleData(cycleId);
         });
 
-        if (data.length > 0) {
-            loadCycleData(data[0]);
-        }
-    } catch (error) {
-        console.error('Error loading cycles:', error);
+        this.displayTypeDropdown.addEventListener('change', () => {
+            const cycleId = this.dropdown.value;
+            this.loadCycleData(cycleId);
+        });
+
+        // Action buttons
+        document.getElementById('deleteData').addEventListener('click', () => this.deleteCycle());
+        document.getElementById('deleteAllData').addEventListener('click', () => this.deleteAllCycles());
+        document.getElementById('exportData').addEventListener('click', () => this.exportData());
     }
-}
 
-async function loadCycleData(cycle_name) {
-    try {
-        const res = await fetch(`/api/data/${cycle_name}`);
-        if (!res.ok) throw new Error('Failed to fetch cycle data');
-        const data = await res.json();
+    async loadCycles() {
+        try {
+            const res = await fetch('/api/cycles');
+            if (!res.ok) throw new Error('Failed to fetch cycles');
+            const data = await res.json();
 
-        // Get current display type
-        const displayType = displayTypeDropdown.value;
+            this.dropdown.innerHTML = '';
+            data.forEach(cycle => {
+                const option = document.createElement('option');
+                option.textContent = cycle;
+                option.value = cycle;
+                this.dropdown.appendChild(option);
+            });
 
-        // Debug output to help troubleshoot
-        console.log('Raw data received:', data);
+            if (data.length > 0) {
+                this.loadCycleData(data[0]);
+            }
+        } catch (error) {
+            console.error('Error loading cycles:', error);
+        }
+    }
 
+    async loadCycleData(cycle_name) {
+        try {
+            const res = await fetch(`/api/data/${cycle_name}`);
+            if (!res.ok) throw new Error('Failed to fetch cycle data');
+            const data = await res.json();
+
+            const displayType = this.displayTypeDropdown.value;
+            const datasets = this.processDataForDisplay(data, displayType);
+            
+            this.updateChartTitle(displayType);
+            this.chartManager.loadDatabaseData(datasets);
+        } catch (error) {
+            console.error('Error loading cycle data:', error);
+        }
+    }
+
+    processDataForDisplay(data, displayType) {
         const sensors = {};
         const calculations = {};
 
-        // Process sensor data - handle the nested structure
+        // Process sensor data
         if (data.sensor_data && typeof data.sensor_data === 'object') {
-            // Iterate through sensor types (current, temperature, etc.)
             Object.entries(data.sensor_data).forEach(([sensorType, sensorArrays]) => {
                 if (Array.isArray(sensorArrays)) {
-                    // Each sensor type contains arrays of sensor readings
                     sensorArrays.forEach(sensorArray => {
                         if (Array.isArray(sensorArray)) {
                             sensorArray.forEach(([sensor_id, timestamp, value]) => {
                                 // Filter based on display type
                                 if (displayType !== 'all') {
-                                    // Skip sensors that don't match the display type
                                     const sensorTypeLower = sensorType.toLowerCase();
                                     if (displayType === 'temperature' && sensorTypeLower !== 'temperature') return;
                                     if (displayType === 'humidity' && sensorTypeLower !== 'humidity') return;
                                     if (displayType === 'current' && sensorTypeLower !== 'current') return;
-                                    if (displayType === 'calculations') return; // Skip sensor data when showing only calculations
+                                    if (displayType === 'calculations') return;
                                 }
 
                                 if (!sensors[sensor_id]) {
                                     sensors[sensor_id] = { timestamps: [], values: [] };
                                 }
 
-                                // Store the original timestamp string and value
                                 sensors[sensor_id].timestamps.push(timestamp);
                                 sensors[sensor_id].values.push(value);
                             });
@@ -73,13 +112,11 @@ async function loadCycleData(cycle_name) {
             });
         }
 
-        // Process calculation data - this structure looks correct
+        // Process calculation data
         if (data.calculation_data && Array.isArray(data.calculation_data)) {
             data.calculation_data.forEach(([calculation_name, timestamp, pid_output, current_temp, target_temp, error]) => {
-                // Filter based on display type - only show calculations if requested
                 if (displayType !== 'all' && displayType !== 'calculations') return;
 
-                // Create separate datasets for each calculation metric
                 const metrics = {
                     [`${calculation_name}_PID_Output`]: pid_output,
                     [`${calculation_name}_Current_Temp`]: current_temp,
@@ -97,27 +134,22 @@ async function loadCycleData(cycle_name) {
             });
         }
 
-        // Debug output to help troubleshoot
-        console.log('Processed sensor data:', sensors);
-        console.log('Processed calculation data:', calculations);
-
-        // Create datasets for sensors
-        const sensorDatasets = Object.entries(sensors).map(([sensor, data], index) => ({
+        // Create datasets
+        const sensorDatasets = Object.entries(sensors).map(([sensor, data]) => ({
             label: sensor,
             data: data.timestamps.map((timestamp, i) => ({
                 x: new Date(timestamp),
                 y: data.values[i]
             })),
-            borderColor: getRandomColor(),
-            backgroundColor: getRandomColor(0.1),
+            borderColor: this.getRandomColor(),
+            backgroundColor: this.getRandomColor(0.1),
             fill: false,
             tension: 0.3,
             pointRadius: 3,
-            yAxisID: 'y' // Default y-axis for temperature/current
+            yAxisID: 'y'
         }));
 
-        // Create datasets for calculations
-        const calculationDatasets = Object.entries(calculations).map(([calcName, data], index) => {
+        const calculationDatasets = Object.entries(calculations).map(([calcName, data]) => {
             const isError = calcName.includes('Error');
             const isPIDOutput = calcName.includes('PID_Output');
 
@@ -127,191 +159,120 @@ async function loadCycleData(cycle_name) {
                     x: new Date(timestamp),
                     y: data.values[i]
                 })),
-                borderColor: getRandomColor(),
-                backgroundColor: getRandomColor(0.1),
+                borderColor: this.getRandomColor(),
+                backgroundColor: this.getRandomColor(0.1),
                 fill: false,
                 tension: 0.3,
                 pointRadius: 2,
-                borderDash: isPIDOutput ? [5, 5] : [], // Dashed line for PID output
-                yAxisID: isError ? 'y1' : 'y' // Use separate axis for error values
+                borderDash: isPIDOutput ? [5, 5] : [],
+                yAxisID: isError ? 'y1' : 'y'
             };
         });
 
-        // Combine all datasets
-        const allDatasets = [...sensorDatasets, ...calculationDatasets];
-
-        // Debug output
-        console.log('Chart datasets:', allDatasets);
-
-        updateChart(allDatasets);
-    } catch (error) {
-        console.error('Error loading cycle data:', error);
+        return [...sensorDatasets, ...calculationDatasets];
     }
-}
 
-function updateChart(datasets) {
-    // Get current display type to set Y axis label
-    const displayType = displayTypeDropdown.value;
-    const yAxisLabel = displayType === 'humidity' ? 'Humidity (%)' : 'Temperature (°C)';
+    updateChartTitle(displayType) {
+        const chart = this.chartManager.getChart();
+        if (!chart) return;
 
-    const config = {
-        type: 'line',
-        data: {
-            datasets: datasets
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            interaction: {
-                mode: 'index',
-                intersect: false
-            },
-            plugins: {
-                title: {
-                    display: true,
-                    text: `Sensor ${displayType === 'all' ? 'Data' : displayType.charAt(0).toUpperCase() + displayType.slice(1)} Over Time`
-                },
-                tooltip: {
-                    enabled: true
-                },
-                legend: {
-                    position: 'top',
-                }
-            },
-            scales: {
-                x: {
-                    type: 'time',
-                    time: {
-                        unit: 'second',
-                        displayFormats: {
-                            second: 'HH:mm:ss'
-                        },
-                        tooltipFormat: 'yyyy-MM-dd HH:mm:ss'
-                    },
-                    title: {
-                        display: true,
-                        text: 'Time'
-                    }
-                },
-                y: {
-                    title: {
-                        display: true,
-                        text: yAxisLabel
-                    },
-                    beginAtZero: false
-                }
+        const title = `Sensor ${displayType === 'all' ? 'Data' : displayType.charAt(0).toUpperCase() + displayType.slice(1)} Over Time`;
+        
+        if (!chart.options.plugins.title) {
+            chart.options.plugins.title = {};
+        }
+        
+        chart.options.plugins.title.display = true;
+        chart.options.plugins.title.text = title;
+
+        // Update Y axis label
+        const yAxisLabel = displayType === 'humidity' ? 'Humidity (%)' : 'Temperature (°C)';
+        if (chart.options.scales.y && chart.options.scales.y.title) {
+            chart.options.scales.y.title.text = yAxisLabel;
+        }
+    }
+
+    async deleteCycle() {
+        try {
+            const cycleName = this.dropdown.value;
+            const res = await fetch(`/api/delete_cycle/${cycleName}`);
+            const data = await res.json();
+
+            if (!res.ok) {
+                throw new Error(data.message || 'Failed to delete cycle');
             }
-        }
-    };
 
-    // Destroy existing chart if it exists
-    if (chart) {
-        chart.destroy();
+            // Remove option from dropdown
+            const optionToRemove = Array.from(this.dropdown.options).find(opt => opt.value === cycleName);
+            if (optionToRemove) {
+                optionToRemove.remove();
+            }
+
+            // Reset dropdown or show placeholder
+            if (this.dropdown.options.length > 0) {
+                this.dropdown.selectedIndex = 0;
+                this.loadCycleData(this.dropdown.value);
+            } else {
+                this.chartManager.clearData();
+            }
+
+            alert(`Cycle ${cycleName} deleted successfully.`);
+        } catch (error) {
+            alert(error.message);
+        }
     }
 
-    // Create new chart
-    chart = new Chart(ctx, config);
+    async deleteAllCycles() {
+        try {
+            const res = await fetch(`/api/delete_all_cycle`);
+            const data = await res.json();
+
+            if (!res.ok) {
+                throw new Error(data.message || 'Failed to delete all cycles');
+            }
+
+            alert(`✅ Success: ${data.message || 'Cycles deleted successfully'}`);
+            this.loadCycles(); // Reload cycles list
+        } catch (err) {
+            alert(`❌ Error: ${err.message}`);
+        }
+    }
+
+    async exportData() {
+        try {
+            const cycleId = this.dropdown.value;
+            const res = await fetch(`/api/data/${cycleId}`);
+            if (!res.ok) throw new Error('Failed to fetch data for export');
+            const data = await res.json();
+
+            // Convert data to CSV
+            const csvContent = 'data:text/csv;charset=utf-8,' +
+                'Sensor,Timestamp,Value\n' +
+                data.map(row => row.join(',')).join('\n');
+
+            // Create download link
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement('a');
+            link.setAttribute('href', encodedUri);
+            link.setAttribute('download', `${cycleId}_sensor_data.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        } catch (error) {
+            console.error('Error exporting data:', error);
+            alert('Failed to export data. Please try again.');
+        }
+    }
+
+    getRandomColor(alpha = 1) {
+        const r = Math.floor(Math.random() * 120) + 80;
+        const g = Math.floor(Math.random() * 120) + 80;
+        const b = Math.floor(Math.random() * 120) + 80;
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
 }
 
-function getRandomColor(alpha = 1) {
-    const r = Math.floor(Math.random() * 120) + 80;
-    const g = Math.floor(Math.random() * 120) + 80;
-    const b = Math.floor(Math.random() * 120) + 80;
-    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-}
-
-// Event listeners
-dropdown.addEventListener('change', () => {
-    const cycleId = dropdown.value;
-    loadCycleData(cycleId);
-});
-
-displayTypeDropdown.addEventListener('change', () => {
-    const cycleId = dropdown.value;
-    loadCycleData(cycleId);
-});
-
-// Delete data button
-document.getElementById('deleteData').addEventListener('click', async () => {
-    try {
-        const cycleName = dropdown.value;
-        const res = await fetch(`/api/delete_cycle/${cycleName}`);
-        const data = await res.json();
-
-        if (!res.ok) {
-            throw new Error(data.message || 'Failed to delete cycle');
-        }
-
-        // Verwijder optie uit de dropdown
-        const optionToRemove = Array.from(dropdown.options).find(opt => opt.value === cycleName);
-        if (optionToRemove) {
-            optionToRemove.remove();
-        }
-
-        // Reset dropdown of toon placeholder
-        if (dropdown.options.length > 0) {
-            dropdown.selectedIndex = 0;
-            loadCycleData(dropdown.value); // Laad nieuwe eerste cycle
-        } else {
-            // Optioneel: leeg maken of melding tonen
-            document.getElementById('chart-container').innerHTML = "<p>No data available.</p>";
-        }
-
-        alert(`Cycle ${cycleName} deleted successfully.`);
-    } catch (error) {
-        alert(error.message);
-    }
-});
-
-// Delete data button
-document.getElementById('deleteAllData').addEventListener('click', async () => {
-    try {
-    const res = await fetch(`/api/delete_all_cycle`);
-
-    const data = await res.json(); // parse backend response
-
-    if (!res.ok) {
-        // show popup on error with backend message
-        throw new Error(data.message || 'Failed to delete all cycles');
-    }
-
-    // show popup on success
-    alert(`✅ Success: ${data.message || 'Cycles deleted successfully'}`);
-
-    } catch (err) {
-        alert(`❌ Error: ${err.message}`);
-    }
-
-});
-
-
-// Export data button
-document.getElementById('exportData').addEventListener('click', async () => {
-    try {
-        const cycleId = dropdown.value;
-        const res = await fetch(`/api/delete_cycle/${cycleId}`);
-        if (!res.ok) throw new Error('Failed to fetch data for export');
-        const data = await res.json();
-
-        // Convert data to CSV
-        const csvContent = 'data:text/csv;charset=utf-8,' +
-            'Sensor,Timestamp,Value\n' +
-            data.map(row => row.join(',')).join('\n');
-
-        // Create download link
-        const encodedUri = encodeURI(csvContent);
-        const link = document.createElement('a');
-        link.setAttribute('href', encodedUri);
-        link.setAttribute('download', `${cycleId}_sensor_data.csv`);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    } catch (error) {
-        console.error('Error exporting data:', error);
-        alert('Failed to export data. Please try again.');
-    }
-});
-
-
-// Initialize
-window.onload = loadCycles;
+// Initialize when page loads
+window.onload = () => {
+    new DatabaseViewer();
+};

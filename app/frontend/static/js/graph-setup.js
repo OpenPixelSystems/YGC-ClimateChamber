@@ -1,11 +1,17 @@
 /**
  * Graph Setup - Temperature Profile Editor
- * Simplified and cleaned up version
+ * Using Universal Chart Manager
  */
+
+import UniversalChartManager from './universal-chart-manager.js';
 
 class GraphSetup {
     constructor() {
-        this.points = [];
+        this.chartManager = new UniversalChartManager({
+            canvasId: 'myChart',
+            type: 'setup'
+        });
+        
         this.unsavedChanges = false;
         this.initChart();
         this.bindEvents();
@@ -13,63 +19,8 @@ class GraphSetup {
     }
 
     initChart() {
-        const ctx = document.getElementById('myChart').getContext('2d');
-        this.chart = new Chart(ctx, {
-            type: 'line',
-            data: {
-                datasets: [{
-                    label: 'Temperature Profile',
-                    data: [],
-                    borderColor: 'rgba(75, 192, 192, 1)',
-                    backgroundColor: 'rgba(75, 192, 192, 0.1)',
-                    borderWidth: 2,
-                    fill: false,
-                    tension: 0,
-                    pointRadius: 6,
-                    pointHoverRadius: 8
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                animation: { duration: 0 },
-                interaction: {
-                    intersect: false,
-                    mode: 'index'
-                },
-                scales: {
-                    x: {
-                        type: 'linear',
-                        position: 'bottom',
-                        min: 0,
-                        max: 120,
-                        title: { 
-                            display: true, 
-                            text: 'Time (minutes)',
-                            font: { size: 14 }
-                        },
-                        grid: { color: 'rgba(0,0,0,0.1)' }
-                    },
-                    y: {
-                        min: -20,
-                        max: 180,
-                        title: { 
-                            display: true, 
-                            text: 'Temperature (°C)',
-                            font: { size: 14 }
-                        },
-                        grid: { color: 'rgba(0,0,0,0.1)' }
-                    }
-                },
-                onClick: (event) => this.handleChartClick(event),
-                plugins: {
-                    legend: {
-                        display: true,
-                        position: 'top'
-                    }
-                }
-            }
-        });
+        this.chartManager.init();
+        this.updateStatusIndicator();
     }
 
     bindEvents() {
@@ -96,18 +47,6 @@ class GraphSetup {
         });
     }
 
-    handleChartClick(event) {
-        const canvasPosition = Chart.helpers.getRelativePosition(event, this.chart);
-        const x = this.chart.scales.x.getValueForPixel(canvasPosition.x);
-        const y = this.chart.scales.y.getValueForPixel(canvasPosition.y);
-
-        // Round to reasonable increments
-        const roundedX = Math.round(x / 5) * 5;
-        const roundedY = Math.round(y);
-
-        this.addPoint(roundedX, roundedY);
-    }
-
     addPointFromInput() {
         const input = document.getElementById('pointInput').value.trim();
         if (!input) return;
@@ -118,73 +57,47 @@ class GraphSetup {
             return;
         }
 
-        this.addPoint(x, y);
+        this.chartManager.addPoint(x, y);
+        this.unsavedChanges = this.chartManager.unsavedChanges;
+        this.updateUndoButton();
+        this.updateStatusIndicator();
         document.getElementById('pointInput').value = '';
     }
 
-    addPoint(x, y) {
-        // Validate ranges
-        if (x < 0 || x > 120) {
-            alert('Time must be between 0 and 120 minutes');
-            return;
-        }
-        if (y < -20 || y > 180) {
-            alert('Temperature must be between -20 and 180°C');
-            return;
-        }
-
-        // Check for duplicate time points
-        const existingIndex = this.points.findIndex(point => point.x === x);
-        if (existingIndex !== -1) {
-            // Update existing point
-            this.points[existingIndex].y = y;
-        } else {
-            // Add new point
-            this.points.push({ x, y });
-        }
-
-        this.updateChart();
-        this.markUnsaved();
-    }
-
     undoLastPoint() {
-        if (this.points.length === 0) {
+        if (this.chartManager.points.length === 0) {
             alert('No points to undo');
             return;
         }
 
-        this.points.pop();
-        this.updateChart();
+        this.chartManager.points.pop();
+        this.chartManager.updateSetupChart();
+        this.updateUndoButton();
         
-        if (this.points.length === 0) {
+        if (this.chartManager.points.length === 0) {
             this.unsavedChanges = false;
+            this.updateStatusIndicator();
         }
     }
 
     clearAllPoints() {
-        if (this.points.length === 0) return;
+        if (this.chartManager.points.length === 0) return;
         
         if (confirm('Are you sure you want to clear all points?')) {
-            this.points = [];
-            this.updateChart();
+            this.chartManager.clearData();
             this.unsavedChanges = false;
+            this.updateUndoButton();
+            this.updateStatusIndicator();
         }
-    }
-
-    updateChart() {
-        // Sort points by time
-        this.points.sort((a, b) => a.x - b.x);
-        
-        // Update chart data
-        this.chart.data.datasets[0].data = [...this.points];
-        this.chart.update('none'); // No animation for better performance
-        
-        this.updateUndoButton();
     }
 
     updateInterpolation() {
         const method = document.getElementById('interpolationMethod').value;
-        const dataset = this.chart.data.datasets[0];
+        const chart = this.chartManager.getChart();
+        if (!chart) return;
+        
+        const dataset = chart.data.datasets[0];
+        if (!dataset) return;
         
         if (method === 'linear') {
             dataset.tension = 0;
@@ -194,22 +107,20 @@ class GraphSetup {
             dataset.cubicInterpolationMode = 'monotone';
         }
         
-        this.chart.update();
+        chart.update();
     }
 
     updateUndoButton() {
         const button = document.getElementById('undoButton');
-        button.disabled = this.points.length === 0;
-        button.textContent = this.points.length === 0 ? 'Undo Last' : `Undo Last (${this.points.length})`;
-    }
-
-    markUnsaved() {
-        this.unsavedChanges = true;
-        this.updateStatusIndicator();
+        const pointCount = this.chartManager.points.length;
+        button.disabled = pointCount === 0;
+        button.textContent = pointCount === 0 ? 'Undo Last' : `Undo Last (${pointCount})`;
     }
 
     updateStatusIndicator() {
         const indicator = document.getElementById('connectionStatusCircle');
+        if (!indicator) return;
+        
         if (this.unsavedChanges) {
             indicator.style.backgroundColor = 'orange';
             indicator.title = 'Unsaved changes';
@@ -220,7 +131,7 @@ class GraphSetup {
     }
 
     async saveToServer() {
-        if (this.points.length === 0) {
+        if (this.chartManager.points.length === 0) {
             alert('No points to save');
             return;
         }
@@ -231,7 +142,7 @@ class GraphSetup {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify([{
                     label: 'Temperature Profile',
-                    data: this.points
+                    data: this.chartManager.points
                 }])
             });
 
