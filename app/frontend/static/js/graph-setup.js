@@ -20,6 +20,12 @@ class GraphSetup {
 
     initChart() {
         this.chartManager.init();
+        
+        // Set up callback for when points are added via chart clicks
+        this.chartManager.onPointAddedCallback = () => {
+            this.unsavedChanges = this.chartManager.unsavedChanges;
+            this.updateUndoButton();
+        };
     }
 
     bindEvents() {
@@ -74,6 +80,10 @@ class GraphSetup {
         
         if (this.chartManager.points.length === 0) {
             this.unsavedChanges = false;
+            this.chartManager.unsavedChanges = false;
+        } else {
+            this.unsavedChanges = true;
+            this.chartManager.unsavedChanges = true;
         }
     }
 

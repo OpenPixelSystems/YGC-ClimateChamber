@@ -25,6 +25,7 @@ export default class UniversalChartManager {
         // Static/setup specific properties
         this.points = [];
         this.unsavedChanges = false;
+        this.onPointAddedCallback = null;
     }
 
     /**
@@ -526,6 +527,11 @@ export default class UniversalChartManager {
 
         this.updateSetupChart();
         this.unsavedChanges = true;
+        
+        // Call callback if set
+        if (this.onPointAddedCallback) {
+            this.onPointAddedCallback();
+        }
     }
 
     /**
