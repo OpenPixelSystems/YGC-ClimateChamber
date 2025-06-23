@@ -11,7 +11,7 @@ class GraphSetup {
             canvasId: 'myChart',
             type: 'setup'
         });
-        
+
         this.unsavedChanges = false;
         this.initChart();
         this.bindEvents();
@@ -117,19 +117,6 @@ class GraphSetup {
         button.textContent = pointCount === 0 ? 'Undo Last' : `Undo Last (${pointCount})`;
     }
 
-    updateStatusIndicator() {
-        const indicator = document.getElementById('connectionStatusCircle');
-        if (!indicator) return;
-        
-        if (this.unsavedChanges) {
-            indicator.style.backgroundColor = 'orange';
-            indicator.title = 'Unsaved changes';
-        } else {
-            indicator.style.backgroundColor = 'green';
-            indicator.title = 'All changes saved';
-        }
-    }
-
     async saveToServer() {
         if (this.chartManager.points.length === 0) {
             alert('No points to save');
@@ -152,8 +139,7 @@ class GraphSetup {
             }
 
             this.unsavedChanges = false;
-            this.updateStatusIndicator();
-            
+
             if (confirm('Graph saved successfully! Would you like to view it?')) {
                 window.location.href = '/display-graph';
             }

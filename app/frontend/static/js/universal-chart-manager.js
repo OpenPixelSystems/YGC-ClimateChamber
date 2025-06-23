@@ -345,6 +345,142 @@ export default class UniversalChartManager {
             pointRadius: 6,
             pointHoverRadius: 8
         });
+
+        // Load temperature limits and add annotations
+        this.loadTemperatureLimits();
+    }
+
+    /**
+     * Load temperature limits from server and add red zone annotations
+     */
+    async loadTemperatureLimits() {
+        if (this.config.type !== 'setup' || !this.chartInstance) return;
+
+        try {
+            const response = await fetch('/get_graph_min_max_temp');
+            if (!response.ok) {
+                console.warn('Could not fetch temperature limits');
+                return;
+            }
+            
+            const data = await response.json();
+            const { min_temp, max_temp } = data;
+            
+            if (min_temp !== undefined && max_temp !== undefined) {
+                this.addTemperatureLimitAnnotations(min_temp, max_temp);
+            }
+        } catch (error) {
+            console.warn('Error fetching temperature limits:', error);
+        }
+    }
+
+    /**
+     * Add red zone annotations for temperature limits
+     */
+    addTemperatureLimitAnnotations(minTemp, maxTemp) {
+        if (!this.chartInstance || !this.chartInstance.options.plugins) return;
+
+        // Initialize annotation plugin if not present
+        if (!this.chartInstance.options.plugins.annotation) {
+            this.chartInstance.options.plugins.annotation = {
+                annotations: {}
+            };
+        }
+
+        const yMin = this.chartInstance.options.scales.y.min || -20;
+        const yMax = this.chartInstance.options.scales.y.max || 180;
+
+        // Add red zone below minimum temperature
+        if (minTemp > yMin) {
+            this.chartInstance.options.plugins.annotation.annotations.redZoneLow = {
+                type: 'box',
+                xMin: 0,
+                xMax: this.chartInstance.options.scales.x.max || 120,
+                yMin: yMin,
+                yMax: minTemp,
+                backgroundColor: 'rgba(255, 0, 0, 0.15)',
+                borderColor: 'rgba(255, 0, 0, 0.3)',
+                borderWidth: 1,
+                label: {
+                    enabled: true,
+                    content: `Below Min (${minTemp}°C)`,
+                    position: 'center',
+                    color: 'rgba(255, 0, 0, 0.8)',
+                    font: {
+                        size: 12,
+                        weight: 'bold'
+                    }
+                }
+            };
+        }
+
+        // Add red zone above maximum temperature
+        if (maxTemp < yMax) {
+            this.chartInstance.options.plugins.annotation.annotations.redZoneHigh = {
+                type: 'box',
+                xMin: 0,
+                xMax: this.chartInstance.options.scales.x.max || 120,
+                yMin: maxTemp,
+                yMax: yMax,
+                backgroundColor: 'rgba(255, 0, 0, 0.15)',
+                borderColor: 'rgba(255, 0, 0, 0.3)',
+                borderWidth: 1,
+                label: {
+                    enabled: true,
+                    content: `Above Max (${maxTemp}°C)`,
+                    position: 'center',
+                    color: 'rgba(255, 0, 0, 0.8)',
+                    font: {
+                        size: 12,
+                        weight: 'bold'
+                    }
+                }
+            };
+        }
+
+        // Add boundary lines for clearer visualization
+        this.chartInstance.options.plugins.annotation.annotations.minTempLine = {
+            type: 'line',
+            yMin: minTemp,
+            yMax: minTemp,
+            borderColor: 'rgba(255, 0, 0, 0.6)',
+            borderWidth: 2,
+            borderDash: [5, 5],
+            label: {
+                enabled: true,
+                content: `Min: ${minTemp}°C`,
+                position: 'end',
+                backgroundColor: 'rgba(255, 0, 0, 0.8)',
+                color: 'white',
+                font: {
+                    size: 11,
+                    weight: 'bold'
+                }
+            }
+        };
+
+        this.chartInstance.options.plugins.annotation.annotations.maxTempLine = {
+            type: 'line',
+            yMin: maxTemp,
+            yMax: maxTemp,
+            borderColor: 'rgba(255, 0, 0, 0.6)',
+            borderWidth: 2,
+            borderDash: [5, 5],
+            label: {
+                enabled: true,
+                content: `Max: ${maxTemp}°C`,
+                position: 'end',
+                backgroundColor: 'rgba(255, 0, 0, 0.8)',
+                color: 'white',
+                font: {
+                    size: 11,
+                    weight: 'bold'
+                }
+            }
+        };
+
+        // Update chart to show annotations
+        this.chartInstance.update();
     }
 
     /**
