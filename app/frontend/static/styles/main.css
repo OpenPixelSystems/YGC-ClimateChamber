@@ -1,6 +1,25 @@
-/* Main CSS imports - original styles split logically */
+/**
+ * Main CSS Entry Point
+ * Imports all CSS modules in the correct order
+ */
+
+/* 1. Base styles - variables, typography, navigation */
 @import 'base.css';
-@import 'buttons.css';
+
+/* 2. Layout components - containers, sections, structure */
+@import 'layout.css';
+
+/* 3. Form elements - inputs, selects, labels */
 @import 'forms.css';
+
+/* 4. Interactive components - sliders, checkboxes, widgets */
+@import 'components.css';
+
+/* 5. Button components - all button styles and variants */
+@import 'buttons.css';
+
+/* 6. Chart and graph components - Chart.js styling */
 @import 'graphs.css';
+
+/* 7. Alert and notification components */
 @import 'alerts.css';
