@@ -75,8 +75,8 @@
         "type": "peltier",
         "editable": {
             "driver_type": "BTS7960",
-            "RPWM": 18,
-            "LPWM": 22,
+            "RPWM": 13,
+            "LPWM": 19,
             "R_EN": 5,
             "L_EN": 6,
             "PWM_FREQUENCY": 5000,
