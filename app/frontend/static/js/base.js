@@ -54,8 +54,65 @@ function initializeDarkMode() {
 }
 
 /**
+ * Fetch and update storage information
+ */
+async function updateStorageInfo() {
+    try {
+        const response = await fetch('/api/storage-info');
+        if (response.ok) {
+            const data = await response.json();
+            if (data.success) {
+                const storage = data.storage;
+                const storagePercent = storage.usage_percent;
+                
+                // Update the progress bar
+                const storageFill = document.getElementById('storageFill');
+                const storageText = document.getElementById('storageText');
+                const storageIndicator = document.getElementById('storageIndicator');
+                
+                if (storageFill && storageText && storageIndicator) {
+                    // Update the fill width
+                    storageFill.style.width = `${storagePercent}%`;
+                    
+                    // Update the text to show percentage
+                    storageText.textContent = `${storagePercent}%`;
+                    
+                    // Remove previous color classes
+                    storageFill.classList.remove('warning', 'danger');
+                    
+                    // Apply color based on usage level
+                    if (storagePercent >= 90) {
+                        storageFill.classList.add('danger');
+                    } else if (storagePercent >= 75) {
+                        storageFill.classList.add('warning');
+                    }
+                    
+                    // Update tooltip with detailed information
+                    storageIndicator.title = `Storage Usage: ${storagePercent}%\nUsed: ${storage.used_gb} GB\nFree: ${storage.free_gb} GB\nTotal: ${storage.total_gb} GB`;
+                }
+            }
+        } else {
+            console.warn('Failed to fetch storage info:', response.status);
+        }
+    } catch (error) {
+        console.error('Error fetching storage info:', error);
+        // Show error state
+        const storageText = document.getElementById('storageText');
+        if (storageText) {
+            storageText.textContent = 'ERR';
+        }
+    }
+}
+
+/**
  * Initialize base template functionality
  */
 document.addEventListener('DOMContentLoaded', () => {
     initializeDarkMode();
+    
+    // Update storage info immediately
+    updateStorageInfo();
+    
+    // Update storage info every 30 seconds
+    setInterval(updateStorageInfo, 30000);
 });

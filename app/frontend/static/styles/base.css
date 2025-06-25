@@ -122,6 +122,67 @@ a:hover {
     color: white;
 }
 
+/* Storage indicator styling */
+.storage-indicator {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    background: var(--nav-hover);
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    transition: all 0.2s;
+    cursor: pointer;
+}
+
+.storage-indicator:hover {
+    background: var(--primary-color);
+    color: white;
+    transform: scale(1.02);
+}
+
+.storage-icon {
+    font-size: 12px;
+    line-height: 1;
+}
+
+.storage-bar {
+    width: 50px;
+    height: 8px;
+    background: var(--border-color);
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+}
+
+.storage-fill {
+    height: 100%;
+    background: var(--success-color);
+    border-radius: 4px;
+    transition: all 0.3s ease;
+    width: 0%;
+}
+
+.storage-fill.warning {
+    background: var(--warning-color);
+}
+
+.storage-fill.danger {
+    background: var(--danger-color);
+}
+
+.storage-text {
+    font-size: 11px;
+    font-weight: 500;
+    min-width: 28px;
+    text-align: center;
+    color: var(--text-color);
+}
+
+.storage-indicator:hover .storage-text {
+    color: white;
+}
+
 /* Utility classes */
 .text-center {
     text-align: center;
@@ -183,6 +244,21 @@ a:hover {
     
     .nav-links {
         gap: 1rem;
+    }
+    
+    .storage-indicator {
+        padding: 3px 6px;
+        gap: 4px;
+    }
+    
+    .storage-bar {
+        width: 40px;
+        height: 6px;
+    }
+    
+    .storage-text {
+        font-size: 10px;
+        min-width: 24px;
     }
     
     h1 {

@@ -2,6 +2,7 @@ from flask import Blueprint, render_template, redirect, url_for, request, flash,
 from app.backend.app_state import get_app_state
 from app.routes.Helper.config import load_config, save_config
 import os
+import shutil
 
 #TODO move config logic to config_manager
 
@@ -53,6 +54,35 @@ def restart_service():
     try:
         get_app_state().restart_climate_chamber_service()
         return jsonify({'success': True, 'message': 'Service restart initiated'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@config_bp.route('/api/storage-info', methods=['GET'])
+def get_storage_info():
+    try:
+        # Get storage information for the root filesystem
+        total, used, free = shutil.disk_usage('/')
+        
+        # Convert bytes to GB for readability
+        total_gb = total / (1024**3)
+        used_gb = used / (1024**3)
+        free_gb = free / (1024**3)
+        
+        # Calculate usage percentage
+        usage_percent = (used / total) * 100
+        
+        return jsonify({
+            'success': True,
+            'storage': {
+                'total_bytes': total,
+                'used_bytes': used,
+                'free_bytes': free,
+                'total_gb': round(total_gb, 2),
+                'used_gb': round(used_gb, 2),
+                'free_gb': round(free_gb, 2),
+                'usage_percent': round(usage_percent, 1)
+            }
+        })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
