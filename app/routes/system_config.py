@@ -48,6 +48,14 @@ def api_save_config():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@config_bp.route('/restart-service', methods=['POST'])
+def restart_service():
+    try:
+        get_app_state().restart_climate_chamber_service()
+        return jsonify({'success': True, 'message': 'Service restart initiated'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @config_bp.route('/edit-config', methods=['GET', 'POST'])
 def edit_config():
     # Get filename from query or form
