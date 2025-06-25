@@ -7,6 +7,7 @@ export default class SensorManager {
     this.eventSource = null;
     this.availableSensors = new Set();
     this.selectedSensors = new Set();
+    this.currentReadings = new Map(); // Store current sensor readings
   }
 
   /**
@@ -53,7 +54,15 @@ export default class SensorManager {
     // Flatten the nested sensor data structure
     const flattenedData = this.flattenSensorData(data);
 
+    // Update current readings
+    Object.entries(flattenedData).forEach(([sensorName, value]) => {
+      if (typeof value === 'number') {
+        this.currentReadings.set(sensorName, value);
+      }
+    });
+
     this.updateSensorList(flattenedData);
+    this.updateSensorReadings(); // Update the displayed readings
 
     if (this.sensorGraph.chartManager.chartInstance) {
       const elapsedSeconds = (Date.now() - startTime) / 1000;
@@ -162,6 +171,14 @@ export default class SensorManager {
           const div = document.createElement('div');
           div.className = 'sensor-checkbox';
           div.style.marginLeft = '15px';
+          div.style.display = 'flex';
+          div.style.justifyContent = 'space-between';
+          div.style.alignItems = 'center';
+          div.style.padding = '2px 0';
+
+          const leftContainer = document.createElement('div');
+          leftContainer.style.display = 'flex';
+          leftContainer.style.alignItems = 'center';
 
           const checkbox = document.createElement('input');
           checkbox.type = 'checkbox';
@@ -180,9 +197,20 @@ export default class SensorManager {
           const label = document.createElement('label');
           label.htmlFor = sensorName;
           label.textContent = sensorName;
+          label.style.marginLeft = '5px';
+          label.style.cursor = 'pointer';
 
-          div.appendChild(checkbox);
-          div.appendChild(label);
+          const readingSpan = document.createElement('span');
+          readingSpan.className = 'sensor-reading';
+          readingSpan.id = `reading-${sensorName}`;
+          readingSpan.style.fontWeight = 'bold';
+          readingSpan.style.color = '#0066cc';
+          readingSpan.textContent = this.formatSensorReading(sensorName);
+
+          leftContainer.appendChild(checkbox);
+          leftContainer.appendChild(label);
+          div.appendChild(leftContainer);
+          div.appendChild(readingSpan);
           sensorList.appendChild(div);
         });
       }
@@ -216,6 +244,51 @@ export default class SensorManager {
     });
 
     return categories;
+  }
+
+  /**
+   * Formats sensor reading with appropriate unit and precision
+   * @param {string} sensorName - The sensor name
+   * @returns {string} Formatted reading with unit
+   */
+  formatSensorReading(sensorName) {
+    const reading = this.currentReadings.get(sensorName);
+    if (reading === undefined) {
+      return '-- --';
+    }
+
+    const lowerName = sensorName.toLowerCase();
+    let unit = '';
+    let roundedValue = Math.round(reading * 100) / 100; // Round to 0.01
+
+    // Determine unit based on sensor type
+    if (lowerName.includes('temp') || lowerName.includes('inside') || lowerName.includes('outside')) {
+      unit = '°C';
+    } else if (lowerName.includes('current')) {
+      unit = 'A';
+    } else if (lowerName.includes('pressure')) {
+      unit = 'Pa';
+    } else if (lowerName.includes('humidity')) {
+      unit = '%';
+    } else if (lowerName.includes('voltage')) {
+      unit = 'V';
+    } else {
+      unit = ''; // No unit for calculations or unknown sensors
+    }
+
+    return `${roundedValue.toFixed(2)} ${unit}`.trim();
+  }
+
+  /**
+   * Updates the displayed sensor readings
+   */
+  updateSensorReadings() {
+    this.currentReadings.forEach((reading, sensorName) => {
+      const readingElement = document.getElementById(`reading-${sensorName}`);
+      if (readingElement) {
+        readingElement.textContent = this.formatSensorReading(sensorName);
+      }
+    });
   }
 
   /**

@@ -5,25 +5,28 @@
 <div class="container">
     <div class="input-section">
         <h1>Configuration Editor</h1>
-        <form id="fileSelectForm" method="get" action="{{ url_for('config.edit_config') }}" style="margin-bottom: 20px;">
+        <div class="control-group">
             <label for="filename">Select configuration file:</label>
-            <select name="filename" id="filename">
+            <select name="filename" id="filename" class="full-width">
                 {% for fname in config_files %}
                     <option value="{{ fname }}" {% if fname == selected_file %}selected{% endif %}>{{ fname }}</option>
                 {% endfor %}
             </select>
-        </form>
+        </div>
 
-        <h2 style="margin-top:0;">Currently editing: <span style="color:var(--accent-color);">{{ selected_file }}</span></h2>
-
-        <form id="config-form"></form>
+        <h2>Currently editing: <span class="accent-text">{{ selected_file }}</span></h2>
 
         <div class="button-group">
             <button id="save-config-btn" type="submit" class="full-width">Save Configuration</button>
             <button type="button" class="full-width" onclick="window.location.href='/'">Back to Home</button>
         </div>
     </div>
+
+    <div class="graph-section">
+        <div id="config-form" class="config-container"></div>
+    </div>
 </div>
+
 {% endblock %}
 
 {% block scripts %}

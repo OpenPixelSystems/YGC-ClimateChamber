@@ -1,67 +1,145 @@
-/* Original form elements */
+/**
+ * Form Components
+ * Input fields, selects, labels, and form layouts
+ */
+
+/* Base form elements */
 input[type="text"],
 input[type="number"],
-select {
-    padding: 8px;
+input[type="email"],
+input[type="password"],
+select,
+textarea {
+    padding: 8px 12px;
     margin: 5px 0;
-    border: 1px solid #ddd;
+    border: 1px solid var(--shadow-color);
     border-radius: 4px;
-    width: 100%;
+    background: var(--card-background);
+    color: var(--text-color);
+    font-size: 14px;
+    font-family: inherit;
+    transition: all 0.2s ease;
+    outline: none;
+    box-sizing: border-box;
 }
 
+input[type="text"]:focus,
+input[type="number"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus,
+select:focus,
+textarea:focus {
+    border-color: #4CAF50;
+    box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
+}
+
+input[type="text"]:invalid,
+input[type="number"]:invalid,
+input[type="email"]:invalid,
+input[type="password"]:invalid {
+    border-color: #e74c3c;
+    box-shadow: 0 0 0 2px rgba(231, 76, 60, 0.2);
+}
+
+/* Form layouts */
 .vertical-form {
     display: flex;
     flex-direction: column;
     gap: 10px;
 }
 
-.config-field label {
-    display: block;
-    margin-bottom: 0.3rem;
-    font-weight: bold;
-    color: #34495e;
+.horizontal-form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    align-items: end;
 }
 
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-row {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+.form-row > * {
+    flex: 1;
+}
+
+/* Labels */
+label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 500;
+    color: var(--text-color);
+    font-size: 14px;
+}
+
+.required-field::after {
+    content: ' *';
+    color: #e74c3c;
+}
+
+/* Select elements */
+select {
+    cursor: pointer;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
+    background-position: right 8px center;
+    background-repeat: no-repeat;
+    background-size: 16px;
+    padding-right: 32px;
+    appearance: none;
+}
+
+/* File inputs */
 input[type="file"] {
     margin-top: 10px;
+    padding: 8px;
+    border: 2px dashed var(--shadow-color);
+    border-radius: 4px;
+    background: var(--card-background);
+    cursor: pointer;
+    transition: all 0.2s ease;
 }
 
-/* Slider specific styles */
-.slider-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 0.5rem;
-    width: fit-content;
+input[type="file"]:hover {
+    border-color: #4CAF50;
+    background: var(--nav-hover);
 }
 
-.slider-header label {
-    margin: 0;
-    margin-right: 0.5rem;
+/* Checkboxes and radios */
+input[type="checkbox"],
+input[type="radio"] {
+    margin: 0 8px 0 0;
+    cursor: pointer;
+    width: 16px;
+    height: 16px;
 }
 
-.slider-header .slider-value {
-    font-weight: bold;
-}
-
-input[type="range"].slider {
+/* Range sliders (moved from base styles) */
+input[type="range"] {
     width: 100%;
+    margin: 8px 0;
     -webkit-appearance: none;
     background: transparent;
+    cursor: pointer;
 }
 
-input[type="range"].slider:focus {
+input[type="range"]:focus {
     outline: none;
 }
 
-input[type="range"].slider::-webkit-slider-runnable-track {
+input[type="range"]::-webkit-slider-runnable-track {
     width: 100%;
     height: 8px;
-    background: #ddd;
+    background: var(--shadow-color);
     border-radius: 4px;
 }
 
-input[type="range"].slider::-webkit-slider-thumb {
+input[type="range"]::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
     width: 20px;
@@ -70,19 +148,126 @@ input[type="range"].slider::-webkit-slider-thumb {
     border-radius: 50%;
     margin-top: -6px;
     cursor: pointer;
+    transition: all 0.2s ease;
 }
 
-input[type="range"].slider::-moz-range-track {
+input[type="range"]::-webkit-slider-thumb:hover {
+    background: #45a049;
+    transform: scale(1.1);
+}
+
+input[type="range"]::-moz-range-track {
     width: 100%;
     height: 8px;
-    background: #ddd;
+    background: var(--shadow-color);
     border-radius: 4px;
+    border: none;
 }
 
-input[type="range"].slider::-moz-range-thumb {
+input[type="range"]::-moz-range-thumb {
     width: 20px;
     height: 20px;
     background: #4CAF50;
     border-radius: 50%;
     cursor: pointer;
+    border: none;
+    transition: all 0.2s ease;
+}
+
+input[type="range"]::-moz-range-thumb:hover {
+    background: #45a049;
+    transform: scale(1.1);
+}
+
+/* Form validation styles */
+.form-error {
+    color: #e74c3c;
+    font-size: 12px;
+    margin-top: 4px;
+    display: block;
+}
+
+.form-success {
+    color: #27ae60;
+    font-size: 12px;
+    margin-top: 4px;
+    display: block;
+}
+
+.has-error input,
+.has-error select,
+.has-error textarea {
+    border-color: #e74c3c;
+    box-shadow: 0 0 0 2px rgba(231, 76, 60, 0.2);
+}
+
+.has-success input,
+.has-success select,
+.has-success textarea {
+    border-color: #27ae60;
+    box-shadow: 0 0 0 2px rgba(39, 174, 96, 0.2);
+}
+
+/* Form control sizing */
+.form-control-sm {
+    padding: 6px 10px;
+    font-size: 12px;
+}
+
+.form-control-lg {
+    padding: 12px 16px;
+    font-size: 16px;
+}
+
+/* Placeholder styling */
+::placeholder {
+    color: var(--text-color);
+    opacity: 0.6;
+    font-style: italic;
+}
+
+/* Disabled form elements */
+input:disabled,
+select:disabled,
+textarea:disabled {
+    background-color: var(--nav-hover);
+    color: var(--text-color);
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Form legacy classes for compatibility */
+.form-control {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid var(--shadow-color);
+    border-radius: 4px;
+    background: var(--card-background);
+    color: var(--text-color);
+    font-size: 14px;
+}
+
+.point-input-form {
+    margin-bottom: 15px;
+}
+
+/* Responsive form adjustments */
+@media (max-width: 768px) {
+    .horizontal-form {
+        flex-direction: column;
+    }
+    
+    .form-row {
+        flex-direction: column;
+    }
+    
+    input[type="text"],
+    input[type="number"],
+    input[type="email"],
+    input[type="password"],
+    select,
+    textarea {
+        font-size: 16px; /* Prevents zoom on iOS */
+        padding: 12px;
+    }
 }

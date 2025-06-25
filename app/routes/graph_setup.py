@@ -48,3 +48,14 @@ def get_stored_graph_data():
             'max_rico': config.max_rico
         }
     })
+
+
+@graph_bp.route('/get_graph_min_max_temp', methods=['GET'])
+def get_graph_min_max_temp():
+    """Get the current graph data for display"""
+    config = get_app_state().config_manager.graph_config
+
+    return jsonify({
+        'min_temp': config.min_y,
+        'max_temp': config.max_y
+    })

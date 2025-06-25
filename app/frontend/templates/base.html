@@ -14,11 +14,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles/main.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='styles/base.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='styles/buttons.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='styles/forms.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='styles/alerts.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='styles/graphs.css') }}">
     <script>
         function toggleDarkMode() {
             document.documentElement.classList.toggle('dark-mode');

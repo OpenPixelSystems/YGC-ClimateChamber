@@ -4,7 +4,7 @@
 {% block content %}
 <div class="container">
     <div class="input-section">
-        <h1 style="text-align: center;">Climate Chamber Control</h1>
+        <h1 class="text-center">Climate Chamber Control</h1>
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 <div class="flash-messages">
@@ -20,7 +20,7 @@
             <form action="{{ url_for('home.submit_temperature') }}" method="post" class="vertical-form">
                 <input type="number" name="temperature" 
                        placeholder="Enter temperature (°C)"
-                       step="0.1" required>
+                       step="0.1" required class="full-width">
                 <button type="submit" class="full-width">Set Constant Temperature</button>
             </form>
         </div>

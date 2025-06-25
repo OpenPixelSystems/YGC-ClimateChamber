@@ -8,7 +8,6 @@ import { formatTime } from './utils.js';
  */
 class SensorGraph {
   constructor() {
-  //TODO chartinstance isn't cleared when page is loaded, resulting in desiredgraph still being visible
     this.startTime = null;
     this.isCycleRunning = false;
 

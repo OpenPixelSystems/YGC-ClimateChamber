@@ -6,42 +6,23 @@
     <div class="input-section">
         <h1>Cycle Data Viewer</h1>
 
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                <div class="flash-messages">
-                    {% for category, message in messages %}
-                        <div class="flash {{ category }}">{{ message }}</div>
-                    {% endfor %}
-                </div>
-            {% endif %}
-        {% endwith %}
-
         <div class="control-group">
             <h3>Select a Cycle</h3>
             <p class="help-text">Choose a cycle to view its sensor readings plotted over time.</p>
             <div class="setting-item">
-                <label for="cycleDropdown">Cycle</label>
                 <select id="cycleDropdown" class="form-control"></select>
+                <div class="setting-item">
+                    <label for="displayType">Display Mode:</label>
+                    <select id="displayType" class="form-control">
+                        <option value="temperature" selected>Temperature</option>
+                        <option value="current">Current</option>
+                        <option value="calculations">Calculations</option>
+                        <option value="all">All Sensors</option>
+                    </select>
+                </div>
             </div>
-        </div>
-
-        <div class="control-group">
-            <h3>Edit cycle</h3>
             <button id="deleteData" class="success-button full-width">Delete Data</button>
             <button id="deleteAllData" class="success-button full-width">Delete All Data</button>
-        </div>
-
-        <div class="control-group">
-            <h3>Graph Settings</h3>
-            <div class="setting-item">
-                <label for="displayType">Display Mode:</label>
-                <select id="displayType" class="form-control">
-                    <option value="temperature" selected>Temperature</option>
-                    <option value="current">Current</option>
-                    <option value="calculations">Calculations</option>
-                    <option value="all">All Sensors</option>
-                </select>
-            </div>
         </div>
 
         <div class="control-group">
@@ -49,121 +30,20 @@
             <button type="button" class="primary-button full-width"
                     onclick="window.location.href='/'">Back to Home</button>
             <button id="exportData" class="success-button full-width">Export Data</button>
+            <button id="importData" class="warning-button full-width">Import Data</button>
         </div>
     </div>
     <div class="graph-section">
+        <div class="chart-controls">
+            <button id="resetZoom" class="secondary-button" title="Double-click chart or use this button to reset zoom">Reset Zoom</button>
+            <p class="help-text">Drag to select time range for zooming • Double-click to reset zoom</p>
+        </div>
         <canvas id="temperatureChart" width="600" height="400"></canvas>
     </div>
 </div>
 
-<style>
-.container {
-    display: flex;
-    gap: 20px;
-    padding: 20px;
-    width: 100%;
-    margin: 0;
-}
-
-.input-section {
-    flex: 1;
-    background: var(--card-background);
-    padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px var(--shadow-color);
-    max-width: 350px;
-}
-
-.graph-section {
-    flex: 2;
-    position: relative;
-    background: var(--card-background);
-    padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px var(--shadow-color);
-    min-height: 450px;
-}
-
-.control-group {
-    margin-bottom: 24px;
-    padding: 16px;
-    background: var(--card-background);
-    border-radius: 6px;
-    border: 1px solid var(--shadow-color);
-}
-
-.control-group h3 {
-    margin-top: 0;
-    margin-bottom: 16px;
-    color: var(--text-color);
-    font-size: 1.1em;
-}
-
-.help-text {
-    font-size: 0.9em;
-    color: var(--text-color);
-    margin-top: 8px;
-    margin-bottom: 16px;
-}
-
-.setting-item {
-    margin-bottom: 12px;
-}
-
-.setting-item label {
-    display: block;
-    margin-bottom: 5px;
-    font-weight: 500;
-}
-
-.form-control {
-    width: 100%;
-    padding: 8px;
-    border-radius: 4px;
-    border: 1px solid var(--border-color);
-}
-
-.status-circle {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    background-color: #ccc;
-}
-
-.primary-button, .success-button, .warning-button {
-    padding: 8px 16px;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-weight: 500;
-    margin-bottom: 10px;
-}
-
-.primary-button {
-    background-color: var(--primary-color, #3498db);
-    color: white;
-}
-
-.success-button {
-    background-color: var(--success-color, #2ecc71);
-    color: white;
-}
-
-.warning-button {
-    background-color: var(--warning-color, #e74c3c);
-    color: white;
-}
-
-.full-width {
-    width: 100%;
-    display: block;
-}
-</style>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
-<script src="{{ url_for('static', filename='js/database-viewer.js') }}"></script>
+<script src="{{ url_for('static', filename='js/database-viewer.js') }}" type="module"></script>
 {% endblock %}
