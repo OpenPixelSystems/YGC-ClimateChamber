@@ -96,15 +96,6 @@ export default class ChartManager {
   }
 
   /**
-   * Adds or updates a vertical line to mark the start time
-   * @param {number} elapsedSeconds - Elapsed time in seconds
-   */
-  updateStartTimeLine(elapsedSeconds) {
-    // Handled internally by universal manager
-    this.universalManager.updateStartTimeLine(elapsedSeconds);
-  }
-
-  /**
    * Adds desired temperature path to the chart
    * @param {Array|Object} desiredPath - Desired temperature data
    */

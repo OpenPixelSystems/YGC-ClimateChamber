@@ -248,7 +248,6 @@ export default class UniversalChartManager {
 
         // Update time axis
         this.updateTimeAxis(elapsedSeconds);
-        this.updateStartTimeLine(elapsedSeconds);
         this.chartInstance.update();
     }
 
@@ -266,32 +265,6 @@ export default class UniversalChartManager {
         // Ensure minimum 5-minute window
         if (this.chartInstance.options.scales.x.max < 300) {
             this.chartInstance.options.scales.x.max = 300;
-        }
-    }
-
-    /**
-     * Add or update start time line
-     */
-    updateStartTimeLine(elapsedSeconds) {
-        if (!this.chartInstance || !this.chartInstance.options.plugins.annotation) return;
-
-        if (!this.startTimeLineConfig) {
-            this.startTimeLineConfig = {
-                type: 'line',
-                xMin: elapsedSeconds,
-                xMax: elapsedSeconds,
-                borderColor: 'green',
-                borderWidth: 2,
-                label: {
-                    content: 'Start Time',
-                    enabled: true,
-                    position: 'start'
-                }
-            };
-            this.chartInstance.options.plugins.annotation.annotations.startTimeLine = this.startTimeLineConfig;
-        } else {
-            this.startTimeLineConfig.xMin = elapsedSeconds;
-            this.startTimeLineConfig.xMax = elapsedSeconds;
         }
     }
 
