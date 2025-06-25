@@ -186,7 +186,10 @@ class BTS7960Driver(IDriver):
     def disable(self):
         GPIO.output(self.config.R_EN, GPIO.LOW)
         GPIO.output(self.config.L_EN, GPIO.LOW)
+        self.enabled = False
+
 
     def enable(self):
         GPIO.output(self.config.R_EN, GPIO.HIGH)
         GPIO.output(self.config.L_EN, GPIO.HIGH)
+        self.enabled = True
