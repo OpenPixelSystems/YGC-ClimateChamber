@@ -40,6 +40,7 @@ class DatabaseViewer {
         document.getElementById('deleteAllData').addEventListener('click', () => this.deleteAllCycles());
         document.getElementById('exportData').addEventListener('click', () => this.exportData());
         document.getElementById('importData').addEventListener('click', () => this.importData());
+        document.getElementById('resetZoom').addEventListener('click', () => this.resetZoom());
     }
 
     async loadCycles() {
@@ -1008,6 +1009,12 @@ class DatabaseViewer {
         }
         
         return await response.json();
+    }
+
+    resetZoom() {
+        if (this.chartManager) {
+            this.chartManager.resetZoom();
+        }
     }
 
     getRandomColor(alpha = 1) {

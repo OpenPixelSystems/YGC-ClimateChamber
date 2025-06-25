@@ -127,12 +127,27 @@
     gap: 10px;
     margin-bottom: 15px;
     flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
 }
 
 .chart-control-item {
     display: flex;
     align-items: center;
     gap: 5px;
+}
+
+/* Zoom controls specific styling */
+.chart-controls .help-text {
+    color: var(--text-color);
+    font-size: 12px;
+    margin: 0;
+    opacity: 0.7;
+    font-style: italic;
+}
+
+.chart-controls .secondary-button {
+    white-space: nowrap;
 }
 
 /* Chart toolbar */

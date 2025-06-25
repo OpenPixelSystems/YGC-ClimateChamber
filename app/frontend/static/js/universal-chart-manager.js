@@ -26,6 +26,13 @@ export default class UniversalChartManager {
         this.points = [];
         this.unsavedChanges = false;
         this.onPointAddedCallback = null;
+
+        // Zoom functionality properties
+        this.isDragging = false;
+        this.dragStart = null;
+        this.dragEnd = null;
+        this.selectionOverlay = null;
+        this.originalXLimits = null;
     }
 
     /**
@@ -52,6 +59,11 @@ export default class UniversalChartManager {
             this.setupInteractiveChart();
         }
         
+        // Add zoom functionality for database charts
+        if (this.config.type === 'database') {
+            this.setupZoomFunctionality();
+        }
+
         return this.chartInstance;
     }
 
@@ -600,9 +612,230 @@ export default class UniversalChartManager {
     }
 
     /**
+     * Setup zoom functionality for database charts
+     */
+    setupZoomFunctionality() {
+        if (this.config.type !== 'database' || !this.chartInstance) return;
+        
+        const canvas = this.chartInstance.canvas;
+        
+        // Store original limits
+        this.originalXLimits = {
+            min: this.chartInstance.options.scales.x.min,
+            max: this.chartInstance.options.scales.x.max
+        };
+        
+        // Mouse event handlers
+        canvas.addEventListener('mousedown', (e) => this.handleMouseDown(e));
+        canvas.addEventListener('mousemove', (e) => this.handleMouseMove(e));
+        canvas.addEventListener('mouseup', (e) => this.handleMouseUp(e));
+        canvas.addEventListener('mouseleave', (e) => this.handleMouseLeave(e));
+        
+        // Double-click to reset zoom
+        canvas.addEventListener('dblclick', (e) => this.resetZoom());
+        
+        // Disable default context menu to prevent interference
+        canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+        
+        // Create selection overlay
+        this.createSelectionOverlay();
+    }
+    
+    /**
+     * Create selection overlay for drag selection
+     */
+    createSelectionOverlay() {
+        if (!this.chartInstance) return;
+        
+        const canvas = this.chartInstance.canvas;
+        const container = canvas.parentElement;
+        
+        // Create overlay div
+        this.selectionOverlay = document.createElement('div');
+        this.selectionOverlay.style.cssText = `
+            position: absolute;
+            border: 2px dashed #007bff;
+            background: rgba(0, 123, 255, 0.1);
+            pointer-events: none;
+            display: none;
+            z-index: 10;
+        `;
+        
+        // Position relative to container
+        if (container.style.position !== 'relative' && container.style.position !== 'absolute') {
+            container.style.position = 'relative';
+        }
+        
+        container.appendChild(this.selectionOverlay);
+    }
+    
+    /**
+     * Handle mouse down event for drag selection
+     */
+    handleMouseDown(e) {
+        if (this.config.type !== 'database' || !this.chartInstance) return;
+        
+        // Only start drag on left mouse button
+        if (e.button !== 0) return;
+        
+        const rect = this.chartInstance.canvas.getBoundingClientRect();
+        const canvasPosition = Chart.helpers.getRelativePosition(e, this.chartInstance);
+        
+        // Check if click is within the plot area
+        const chartArea = this.chartInstance.chartArea;
+        if (canvasPosition.x < chartArea.left || canvasPosition.x > chartArea.right ||
+            canvasPosition.y < chartArea.top || canvasPosition.y > chartArea.bottom) {
+            return;
+        }
+        
+        this.isDragging = true;
+        this.dragStart = {
+            x: canvasPosition.x,
+            y: canvasPosition.y,
+            screenX: e.clientX - rect.left,
+            screenY: e.clientY - rect.top
+        };
+        
+        // Prevent text selection
+        e.preventDefault();
+    }
+    
+    /**
+     * Handle mouse move event for drag selection
+     */
+    handleMouseMove(e) {
+        if (!this.isDragging || this.config.type !== 'database' || !this.chartInstance) return;
+        
+        const rect = this.chartInstance.canvas.getBoundingClientRect();
+        const canvasPosition = Chart.helpers.getRelativePosition(e, this.chartInstance);
+        
+        this.dragEnd = {
+            x: canvasPosition.x,
+            y: canvasPosition.y,
+            screenX: e.clientX - rect.left,
+            screenY: e.clientY - rect.top
+        };
+        
+        // Update selection overlay
+        this.updateSelectionOverlay();
+    }
+    
+    /**
+     * Handle mouse up event for drag selection
+     */
+    handleMouseUp(e) {
+        if (!this.isDragging || this.config.type !== 'database' || !this.chartInstance) return;
+        
+        this.isDragging = false;
+        
+        if (this.dragStart && this.dragEnd) {
+            this.performZoom();
+        }
+        
+        // Hide selection overlay
+        if (this.selectionOverlay) {
+            this.selectionOverlay.style.display = 'none';
+        }
+        
+        // Clear drag data
+        this.dragStart = null;
+        this.dragEnd = null;
+    }
+    
+    /**
+     * Handle mouse leave event
+     */
+    handleMouseLeave(e) {
+        if (this.isDragging) {
+            this.isDragging = false;
+            if (this.selectionOverlay) {
+                this.selectionOverlay.style.display = 'none';
+            }
+            this.dragStart = null;
+            this.dragEnd = null;
+        }
+    }
+    
+    /**
+     * Update selection overlay position and size
+     */
+    updateSelectionOverlay() {
+        if (!this.selectionOverlay || !this.dragStart || !this.dragEnd) return;
+        
+        const startX = Math.min(this.dragStart.screenX, this.dragEnd.screenX);
+        const endX = Math.max(this.dragStart.screenX, this.dragEnd.screenX);
+        const width = endX - startX;
+        
+        // Only show overlay if there's significant horizontal movement
+        if (width > 5) {
+            const chartArea = this.chartInstance.chartArea;
+            const canvas = this.chartInstance.canvas;
+            
+            // Get the canvas position relative to its container
+            const canvasOffsetTop = canvas.offsetTop;
+            const canvasOffsetLeft = canvas.offsetLeft;
+            
+            this.selectionOverlay.style.display = 'block';
+            this.selectionOverlay.style.left = `${canvasOffsetLeft + startX}px`;
+            this.selectionOverlay.style.top = `${canvasOffsetTop + chartArea.top}px`;
+            this.selectionOverlay.style.width = `${width}px`;
+            this.selectionOverlay.style.height = `${chartArea.bottom - chartArea.top}px`;
+        } else {
+            this.selectionOverlay.style.display = 'none';
+        }
+    }
+    
+    /**
+     * Perform zoom based on selection
+     */
+    performZoom() {
+        if (!this.dragStart || !this.dragEnd || !this.chartInstance) return;
+        
+        // Calculate the selected time range
+        const startX = Math.min(this.dragStart.x, this.dragEnd.x);
+        const endX = Math.max(this.dragStart.x, this.dragEnd.x);
+        
+        // Convert pixel positions to data values
+        const startValue = this.chartInstance.scales.x.getValueForPixel(startX);
+        const endValue = this.chartInstance.scales.x.getValueForPixel(endX);
+        
+        // Only zoom if there's a reasonable selection
+        if (Math.abs(endX - startX) > 10) {
+            // Update chart x-axis limits
+            this.chartInstance.options.scales.x.min = startValue;
+            this.chartInstance.options.scales.x.max = endValue;
+            this.chartInstance.update('none');
+        }
+    }
+    
+    /**
+     * Reset zoom to original limits
+     */
+    resetZoom() {
+        if (!this.chartInstance || this.config.type !== 'database') return;
+        
+        // Reset to original limits or auto-fit to data
+        if (this.originalXLimits && (this.originalXLimits.min !== undefined || this.originalXLimits.max !== undefined)) {
+            this.chartInstance.options.scales.x.min = this.originalXLimits.min;
+            this.chartInstance.options.scales.x.max = this.originalXLimits.max;
+        } else {
+            // Auto-fit to data
+            delete this.chartInstance.options.scales.x.min;
+            delete this.chartInstance.options.scales.x.max;
+        }
+        
+        this.chartInstance.update('none');
+    }
+
+    /**
      * Destroy chart
      */
     destroy() {
+        // Clean up selection overlay
+        if (this.selectionOverlay && this.selectionOverlay.parentElement) {
+            this.selectionOverlay.parentElement.removeChild(this.selectionOverlay);
+        }
+        
         if (this.chartInstance) {
             this.chartInstance.destroy();
             this.chartInstance = null;
