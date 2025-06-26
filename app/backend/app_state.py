@@ -1,4 +1,6 @@
 from pathlib import Path
+import subprocess
+import sys
 from app.backend.Providers.gpio_provider import GPIO
 
 _app_state = None
@@ -107,3 +109,15 @@ class AppState(metaclass=SingletonMeta):
         #TODO reload struggles with overwriting PWM configured pin
         GPIO.cleanup()
         self.__climate_chamber_factory()
+
+    def restart_climate_chamber_service(self):
+        """Restart the systemd service"""
+        try:
+            print("[app_state] [restart_climate_chamber_service] Restarting climate chamber")
+            subprocess.run(['sudo', 'systemctl', 'restart', 'climatechamber.service'],
+                           check=True)
+            # Exit the current process cleanly
+            sys.exit(0)
+        except subprocess.CalledProcessError as e:
+            print(f"[app_state] [restart_climate_chamber_service] Failed to restart service: {e}")
+            sys.exit(1)

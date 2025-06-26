@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
     <script>
+        // Immediate dark mode initialization to prevent flash
         (function() {
             const isDarkMode = localStorage.getItem('darkMode') === 'true';
             if (isDarkMode) {
@@ -14,22 +15,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles/main.css') }}">
-    <script>
-        function toggleDarkMode() {
-            document.documentElement.classList.toggle('dark-mode');
-            const isDarkMode = document.documentElement.classList.contains('dark-mode');
-            localStorage.setItem('darkMode', isDarkMode);
-        }
-
-        document.addEventListener('DOMContentLoaded', () => {
-            const isDarkMode = localStorage.getItem('darkMode') === 'true';
-            if (isDarkMode) {
-                document.documentElement.classList.add('dark-mode');
-            } else {
-                document.documentElement.classList.remove('dark-mode');
-            }
-        });
-    </script>
+    <script src="{{ url_for('static', filename='js/base.js') }}"></script>
     {% endblock %}
 </head>
 <body>
@@ -40,9 +26,19 @@
             <a href="{{ url_for('viewer.view_database') }}" class="nav-link">Database viewer</a>
         </div>
         <div class="nav-controls">
+            <div class="storage-indicator" id="storageIndicator" title="Storage Usage">
+                <div class="storage-icon">💾</div>
+                <div class="storage-bar">
+                    <div class="storage-fill" id="storageFill"></div>
+                </div>
+                <div class="storage-text" id="storageText">--</div>
+            </div>
             <a href="{{ url_for('config.edit_config') }}" class="icon-button" title="System Configuration">
                 ⚙️
             </a>
+            <button onclick="restartService()" class="icon-button restart-button" title="Restart Climate Chamber Service">
+                ↻
+            </button>
             <button onclick="toggleDarkMode()" class="icon-button" title="Toggle Dark Mode">
                 🌓
             </button>

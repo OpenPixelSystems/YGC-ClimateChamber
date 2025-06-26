@@ -2,6 +2,9 @@ from flask import Blueprint, render_template, redirect, url_for, request, flash,
 from app.backend.app_state import get_app_state
 from app.routes.Helper.config import load_config, save_config
 import os
+import shutil
+import threading
+import time
 
 #TODO move config logic to config_manager
 
@@ -45,6 +48,49 @@ def api_save_config():
         save_config(config_path, config_data)
         get_app_state().reload_climate_chamber()
         return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@config_bp.route('/restart-service', methods=['POST'])
+def restart_service():
+    def delayed_restart():
+        time.sleep(2)  # Give time for response to be sent
+        get_app_state().restart_climate_chamber_service()
+
+    try:
+        # Start restart in background thread
+        threading.Thread(target=delayed_restart, daemon=True).start()
+        return jsonify({'success': True, 'message': 'Service restart initiated'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@config_bp.route('/api/storage-info', methods=['GET'])
+def get_storage_info():
+    try:
+        # Get storage information for the root filesystem
+        total, used, free = shutil.disk_usage('/')
+        
+        # Convert bytes to GB for readability
+        total_gb = total / (1024**3)
+        used_gb = used / (1024**3)
+        free_gb = free / (1024**3)
+        
+        # Calculate usage percentage
+        usage_percent = (used / total) * 100
+        
+        return jsonify({
+            'success': True,
+            'storage': {
+                'total_bytes': total,
+                'used_bytes': used,
+                'free_bytes': free,
+                'total_gb': round(total_gb, 2),
+                'used_gb': round(used_gb, 2),
+                'free_gb': round(free_gb, 2),
+                'usage_percent': round(usage_percent, 1)
+            }
+        })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
