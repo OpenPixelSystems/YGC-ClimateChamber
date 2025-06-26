@@ -3,6 +3,8 @@ from app.backend.app_state import get_app_state
 from app.routes.Helper.config import load_config, save_config
 import os
 import shutil
+import threading
+import time
 
 #TODO move config logic to config_manager
 
@@ -49,10 +51,16 @@ def api_save_config():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+
 @config_bp.route('/restart-service', methods=['POST'])
 def restart_service():
-    try:
+    def delayed_restart():
+        time.sleep(2)  # Give time for response to be sent
         get_app_state().restart_climate_chamber_service()
+
+    try:
+        # Start restart in background thread
+        threading.Thread(target=delayed_restart, daemon=True).start()
         return jsonify({'success': True, 'message': 'Service restart initiated'})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
