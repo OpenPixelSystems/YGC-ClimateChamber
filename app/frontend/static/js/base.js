@@ -116,3 +116,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // Update storage info every 30 seconds
     setInterval(updateStorageInfo, 30000);
 });
+
+window.addEventListener('DOMContentLoaded', () => {
+    const flashContainer = document.querySelector('.flash-messages');
+    if (flashContainer) {
+        // Verberg of verwijder de melding meteen bij laden
+        flashContainer.remove();
+    }
+});
