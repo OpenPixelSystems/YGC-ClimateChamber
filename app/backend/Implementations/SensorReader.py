@@ -30,8 +30,7 @@ class SensorReader(ISensorReader, Subscriptable):
         
         self.initialise(mcu_config)
         
-        # Start background reading automatically
-        self.start_background_reading()
+        # Background reading will be started manually when needed (when cycle starts)
 
     def initialise(self, mcu_config: McuConfig):
         """Initialize Sensors from McuConfig dataclass"""
@@ -58,19 +57,27 @@ class SensorReader(ISensorReader, Subscriptable):
 
     """Return cached sensor values (instant response) or direct read if no cache available"""
     def read_sensors(self):
-        # Try to return cached data first (instant response)
-        with self._data_lock:
-            if self._cached_sensor_data and self._last_reading_time:
-                age = (datetime.now() - self._last_reading_time).total_seconds()
-                if age < 10.0:  # Use cache if less than 10 seconds old
-                    print(f"[SensorReader] Returning cached data (age: {age:.1f}s)")
-                    self.notify(self._cached_sensor_data)
-                    return self._cached_sensor_data.copy()
-                else:
-                    print(f"[SensorReader] Cached data too old ({age:.1f}s), falling back to direct read")
+        # Check if background reading is running
+        background_running = self._background_thread and self._background_thread.is_alive()
         
-        # Fallback: direct read if no cached data or cache too old
-        print("[SensorReader] No cached data available, reading sensors directly")
+        # Try to return cached data first (instant response) - only if background reading is active
+        if background_running:
+            with self._data_lock:
+                if self._cached_sensor_data and self._last_reading_time:
+                    age = (datetime.now() - self._last_reading_time).total_seconds()
+                    if age < 10.0:  # Use cache if less than 10 seconds old
+                        print(f"[SensorReader] Returning cached data (age: {age:.1f}s)")
+                        self.notify(self._cached_sensor_data)
+                        return self._cached_sensor_data.copy()
+                    else:
+                        print(f"[SensorReader] Cached data too old ({age:.1f}s), falling back to direct read")
+        
+        # Fallback: direct read if background reading not active or no cached data
+        if not background_running:
+            print("[SensorReader] Background reading not active, reading sensors directly")
+        else:
+            print("[SensorReader] No cached data available, reading sensors directly")
+            
         sensor_readings = self._read_sensors_directly()
         
         self.notify(sensor_readings)

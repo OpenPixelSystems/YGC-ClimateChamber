@@ -470,6 +470,26 @@ export default class UniversalChartManager {
     }
 
     /**
+     * Update the x range of temperature limit annotations when x-axis extends
+     */
+    updateTemperatureLimitAnnotationsXRange(newMaxX) {
+        if (!this.chartInstance || !this.chartInstance.options.plugins?.annotation?.annotations) return;
+
+        const annotations = this.chartInstance.options.plugins.annotation.annotations;
+        
+        // Update red zone annotations with new x range
+        if (annotations.redZoneLow) {
+            annotations.redZoneLow.xMax = newMaxX;
+        }
+        
+        if (annotations.redZoneHigh) {
+            annotations.redZoneHigh.xMax = newMaxX;
+        }
+        
+        console.log(`[ChartManager] Temperature limit annotations updated to x-max: ${newMaxX}`);
+    }
+
+    /**
      * Handle chart click (for setup page)
      */
     handleChartClick(event) {
@@ -483,6 +503,7 @@ export default class UniversalChartManager {
         const roundedX = Math.round(x / 5) * 5;
         const roundedY = Math.round(y);
 
+        // Note: addPoint() will handle dynamic x-axis scaling automatically
         this.addPoint(roundedX, roundedY);
     }
 
@@ -492,14 +513,34 @@ export default class UniversalChartManager {
     addPoint(x, y) {
         if (this.config.type !== 'setup') return;
 
-        // Validate ranges
-        if (x < 0 || x > 120) {
-            alert('Time must be between 0 and 120 minutes');
+        // Get current x-axis maximum
+        const currentMaxX = this.chartInstance.options.scales.x.max;
+        const threeFourthsPoint = currentMaxX * 0.75;
+        
+        // Validate minimum ranges
+        if (x < 0) {
+            alert('Time must be greater than 0 minutes');
             return;
         }
         if (y < -20 || y > 180) {
             alert('Temperature must be between -20 and 180°C');
             return;
+        }
+
+        // Dynamic x-axis scaling: extend if point is past 3/4 of current range
+        if (x > threeFourthsPoint) {
+            // Calculate new maximum - extend by 50% or ensure at least 20 minutes beyond the new point
+            const extensionOption1 = currentMaxX * 1.5;
+            const extensionOption2 = x + 20;
+            const newMaxX = Math.max(extensionOption1, extensionOption2);
+            
+            // Update x-axis maximum
+            this.chartInstance.options.scales.x.max = newMaxX;
+            
+            // Also update any temperature limit annotations to match new x range
+            this.updateTemperatureLimitAnnotationsXRange(newMaxX);
+            
+            console.log(`[ChartManager] X-axis extended from ${currentMaxX} to ${newMaxX} minutes (point at ${x} minutes)`);
         }
 
         // Check for duplicate time points
