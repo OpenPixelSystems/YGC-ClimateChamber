@@ -33,9 +33,9 @@
                 </div>
                 <div class="storage-text" id="storageText">--</div>
             </div>
-            <a href="{{ url_for('config.edit_config') }}" class="icon-button" title="System Configuration">
+            <button onclick="navigateToSettings()" class="icon-button" title="System Configuration">
                 ⚙️
-            </a>
+            </button>
             <button onclick="restartService()" class="icon-button restart-button" title="Restart Climate Chamber Service">
                 ↻
             </button>
