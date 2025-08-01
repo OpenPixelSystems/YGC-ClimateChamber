@@ -152,9 +152,12 @@ class ADS1115(ISensor):
         """Read current from the ADS1115 sensor.
 
         Returns:
-            Dictionary mapping sensor name to its current reading value
+            Dictionary mapping sensor name to its current reading value with data source info
         """
         json_format = {}
+        
+        # Add data source metadata (backward compatible)
+        data_source_key = f"{self._name}_data_source"
 
         try:
             if not self._is_testing:
@@ -166,29 +169,44 @@ class ADS1115(ISensor):
                     # Convert voltage to current
                     current = self._voltage_to_current(voltage)
 
-                    json_format[self._type] = {self._name: round(current, 3)}
+                    json_format[self._type] = {
+                        self._name: round(current, 3),
+                        data_source_key: "real"
+                    }
                     self._last_reading = current
                     print(f"[ADS1115] Read actual sensor value: {current} {self._unit} (voltage: {voltage:.3f}V)")
 
 
                 except Exception as e:
                     # Error reading sensor, return None instead of simulated value
-                    json_format[self._type] = {self._name: None}
+                    json_format[self._type] = {
+                        self._name: None,
+                        data_source_key: "error"
+                    }
                     print(f"[ADS1115] Error reading real sensor: {str(e)}, returning None")
             else:
                 # We're in a test environment or sensor initialization failed
                 # Only use simulated values in testing environment
                 if self._is_testing:
                     value = self._get_simulated_value()
-                    json_format[self._type] = {self._name: value}
+                    json_format[self._type] = {
+                        self._name: value,
+                        data_source_key: "test"
+                    }
                     print(f"[ADS1115] In testing environment, using simulated value: {value} {self._unit}")
                 else:
                     # On real hardware but sensor failed to initialize
-                    json_format[self._type] = {self._name: None}
+                    json_format[self._type] = {
+                        self._name: None,
+                        data_source_key: "failed"
+                    }
                     print(f"[ADS1115] Sensor initialization failed on real hardware, returning None")
 
         except Exception as e:
             print(f"[ADS1115] Critical error reading sensor {self._name}: {str(e)}")
-            json_format[self._type] = {self._name: None}
+            json_format[self._type] = {
+                self._name: None,
+                data_source_key: "error"
+            }
 
         return json_format

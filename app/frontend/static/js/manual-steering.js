@@ -93,10 +93,13 @@ class SensorGraph {
       const valueDisplay = wrapper.querySelector('.slider-value');
       const sliderType = wrapper.dataset.sliderType;
 
-      // Update displayed value when slider moves
+      // Update displayed value when slider moves (visual feedback only)
       slider.addEventListener('input', () => {
         valueDisplay.textContent = slider.value;
+      });
 
+      // Send data only when slider is released
+      slider.addEventListener('change', () => {
         // Call specific update method based on slider type
         switch(sliderType) {
           case 'power':

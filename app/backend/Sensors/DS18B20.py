@@ -1,5 +1,6 @@
 import random
 import time
+import threading
 from typing import Dict, Optional
 
 from app.backend.Dataclasses.Config import DS18B20Config
@@ -25,6 +26,10 @@ class DS18B20(ISensor):
         self._unit = sensor_config.unit
         self._is_testing = is_testing
         self._last_reading = None
+        self._last_successful_reading = None
+        self._consecutive_failures = 0
+        self._max_consecutive_failures = 3
+        self._read_timeout = 3.0  # 3 second timeout for sensor reads
 
         # Production sensor object (only created when not testing)
         self._sensor = None
@@ -106,39 +111,92 @@ class DS18B20(ISensor):
 
         return round(new_value, 1)
 
+    def _read_sensor_with_timeout(self) -> Optional[float]:
+        """Read sensor with timeout to prevent system stalls.
+        
+        Returns:
+            Temperature reading or None if timeout/error occurred
+        """
+        if not (self._sensor and self._w1thermsensor_available):
+            return None
+            
+        result = [None]
+        exception_info = [None]
+        
+        def read_thread():
+            try:
+                result[0] = self._sensor.get_temperature(self._Unit.DEGREES_C)
+            except Exception as e:
+                exception_info[0] = e
+        
+        thread = threading.Thread(target=read_thread, daemon=True)
+        thread.start()
+        thread.join(timeout=self._read_timeout)
+        
+        if thread.is_alive():
+            print(f"[DS18B20] Sensor {self._full_rom_address} read timed out after {self._read_timeout}s")
+            return None
+            
+        if exception_info[0]:
+            print(f"[DS18B20] Sensor {self._full_rom_address} read failed: {exception_info[0]}")
+            return None
+            
+        return result[0]
+
     def read(self) -> Dict[str, Dict[str, Optional[float]]]:
         """Read temperature from sensor or return simulated value in testing mode.
 
         Returns:
-            Dictionary mapping sensor type to sensor name to reading value
+            Dictionary mapping sensor type to sensor name to reading value with data source info
         """
         json_format = {self._type: {self._name: None}}
+        
+        # Add data source metadata (backward compatible - won't break existing code)
+        data_source_key = f"{self._name}_data_source"
+        json_format[self._type][data_source_key] = "unknown"
 
         try:
             if self._is_testing:
                 # Testing mode - use simulated values
                 value = self._get_simulated_value()
                 json_format[self._type][self._name] = value
+                json_format[self._type][data_source_key] = "test"
                 print(f"[DS18B20] Testing mode - simulated value for {self._full_rom_address}: {value} {self._unit}")
             else:
-                # Production mode - read from real sensor
-                if self._sensor is not None and self._w1thermsensor_available:
-                    try:
-                        # Read temperature using w1thermsensor (no import needed)
-                        temp_c = self._sensor.get_temperature(self._Unit.DEGREES_C)
-                        json_format[self._type][self._name] = round(temp_c, 1)
-                        self._last_reading = temp_c
-                        print(f"[DS18B20] Read sensor {self._full_rom_address}: {temp_c} {self._unit}")
-
-                    except Exception as e:
-                        print(f"[DS18B20] Error reading sensor {self._full_rom_address}: {str(e)}")
-                elif not self._w1thermsensor_available:
-                    print(f"[DS18B20] w1thermsensor library not available")
+                # Production mode - read from real sensor with timeout
+                temp_c = self._read_sensor_with_timeout()
+                
+                if temp_c is not None:
+                    # Successful read
+                    rounded_temp = round(temp_c, 1)
+                    json_format[self._type][self._name] = rounded_temp
+                    json_format[self._type][data_source_key] = "real"
+                    self._last_reading = rounded_temp
+                    self._last_successful_reading = rounded_temp
+                    self._consecutive_failures = 0
+                    print(f"[DS18B20] Read sensor {self._full_rom_address}: {rounded_temp} {self._unit}")
                 else:
-                    print(f"[DS18B20] Sensor {self._full_rom_address} not available")
+                    # Failed read - increment failure counter
+                    self._consecutive_failures += 1
+                    print(f"[DS18B20] Failed to read sensor {self._full_rom_address} (failure #{self._consecutive_failures})")
+                    
+                    # Use fallback strategy based on failure count
+                    if self._consecutive_failures <= self._max_consecutive_failures and self._last_successful_reading is not None:
+                        # Use last successful reading as fallback
+                        fallback_value = self._last_successful_reading
+                        json_format[self._type][self._name] = fallback_value
+                        json_format[self._type][data_source_key] = "fallback"
+                        print(f"[DS18B20] Using fallback value for {self._full_rom_address}: {fallback_value} {self._unit}")
+                    else:
+                        # Too many consecutive failures, return None
+                        print(f"[DS18B20] Max consecutive failures ({self._max_consecutive_failures}) reached for {self._full_rom_address}, returning None")
+                        json_format[self._type][self._name] = None
+                        json_format[self._type][data_source_key] = "failed"
 
         except Exception as e:
             print(f"[DS18B20] Critical error reading sensor {self._name} ({self._full_rom_address}): {str(e)}")
+            self._consecutive_failures += 1
+            json_format[self._type][data_source_key] = "error"
 
         return json_format
 

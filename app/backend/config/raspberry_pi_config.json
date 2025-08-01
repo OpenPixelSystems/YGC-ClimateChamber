@@ -56,13 +56,55 @@
         "unit": "degrees",
         "_comment": "Temperature sensor inside peltier device"
     },
-    "Current_sensor": {
-        "name": "Current_sensor",
+    "R_IS_1_Current_sensor": {
+        "name": "R_IS_1_Current_sensor",
         "type": "ADS1115",
         "editable": {
             "SDA": 2,
             "SCL": 3,
             "read_pin": 0,
+            "max_value": 4,
+            "min_value": -4,
+            "safety_critical": 1
+        },
+        "unit": "Amps",
+        "_comment": "Current sensor attached to motor driver"
+    },
+    "L_IS_1_Current_sensor": {
+        "name": "L_IS_1_Current_sensor",
+        "type": "ADS1115",
+        "editable": {
+            "SDA": 2,
+            "SCL": 3,
+            "read_pin": 1,
+            "max_value": 4,
+            "min_value": -4,
+            "safety_critical": 1
+        },
+        "unit": "Amps",
+        "_comment": "Current sensor attached to motor driver"
+    },
+    "R_IS_2_Current_sensor": {
+        "name": "R_IS_2_Current_sensor",
+        "type": "ADS1115",
+        "editable": {
+            "SDA": 2,
+            "SCL": 3,
+            "read_pin": 2,
+            "max_value": 4,
+            "min_value": -4,
+            "safety_critical": 1
+        },
+        "unit": "Amps",
+        "_comment": "Current sensor attached to motor driver"
+    },
+    "L_IS_2_Current_sensor": {
+        "name": "L_IS_2_Current_sensor",
+        "type": "ADS1115",
+        "editable": {
+            "SDA": 2,
+            "SCL": 3,
+            "read_pin": 3,
             "max_value": 4,
             "min_value": -4,
             "safety_critical": 1

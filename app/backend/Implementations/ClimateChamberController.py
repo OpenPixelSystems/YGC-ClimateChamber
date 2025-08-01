@@ -49,6 +49,7 @@ class ClimateChamberController(IClimateChamberController, LoggingMixin):
         """Start the sensor data stream."""
         self.running = True
         self.climate_chamber.start()
+        self.sensor_reader.start_background_reading()  # Start background sensor reading
         self.calculation_service.last_time = datetime.now()  # Initialize timestamp
         self.print("\n[ClimateChamberController] [start_sensor_stream] ClimateChamberController: Sensor stream started.")
 
@@ -68,6 +69,7 @@ class ClimateChamberController(IClimateChamberController, LoggingMixin):
         self.current_power = 0
         self.calculation_service.stop()
         self.climate_chamber.stop()
+        self.sensor_reader.stop_background_reading()  # Stop background sensor reading
         self.disable_peltier_driver()
         self.print("\n[ClimateChamberController] [stop_sensor_stream] Sensor stream stopped.")
 
