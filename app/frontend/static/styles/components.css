@@ -157,6 +157,28 @@
     text-align: right;
 }
 
+/* Data source specific colors */
+.sensor-reading.data-source-real {
+    color: white;
+}
+
+.sensor-reading.data-source-cached {
+    color: orange;
+}
+
+.sensor-reading.data-source-test {
+    color: green;
+}
+
+.sensor-reading.data-source-fallback {
+    color: yellow;
+}
+
+.sensor-reading.data-source-failed, 
+.sensor-reading.data-source-error {
+    color: red;
+}
+
 /* Status animations for sensors */
 @keyframes pulseRed {
     0% { 

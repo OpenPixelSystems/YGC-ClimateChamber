@@ -147,15 +147,20 @@ class DS18B20(ISensor):
         """Read temperature from sensor or return simulated value in testing mode.
 
         Returns:
-            Dictionary mapping sensor type to sensor name to reading value
+            Dictionary mapping sensor type to sensor name to reading value with data source info
         """
         json_format = {self._type: {self._name: None}}
+        
+        # Add data source metadata (backward compatible - won't break existing code)
+        data_source_key = f"{self._name}_data_source"
+        json_format[self._type][data_source_key] = "unknown"
 
         try:
             if self._is_testing:
                 # Testing mode - use simulated values
                 value = self._get_simulated_value()
                 json_format[self._type][self._name] = value
+                json_format[self._type][data_source_key] = "test"
                 print(f"[DS18B20] Testing mode - simulated value for {self._full_rom_address}: {value} {self._unit}")
             else:
                 # Production mode - read from real sensor with timeout
@@ -165,6 +170,7 @@ class DS18B20(ISensor):
                     # Successful read
                     rounded_temp = round(temp_c, 1)
                     json_format[self._type][self._name] = rounded_temp
+                    json_format[self._type][data_source_key] = "real"
                     self._last_reading = rounded_temp
                     self._last_successful_reading = rounded_temp
                     self._consecutive_failures = 0
@@ -179,15 +185,18 @@ class DS18B20(ISensor):
                         # Use last successful reading as fallback
                         fallback_value = self._last_successful_reading
                         json_format[self._type][self._name] = fallback_value
+                        json_format[self._type][data_source_key] = "fallback"
                         print(f"[DS18B20] Using fallback value for {self._full_rom_address}: {fallback_value} {self._unit}")
                     else:
                         # Too many consecutive failures, return None
                         print(f"[DS18B20] Max consecutive failures ({self._max_consecutive_failures}) reached for {self._full_rom_address}, returning None")
                         json_format[self._type][self._name] = None
+                        json_format[self._type][data_source_key] = "failed"
 
         except Exception as e:
             print(f"[DS18B20] Critical error reading sensor {self._name} ({self._full_rom_address}): {str(e)}")
             self._consecutive_failures += 1
+            json_format[self._type][data_source_key] = "error"
 
         return json_format
 

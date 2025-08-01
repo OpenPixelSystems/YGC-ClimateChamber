@@ -67,8 +67,15 @@ class SensorReader(ISensorReader, Subscriptable):
                     age = (datetime.now() - self._last_reading_time).total_seconds()
                     if age < 10.0:  # Use cache if less than 10 seconds old
                         print(f"[SensorReader] Returning cached data (age: {age:.1f}s)")
-                        self.notify(self._cached_sensor_data)
-                        return self._cached_sensor_data.copy()
+                        cached_data = self._cached_sensor_data.copy()
+                        # Add cache metadata to indicate this is cached data
+                        cached_data['_cache_info'] = {
+                            'source': 'cached',
+                            'age_seconds': round(age, 1),
+                            'cached_at': self._last_reading_time.isoformat()
+                        }
+                        self.notify(cached_data)
+                        return cached_data
                     else:
                         print(f"[SensorReader] Cached data too old ({age:.1f}s), falling back to direct read")
         
@@ -79,6 +86,12 @@ class SensorReader(ISensorReader, Subscriptable):
             print("[SensorReader] No cached data available, reading sensors directly")
             
         sensor_readings = self._read_sensors_directly()
+        
+        # Add direct read metadata
+        sensor_readings['_cache_info'] = {
+            'source': 'direct',
+            'read_at': datetime.now().isoformat()
+        }
         
         self.notify(sensor_readings)
         return sensor_readings

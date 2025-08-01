@@ -8,6 +8,7 @@ export default class SensorManager {
     this.availableSensors = new Set();
     this.selectedSensors = new Set();
     this.currentReadings = new Map(); // Store current sensor readings
+    this.dataSources = new Map(); // Store data source information for each sensor
   }
 
   /**
@@ -51,13 +52,23 @@ export default class SensorManager {
       return;
     }
 
-    // Flatten the nested sensor data structure
-    const flattenedData = this.flattenSensorData(data);
+    // Check if this is cached data from SensorReader
+    const isCachedData = data._cache_info && data._cache_info.source === 'cached';
 
-    // Update current readings
+    // Flatten the nested sensor data structure and extract data sources
+    const { flattenedData, dataSources } = this.flattenSensorData(data);
+
+    // Update current readings and data sources
     Object.entries(flattenedData).forEach(([sensorName, value]) => {
       if (typeof value === 'number') {
         this.currentReadings.set(sensorName, value);
+        
+        // Determine data source: cached data overrides individual sensor sources
+        let dataSource = dataSources[sensorName] || 'unknown';
+        if (isCachedData && (dataSource === 'real' || dataSource === 'unknown')) {
+          dataSource = 'cached';
+        }
+        this.dataSources.set(sensorName, dataSource);
       }
     });
 
@@ -72,12 +83,13 @@ export default class SensorManager {
   }
 
   /**
-   * Flattens the nested sensor data structure into a flat object
+   * Flattens the nested sensor data structure into a flat object and extracts data sources
    * @param {Object} data - The nested sensor data
-   * @returns {Object} Flattened sensor data
+   * @returns {Object} Object containing flattened sensor data and data sources
    */
   flattenSensorData(data) {
       const flattened = {};
+      const dataSources = {};
 
       // Process sensor chip data (ADS1115, DS18B20, etc.)
       Object.entries(data).forEach(([chipType, chipData]) => {
@@ -87,6 +99,7 @@ export default class SensorManager {
             Object.entries(chipData).forEach(([calcName, calcValue]) => {
               // Prefix calculation data to distinguish from sensor data
               flattened[`calc_${calcName}`] = calcValue;
+              dataSources[`calc_${calcName}`] = 'calculated';
             });
           }
         } else if (chipType === 'DS18B20') {
@@ -97,24 +110,41 @@ export default class SensorManager {
                 Object.entries(groupData).forEach(([sensorName, sensorValue]) => {
                   if (typeof sensorValue === 'number') {
                     // Combine group name and sensor name for DS18B20
-                    flattened[`${groupName}_${sensorName}`] = sensorValue;
+                    const fullSensorName = `${groupName}_${sensorName}`;
+                    flattened[fullSensorName] = sensorValue;
+                    
+                    // Look for corresponding data source field
+                    const dataSourceKey = `${sensorName}_data_source`;
+                    if (groupData[dataSourceKey]) {
+                      dataSources[fullSensorName] = groupData[dataSourceKey];
+                    } else {
+                      dataSources[fullSensorName] = 'unknown';
+                    }
                   }
                 });
               }
             });
           }
-        } else if (typeof chipData === 'object' && chipData !== null) {
+        } else if (chipType !== '_cache_info' && typeof chipData === 'object' && chipData !== null) {
           // Handle other sensor data from chips (MPL3115A2, ADS1115, etc.) - flat structure
           Object.entries(chipData).forEach(([sensorName, sensorValue]) => {
             if (typeof sensorValue === 'number') {
               // Use the sensor name directly for non-DS18B20 sensors
               flattened[sensorName] = sensorValue;
+              
+              // Look for corresponding data source field
+              const dataSourceKey = `${sensorName}_data_source`;
+              if (chipData[dataSourceKey]) {
+                dataSources[sensorName] = chipData[dataSourceKey];
+              } else {
+                dataSources[sensorName] = 'unknown';
+              }
             }
           });
         }
       });
 
-      return flattened;
+      return { flattenedData: flattened, dataSources };
     }
 
   /**
@@ -204,8 +234,11 @@ export default class SensorManager {
           readingSpan.className = 'sensor-reading';
           readingSpan.id = `reading-${sensorName}`;
           readingSpan.style.fontWeight = 'bold';
-          readingSpan.style.color = '#0066cc';
           readingSpan.textContent = this.formatSensorReading(sensorName);
+          
+          // Apply data source color coding
+          const dataSource = this.dataSources.get(sensorName) || 'unknown';
+          readingSpan.classList.add(`data-source-${dataSource}`);
 
           leftContainer.appendChild(checkbox);
           leftContainer.appendChild(label);
@@ -280,13 +313,25 @@ export default class SensorManager {
   }
 
   /**
-   * Updates the displayed sensor readings
+   * Updates the displayed sensor readings with data source color coding
    */
   updateSensorReadings() {
     this.currentReadings.forEach((reading, sensorName) => {
       const readingElement = document.getElementById(`reading-${sensorName}`);
       if (readingElement) {
         readingElement.textContent = this.formatSensorReading(sensorName);
+        
+        // Apply data source color coding
+        const dataSource = this.dataSources.get(sensorName) || 'unknown';
+        
+        // Remove existing data source classes
+        readingElement.classList.remove(
+          'data-source-real', 'data-source-cached', 'data-source-test', 
+          'data-source-fallback', 'data-source-failed', 'data-source-error'
+        );
+        
+        // Add appropriate data source class
+        readingElement.classList.add(`data-source-${dataSource}`);
       }
     });
   }
