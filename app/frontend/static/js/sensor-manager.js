@@ -52,8 +52,14 @@ export default class SensorManager {
       return;
     }
 
-    // Check if this is cached data from SensorReader
-    const isCachedData = data._cache_info && data._cache_info.source === 'cached';
+    // Check cache information from SensorReader
+    const cacheInfo = data._cache_info;
+    let cacheDataSource = null;
+    
+    if (cacheInfo) {
+      // Use the specific cache status (cached_recent or cached_old)
+      cacheDataSource = cacheInfo.source;
+    }
 
     // Flatten the nested sensor data structure and extract data sources
     const { flattenedData, dataSources } = this.flattenSensorData(data);
@@ -63,10 +69,10 @@ export default class SensorManager {
       if (typeof value === 'number') {
         this.currentReadings.set(sensorName, value);
         
-        // Determine data source: cached data overrides individual sensor sources
+        // Determine data source: cache info overrides individual sensor sources
         let dataSource = dataSources[sensorName] || 'unknown';
-        if (isCachedData && (dataSource === 'real' || dataSource === 'unknown')) {
-          dataSource = 'cached';
+        if (cacheDataSource && (dataSource === 'real' || dataSource === 'unknown')) {
+          dataSource = cacheDataSource; // Will be 'cached_recent' or 'cached_old'
         }
         this.dataSources.set(sensorName, dataSource);
       }
@@ -326,8 +332,9 @@ export default class SensorManager {
         
         // Remove existing data source classes
         readingElement.classList.remove(
-          'data-source-real', 'data-source-cached', 'data-source-test', 
-          'data-source-fallback', 'data-source-failed', 'data-source-error'
+          'data-source-real', 'data-source-cached', 'data-source-cached_recent', 
+          'data-source-cached_old', 'data-source-test', 'data-source-fallback', 
+          'data-source-failed', 'data-source-error'
         );
         
         // Add appropriate data source class

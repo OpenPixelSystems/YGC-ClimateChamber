@@ -69,10 +69,13 @@ class SensorReader(ISensorReader, Subscriptable):
                         print(f"[SensorReader] Returning cached data (age: {age:.1f}s)")
                         cached_data = self._cached_sensor_data.copy()
                         # Add cache metadata to indicate this is cached data
+                        # Determine if cache is recent (< 3 seconds) or old
+                        cache_status = 'cached_recent' if age < 3.0 else 'cached_old'
                         cached_data['_cache_info'] = {
-                            'source': 'cached',
+                            'source': cache_status,
                             'age_seconds': round(age, 1),
-                            'cached_at': self._last_reading_time.isoformat()
+                            'cached_at': self._last_reading_time.isoformat(),
+                            'is_recent': age < 3.0
                         }
                         self.notify(cached_data)
                         return cached_data

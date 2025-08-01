@@ -162,8 +162,16 @@
     color: white;
 }
 
-.sensor-reading.data-source-cached {
+.sensor-reading.data-source-cached_recent {
     color: orange;
+}
+
+.sensor-reading.data-source-cached_old {
+    color: #cc6600; /* Darker orange for older cached data */
+}
+
+.sensor-reading.data-source-cached {
+    color: orange; /* Fallback for generic cached */
 }
 
 .sensor-reading.data-source-test {
