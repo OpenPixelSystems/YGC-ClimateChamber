@@ -66,7 +66,7 @@
             "max_value": 4,
             "min_value": -4,
             "safety_critical": 1,
-            "voltage_offset": 0.0
+            "voltage_offset": -0.048
         },
         "unit": "Amps",
         "_comment": "Current sensor attached to motor driver"
@@ -81,7 +81,7 @@
             "max_value": 4,
             "min_value": -4,
             "safety_critical": 1,
-            "voltage_offset": 0.0
+            "voltage_offset": 0.014
         },
         "unit": "Amps",
         "_comment": "Current sensor attached to motor driver"
@@ -96,7 +96,7 @@
             "max_value": 4,
             "min_value": -4,
             "safety_critical": 1,
-            "voltage_offset": 0.0
+            "voltage_offset": 0.068
         },
         "unit": "Amps",
         "_comment": "Current sensor attached to motor driver"
@@ -111,7 +111,7 @@
             "max_value": 4,
             "min_value": -4,
             "safety_critical": 1,
-            "voltage_offset": 0.0
+            "voltage_offset": 0.449
         },
         "unit": "Amps",
         "_comment": "Current sensor attached to motor driver"
