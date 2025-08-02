@@ -167,11 +167,16 @@ class DatabaseManager(LoggingMixin):
                 cursor = conn.cursor()
                 timestamp = datetime.now().isoformat()
 
-                # Extract calculation data
+                # Extract calculation data, handling None values properly
                 pid_output = calculation_readings.get("pid_output", 0.0)
-                current_temp = calculation_readings.get("current_temp", 0.0)
-                target_temp = calculation_readings.get("target_temp", 0.0)
-                error = calculation_readings.get("error", 0.0)
+                current_temp = calculation_readings.get("current_temp")
+                target_temp = calculation_readings.get("target_temp")
+                error = calculation_readings.get("error")
+                
+                # Convert None to 0.0 for database storage to avoid NULL issues
+                current_temp = current_temp if current_temp is not None else 0.0
+                target_temp = target_temp if target_temp is not None else 0.0
+                error = error if error is not None else 0.0
 
                 cursor.execute(
                     "INSERT INTO calculation_data (cycle_id, calculation_name, timestamp, pid_output, current_temp, target_temp, error) VALUES (?, ?, ?, ?, ?, ?, ?)",
@@ -332,7 +337,7 @@ class DatabaseManager(LoggingMixin):
 
             # Get calculation data
             cursor.execute(
-                "SELECT calculation_name, timestamp, pid_output FROM calculation_data WHERE cycle_id = ?",
+                "SELECT calculation_name, timestamp, pid_output, current_temp, target_temp, error FROM calculation_data WHERE cycle_id = ?",
                 (cycle_id,)
             )
             calculation_data = cursor.fetchall()

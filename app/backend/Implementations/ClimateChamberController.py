@@ -38,6 +38,8 @@ class ClimateChamberController(IClimateChamberController, LoggingMixin):
         """Set the desired temperature profile."""
         self.print("[ClimateChamberController] [set_desired_graph] Desired flow graph set for climate chamber control")
         self.desired_graph = graph
+        # Pass the schedule to the calculation service for predictive control
+        self.calculation_service.set_setpoint_schedule(graph)
 
     def set_start_time(self, start_time):
         self.desired_graph.set_start_time(start_time)
@@ -84,13 +86,15 @@ class ClimateChamberController(IClimateChamberController, LoggingMixin):
                         data[self.viable_sensor]['sensor_value'] is not None): #TODO currently only uses one sensor, extend to average of applicable sensors
                     current_temp = data[self.viable_sensor]['sensor_value']
                     target_temp = self.desired_graph.get_temperature_at_time()
+                    # Get current time offset for predictive control
+                    current_time_offset = round((datetime.now() - self.desired_graph.start_time).total_seconds())
                     self.print("Target temperature is: ", target_temp)
                     if self.guarding_service.get_guarding_state():
                         print("[ClimateChamberController] [sensor_data_provider] Pausing steering, max or min sensor temperature exceeded.")
                         self.calculation_service.pause(current_temp, target_temp)
                         output = 0
                     else:
-                        output = self.calculation_service.calculate_pid_control(current_temp, target_temp)
+                        output = self.calculation_service.calculate_pid_control(current_temp, target_temp, current_time_offset)
                         self.print("[ClimateChamberController] [sensor_data_provider] PID steering active")
 
                     self.current_power = output
@@ -101,7 +105,9 @@ class ClimateChamberController(IClimateChamberController, LoggingMixin):
                     print(f"[ClimateChamberController] [sensor_data_provider] No steering possible due to absent sensor data. {self.viable_sensor}")
 
                 else:
-                    self.calculation_service.manual_pid_control(self.current_power)
+                    # In manual mode, still pass temperature data if available for logging
+                    current_temp = data.get(self.viable_sensor, {}).get('sensor_value') if self.viable_sensor in data else None
+                    self.calculation_service.manual_pid_control(self.current_power, current_temp, None)
                     data['calculation_data'] = {'Peltier power':self.current_power}
                 
                 # Add guarding information to the data stream
