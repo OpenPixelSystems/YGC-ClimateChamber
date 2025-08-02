@@ -21,6 +21,7 @@ class ADS1115(ISensor):
         self._min_value = config.min_value
         self._max_value = config.max_value
         self._unit = config.unit
+        self._config_voltage_offset = config.voltage_offset
         self._is_testing = self._detect_testing_environment()
         self._last_reading = None
         self._ads = None
@@ -164,7 +165,10 @@ class ADS1115(ISensor):
                 # Read from actual ADS1115 sensor
                 try:
                     # Read voltage from the specified channel
-                    voltage = self._channel.voltage
+                    raw_voltage = self._channel.voltage
+                    
+                    # Apply calibration offset
+                    voltage = raw_voltage - self._config_voltage_offset
 
                     # Convert voltage to current
                     current = self._voltage_to_current(voltage)
@@ -174,7 +178,7 @@ class ADS1115(ISensor):
                         data_source_key: "real"
                     }
                     self._last_reading = current
-                    print(f"[ADS1115] Read actual sensor value: {current} {self._unit} (voltage: {voltage:.3f}V)")
+                    print(f"[ADS1115] Read actual sensor value: {current} {self._unit} (raw: {raw_voltage:.3f}V, calibrated: {voltage:.3f}V, offset: {self._config_voltage_offset:.3f}V)")
 
 
                 except Exception as e:

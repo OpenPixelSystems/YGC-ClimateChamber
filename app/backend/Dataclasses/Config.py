@@ -41,6 +41,7 @@ class ADS1115Config(ISensorConfig):
     read_pin: int = None
     SDA: int = None
     SCL: int = None
+    voltage_offset: float = 0.0
 
 @dataclass
 class MPL3115A2Config(ISensorConfig):
