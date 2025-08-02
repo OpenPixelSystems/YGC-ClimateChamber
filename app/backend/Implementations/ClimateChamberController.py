@@ -103,6 +103,10 @@ class ClimateChamberController(IClimateChamberController, LoggingMixin):
                 else:
                     self.calculation_service.manual_pid_control(self.current_power)
                     data['calculation_data'] = {'Peltier power':self.current_power}
+                
+                # Add guarding information to the data stream
+                data['guarding_info'] = self.guarding_service.get_guarding_info()
+                
                 self.print_debug(f"[ClimateChamberController] [sensor_data_provider] Sending data to webpage {data}")
                 yield f"data: {json.dumps(data)}\n\n"
             except (FileNotFoundError, json.JSONDecodeError) as e:

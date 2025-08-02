@@ -24,5 +24,8 @@
 /* 7. Alert and notification components */
 @import 'alerts.css';
 
-/* 8. Logs viewer components */
+/* 8. Guarding service visual effects */
+@import 'guarding.css';
+
+/* 9. Logs viewer components */
 @import 'logs-viewer.css';

@@ -61,6 +61,15 @@ export default class SensorManager {
       cacheDataSource = cacheInfo.source;
     }
 
+    // Extract guarding information
+    const guardingInfo = data.guarding_info || {
+      is_guarding: false,
+      reasons: [],
+      last_violation_time: null,
+      stop_steering_temperature: false,
+      stop_steering_current: false
+    };
+
     // Flatten the nested sensor data structure and extract data sources
     const { flattenedData, dataSources } = this.flattenSensorData(data);
 
@@ -83,7 +92,7 @@ export default class SensorManager {
 
     if (this.sensorGraph.chartManager.chartInstance) {
       const elapsedSeconds = (Date.now() - startTime) / 1000;
-      this.sensorGraph.chartManager.updateChartData(flattenedData, elapsedSeconds, this.selectedSensors);
+      this.sensorGraph.chartManager.updateChartData(flattenedData, elapsedSeconds, this.selectedSensors, guardingInfo);
       this.sensorGraph.chartManager.updateChartXAxisRange(elapsedSeconds);
     }
   }
