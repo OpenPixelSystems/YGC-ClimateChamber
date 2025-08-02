@@ -1,7 +1,9 @@
 #!/bin/bash
 
-set -e  # Exit on any error
+set -e
 set -o pipefail
+
+apt install -y hostapd dnsmasq iw iptables dialog
 
 BACKUP_DIR="/etc/dual_wifi_backup_$(date +%Y%m%d_%H%M%S)"
 LOG_FILE="$HOME/dual_wifi_setup.log"
@@ -20,11 +22,40 @@ trap 'echo "⚠️  Error occurred. Restoring previous configuration..."; cp -r 
 
 echo "📦 Updating and installing required packages..."
 apt update && apt full-upgrade -y
-apt install -y hostapd dnsmasq iw
+apt install -y hostapd dnsmasq iw iptables dialog
 
 echo "🛑 Stopping conflicting services..."
 systemctl stop hostapd || true
 systemctl stop dnsmasq || true
+
+# 📡 SCAN for available Wi-Fi networks
+echo "📡 Scanning for available Wi-Fi networks..."
+mapfile -t SSID_LIST < <(iwlist wlan0 scan | grep 'ESSID' | sed 's/.*ESSID:"\(.*\)"/\1/' | sort -u)
+
+if [ ${#SSID_LIST[@]} -eq 0 ]; then
+    echo "❌ No Wi-Fi networks found. Exiting."
+    exit 1
+fi
+
+CHOICES=""
+for i in "${!SSID_LIST[@]}"; do
+    CHOICES="$CHOICES $i \"${SSID_LIST[$i]}\""
+done
+
+SSID_INDEX=$(dialog --title "Wi-Fi Setup" --menu "Select your Wi-Fi network:" 15 50 8 $CHOICES 3>&1 1>&2 2>&3  || true)
+SSID="${SSID_LIST[$SSID_INDEX]}"
+
+if [ -z "$SSID" ]; then
+    echo "❌ No Wi-Fi network selected. Exiting."
+    exit 1
+fi
+
+PASSWORD=$(dialog --title "Wi-Fi Password" --insecure --passwordbox "Enter password for '$SSID':" 8 40 3>&1 1>&2 2>&3 || true)
+
+if [ -z "$PASSWORD" ]; then
+    echo "❌ No password entered. Exiting."
+    exit 1
+fi
 
 echo "📶 Setting up home Wi-Fi connection (wlan0)..."
 cat <<EOF > /etc/wpa_supplicant/wpa_supplicant.conf
@@ -33,8 +64,8 @@ ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev
 update_config=1
 
 network={
-    ssid="YourHomeSSID"
-    psk="YourHomePassword"
+    ssid="$SSID"
+    psk="$PASSWORD"
     key_mgmt=WPA-PSK
 }
 EOF
@@ -63,7 +94,7 @@ echo "🌐 Configuring hostapd..."
 cat <<EOF > /etc/hostapd/hostapd.conf
 interface=uap0
 driver=nl80211
-ssid=PiZeroAP
+ssid=Pi4BAP
 hw_mode=g
 channel=7
 wmm_enabled=0
@@ -71,7 +102,7 @@ macaddr_acl=0
 auth_algs=1
 ignore_broadcast_ssid=0
 wpa=2
-wpa_passphrase=YourStrongPassword
+wpa_passphrase=Pi4password
 wpa_key_mgmt=WPA-PSK
 rsn_pairwise=CCMP
 EOF
@@ -86,7 +117,6 @@ echo "📤 Setting up NAT with iptables..."
 iptables -t nat -A POSTROUTING -o wlan0 -j MASQUERADE
 iptables -A FORWARD -i wlan0 -o uap0 -m state --state RELATED,ESTABLISHED -j ACCEPT
 iptables -A FORWARD -i uap0 -o wlan0 -j ACCEPT
-
 sh -c "iptables-save > /etc/iptables.ipv4.nat"
 
 echo "🔁 Modifying /etc/rc.local for boot-time restoration..."
