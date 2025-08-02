@@ -39,12 +39,31 @@ class ADS1115(ISensor):
         # - ACS712-30A: 66 mV/A,  offset ~2.5V (for 5V supply) or ~1.65V (for 3.3V)
         # - Hall effect: 20-100 mV/A typically
         
-        # Default values - CALIBRATED FOR CURRENT HARDWARE
-        self._voltage_offset = 1.65  # Offset voltage (V) - voltage at 0A
-        self._sensitivity = 1.44     # Sensitivity (V/A) - calibrated from field data (was 0.185)
+        # Default values - CALIBRATED FROM FIELD DATA
+        # Based on actual measurements: zero current ~1.66V, sensitivity varies by sensor
+        self._voltage_offset = 1.66  # Offset voltage (V) - voltage at 0A (was 1.65)
+        self._sensitivity = 0.2      # Sensitivity (V/A) - will be overridden per sensor (was 1.44)
         
         # Use config voltage offset if provided (this overrides the calculated current)
         # Note: config.voltage_offset is applied to raw voltage, not current calculation
+        
+        # Override sensitivity and offset based on sensor name (from calibration data)
+        # Note: Some sensors may have inverted polarity (negative sensitivity)
+        sensor_calibration = {
+            'R_IS_1_Current_sensor': {'sensitivity': 0.065, 'offset': 1.661, 'inverted': False},
+            'L_IS_1_Current_sensor': {'sensitivity': 0.738, 'offset': 1.642, 'inverted': False}, 
+            'R_IS_2_Current_sensor': {'sensitivity': 0.039, 'offset': 1.661, 'inverted': False},
+            'L_IS_2_Current_sensor': {'sensitivity': 0.013, 'offset': 1.663, 'inverted': True}  # Negative sensitivity indicates inverted polarity
+        }
+        
+        # Apply sensor-specific calibration
+        self._inverted_polarity = False
+        if self._name in sensor_calibration:
+            cal = sensor_calibration[self._name]
+            self._sensitivity = cal['sensitivity']
+            self._voltage_offset = cal['offset']
+            self._inverted_polarity = cal['inverted']
+            print(f"[ADS1115] Using calibrated values for {self._name}: sensitivity={self._sensitivity:.3f}V/A, offset={self._voltage_offset:.3f}V, inverted={self._inverted_polarity}")
 
         if not self._is_testing:
             try:
@@ -122,7 +141,16 @@ class ADS1115(ISensor):
         """
         # Calculate current based on sensor characteristics
         # Current = (Voltage - Offset) / Sensitivity
-        current = (voltage - self._voltage_offset) / self._sensitivity
+        voltage_diff = voltage - self._voltage_offset
+        
+        # Handle inverted polarity sensors
+        if hasattr(self, '_inverted_polarity') and self._inverted_polarity:
+            voltage_diff = -voltage_diff  # Invert the voltage difference
+        
+        current = voltage_diff / self._sensitivity
+
+        # Ensure current is always positive (absolute value)
+        current = abs(current)
 
         # Apply unit conversion if needed
         if self._unit.lower() == 'ma':
@@ -241,7 +269,22 @@ class ADS1115(ISensor):
         print(f"  Actual current: {actual_current_amps:.3f}A")
         print(f"  Current offset: {self._voltage_offset:.3f}V")
         
-        # Calculate what sensitivity should be
+        # Handle zero current case (for offset calibration)
+        if abs(actual_current_amps) < 0.01:  # Very close to zero current
+            print(f"  Zero current detected - this is for offset calibration")
+            print(f"  Current offset: {self._voltage_offset:.3f}V")
+            print(f"  Measured voltage at 0A: {measured_voltage:.3f}V")
+            print(f"  Voltage difference: {abs(measured_voltage - self._voltage_offset):.3f}V")
+            
+            if abs(measured_voltage - self._voltage_offset) > 0.1:  # Significant offset error
+                print(f"\nSUGGESTED OFFSET FIX:")
+                print(f"  Consider changing self._voltage_offset from {self._voltage_offset:.3f}V to {measured_voltage:.3f}V")
+            else:
+                print(f"  Offset looks reasonable (difference < 0.1V)")
+            
+            return self._voltage_offset  # Return current offset
+        
+        # Calculate sensitivity for non-zero current
         voltage_above_offset = measured_voltage - self._voltage_offset
         calculated_sensitivity = voltage_above_offset / actual_current_amps
         
@@ -249,11 +292,7 @@ class ADS1115(ISensor):
         print(f"  Calculated sensitivity: {calculated_sensitivity:.3f}V/A")
         print(f"  Current sensitivity: {self._sensitivity:.3f}V/A")
         
-        print(f"\nSUGGESTED FIX:")
+        print(f"\nSUGGESTED SENSITIVITY FIX:")
         print(f"  Change self._sensitivity from {self._sensitivity:.3f} to {calculated_sensitivity:.3f}")
-        
-        # Also check if offset might be wrong
-        if abs(actual_current_amps) < 0.01:  # Very close to zero current
-            print(f"  For zero current, consider changing self._voltage_offset from {self._voltage_offset:.3f}V to {measured_voltage:.3f}V")
         
         return calculated_sensitivity
