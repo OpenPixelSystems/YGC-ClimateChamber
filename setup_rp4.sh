@@ -28,19 +28,6 @@ echo "🛑 Stopping conflicting services..."
 systemctl stop hostapd || true
 systemctl stop dnsmasq || true
 
-echo "📶 Setting up home Wi-Fi connection (wlan0)..."
-cat <<EOF > /etc/wpa_supplicant/wpa_supplicant.conf
-country=US
-ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev
-update_config=1
-
-network={
-    ssid="YourHomeSSID"
-    psk="YourHomePassword"
-    key_mgmt=WPA-PSK
-}
-EOF
-
 echo "🧩 Creating virtual AP interface uap0..."
 iw dev wlan0 interface add uap0 type __ap || true
 
