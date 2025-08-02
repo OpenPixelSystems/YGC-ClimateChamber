@@ -22,16 +22,28 @@ from app.backend.Sensors.ADS1115 import ADS1115
 def setup_peltier_control():
     """Setup peltier control for testing."""
     try:
+        from pathlib import Path
         from app.backend.Implementations.ConfigManager import ConfigManager
         from app.backend.Implementations.ClimateChamber import ClimateChamber
         from app.backend.Implementations.SensorReader import SensorReader
         from app.backend.Implementations.CalculationService import CalculationService
         from app.backend.Implementations.FanController import FanController
         
-        # Initialize components
-        config_manager = ConfigManager()
+        # Set up config paths (same as in app_state.py)
+        config_dir = Path('app/backend/config')
+        control_config_path = config_dir / 'control_config.json'
+        graph_config_path = config_dir / 'graph_config.json'
+        mcu_config_path = config_dir / 'raspberry_pi_config.json'
+        
+        # Initialize components with correct paths
+        config_manager = ConfigManager(
+            control_config_path=control_config_path,
+            graph_config_path=graph_config_path,
+            mcu_config_path=mcu_config_path
+        )
+        
         sensor_reader = SensorReader(config_manager.mcu_config)
-        calculation_service = CalculationService(config_manager.control_config)
+        calculation_service = CalculationService(config_manager, False)  # False for no threading
         fan_controller = FanController(config_manager.mcu_config)
         
         climate_chamber = ClimateChamber(
@@ -45,6 +57,8 @@ def setup_peltier_control():
         
     except Exception as e:
         print(f"Error setting up peltier control: {e}")
+        import traceback
+        traceback.print_exc()
         return None, None
 
 def control_peltier(climate_chamber, duty_cycle_percent):
@@ -90,9 +104,21 @@ def stop_peltier(climate_chamber):
 def find_current_sensors_in_config():
     """Find all current sensors in the configuration."""
     try:
-        # Try to load the actual config
+        from pathlib import Path
         from app.backend.Implementations.ConfigManager import ConfigManager
-        config_manager = ConfigManager()
+        
+        # Set up config paths
+        config_dir = Path('app/backend/config')
+        control_config_path = config_dir / 'control_config.json'
+        graph_config_path = config_dir / 'graph_config.json'
+        mcu_config_path = config_dir / 'raspberry_pi_config.json'
+        
+        # Try to load the actual config
+        config_manager = ConfigManager(
+            control_config_path=control_config_path,
+            graph_config_path=graph_config_path,
+            mcu_config_path=mcu_config_path
+        )
         mcu_config = config_manager.mcu_config
         
         current_sensors = []
@@ -104,6 +130,8 @@ def find_current_sensors_in_config():
         return current_sensors
     except Exception as e:
         print(f"Could not load config: {e}")
+        import traceback
+        traceback.print_exc()
         return []
 
 def calibrate_single_sensor(sensor_config, climate_chamber):
