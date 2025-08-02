@@ -67,9 +67,10 @@ export default class ChartManager {
    * @param {Object} data - Sensor data
    * @param {number} elapsedSeconds - Elapsed time in seconds
    * @param {Set} selectedSensors - Currently selected Sensors
+   * @param {Object} guardingInfo - Guarding service information
    */
-  updateChartData(data, elapsedSeconds, selectedSensors) {
-    this.universalManager.updateRealTimeData(data, elapsedSeconds, selectedSensors);
+  updateChartData(data, elapsedSeconds, selectedSensors, guardingInfo = null) {
+    this.universalManager.updateRealTimeData(data, elapsedSeconds, selectedSensors, guardingInfo);
   }
 
   /**

@@ -61,6 +61,15 @@ export default class SensorManager {
       cacheDataSource = cacheInfo.source;
     }
 
+    // Extract guarding information
+    const guardingInfo = data.guarding_info || {
+      is_guarding: false,
+      reasons: [],
+      last_violation_time: null,
+      stop_steering_temperature: false,
+      stop_steering_current: false
+    };
+
     // Flatten the nested sensor data structure and extract data sources
     const { flattenedData, dataSources } = this.flattenSensorData(data);
 
@@ -83,70 +92,38 @@ export default class SensorManager {
 
     if (this.sensorGraph.chartManager.chartInstance) {
       const elapsedSeconds = (Date.now() - startTime) / 1000;
-      this.sensorGraph.chartManager.updateChartData(flattenedData, elapsedSeconds, this.selectedSensors);
+      this.sensorGraph.chartManager.updateChartData(flattenedData, elapsedSeconds, this.selectedSensors, guardingInfo);
       this.sensorGraph.chartManager.updateChartXAxisRange(elapsedSeconds);
     }
   }
 
   /**
-   * Flattens the nested sensor data structure into a flat object and extracts data sources
-   * @param {Object} data - The nested sensor data
+   * Flattens the sensor data structure and extracts data sources
+   * @param {Object} data - The sensor data (now using new flat structure)
    * @returns {Object} Object containing flattened sensor data and data sources
    */
   flattenSensorData(data) {
       const flattened = {};
       const dataSources = {};
 
-      // Process sensor chip data (ADS1115, DS18B20, etc.)
-      Object.entries(data).forEach(([chipType, chipData]) => {
-        if (chipType === 'calculation_data') {
+      // Process all entries in the data object
+      Object.entries(data).forEach(([key, value]) => {
+        if (key === 'calculation_data') {
           // Handle calculation data separately
-          if (typeof chipData === 'object' && chipData !== null) {
-            Object.entries(chipData).forEach(([calcName, calcValue]) => {
+          if (typeof value === 'object' && value !== null) {
+            Object.entries(value).forEach(([calcName, calcValue]) => {
               // Prefix calculation data to distinguish from sensor data
               flattened[`calc_${calcName}`] = calcValue;
               dataSources[`calc_${calcName}`] = 'calculated';
             });
           }
-        } else if (chipType === 'DS18B20') {
-          // Handle DS18B20's nested structure: chipType -> groupName -> sensorName -> value
-          if (typeof chipData === 'object' && chipData !== null) {
-            Object.entries(chipData).forEach(([groupName, groupData]) => {
-              if (typeof groupData === 'object' && groupData !== null) {
-                Object.entries(groupData).forEach(([sensorName, sensorValue]) => {
-                  if (typeof sensorValue === 'number') {
-                    // Combine group name and sensor name for DS18B20
-                    const fullSensorName = `${groupName}_${sensorName}`;
-                    flattened[fullSensorName] = sensorValue;
-                    
-                    // Look for corresponding data source field
-                    const dataSourceKey = `${sensorName}_data_source`;
-                    if (groupData[dataSourceKey]) {
-                      dataSources[fullSensorName] = groupData[dataSourceKey];
-                    } else {
-                      dataSources[fullSensorName] = 'unknown';
-                    }
-                  }
-                });
-              }
-            });
-          }
-        } else if (chipType !== '_cache_info' && typeof chipData === 'object' && chipData !== null) {
-          // Handle other sensor data from chips (MPL3115A2, ADS1115, etc.) - flat structure
-          Object.entries(chipData).forEach(([sensorName, sensorValue]) => {
-            if (typeof sensorValue === 'number') {
-              // Use the sensor name directly for non-DS18B20 sensors
-              flattened[sensorName] = sensorValue;
-              
-              // Look for corresponding data source field
-              const dataSourceKey = `${sensorName}_data_source`;
-              if (chipData[dataSourceKey]) {
-                dataSources[sensorName] = chipData[dataSourceKey];
-              } else {
-                dataSources[sensorName] = 'unknown';
-              }
-            }
-          });
+        } else if (key === '_cache_info') {
+          // Skip cache info
+          return;
+        } else if (typeof value === 'object' && value !== null && 'sensor_value' in value && 'sensor_source' in value) {
+          // Handle new sensor structure: sensor_name: {sensor_value: value, sensor_source: source}
+          flattened[key] = value.sensor_value;
+          dataSources[key] = value.sensor_source;
         }
       });
 

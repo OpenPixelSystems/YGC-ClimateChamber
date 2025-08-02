@@ -109,7 +109,8 @@ class ConfigManager(IConfigManager, LoggingMixin):
                         max_value=value["editable"]["max_value"],
                         min_value=value["editable"]["min_value"],
                         critical=value["editable"]["safety_critical"]==1,
-                        unit=value["unit"]
+                        unit=value["unit"],
+                        voltage_offset=value["editable"]["voltage_offset"]
                     ))
                 elif value["type"] == "MPL3115A2":
                     sensors.append(MPL3115A2Config(

@@ -229,7 +229,7 @@ export default class UniversalChartManager {
     /**
      * Update chart data (for real-time)
      */
-    updateRealTimeData(data, elapsedSeconds, selectedSensors = new Set()) {
+    updateRealTimeData(data, elapsedSeconds, selectedSensors = new Set(), guardingInfo = null) {
         if (!this.chartInstance || this.config.type !== 'realtime') return;
 
         // Update max elapsed time
@@ -258,9 +258,81 @@ export default class UniversalChartManager {
             }
         });
 
+        // Handle guarding information
+        this.handleGuardingInfo(guardingInfo);
+
         // Update time axis
         this.updateTimeAxis(elapsedSeconds);
         this.chartInstance.update();
+    }
+
+    /**
+     * Handle guarding information and apply visual effects
+     */
+    handleGuardingInfo(guardingInfo) {
+        if (!this.chartInstance || !guardingInfo) return;
+
+        const chartCanvas = this.chartInstance.canvas;
+        const chartContainer = chartCanvas.parentElement;
+
+        if (guardingInfo.is_guarding) {
+            // Apply red flashing effect
+            this.startGuardingFlash(chartContainer, guardingInfo);
+        } else {
+            // Remove guarding effects
+            this.stopGuardingFlash(chartContainer);
+        }
+    }
+
+    /**
+     * Start the guarding notification (no flashing effect)
+     */
+    startGuardingFlash(chartContainer, guardingInfo) {
+        // Add guarding class for positioning
+        chartContainer.classList.add('guarding-active');
+        
+        // Create or update guarding notification
+        this.updateGuardingNotification(guardingInfo);
+    }
+
+    /**
+     * Stop the guarding notification
+     */
+    stopGuardingFlash(chartContainer) {
+        chartContainer.classList.remove('guarding-active');
+        
+        // Remove guarding notification from document body
+        const notification = document.querySelector('.guarding-notification');
+        if (notification) {
+            notification.remove();
+        }
+    }
+
+    /**
+     * Create or update the guarding notification display
+     */
+    updateGuardingNotification(guardingInfo) {
+        let notification = document.querySelector('.guarding-notification');
+        
+        if (!notification) {
+            notification = document.createElement('div');
+            notification.className = 'guarding-notification';
+            document.body.appendChild(notification);
+        }
+
+        // Create reason messages
+        const reasonMessages = guardingInfo.reasons.map(reason => reason.message).join(', ');
+        const statusMessage = guardingInfo.stop_steering_temperature && guardingInfo.stop_steering_current 
+            ? 'Temperature & Current Limits Exceeded' 
+            : guardingInfo.stop_steering_temperature 
+            ? 'Temperature Limit Exceeded' 
+            : 'Current Limit Exceeded';
+
+        notification.innerHTML = `
+            <div class="guarding-title">⚠️ STEERING DISABLED</div>
+            <div class="guarding-status">${statusMessage}</div>
+            <div class="guarding-reasons">${reasonMessages}</div>
+        `;
     }
 
     /**

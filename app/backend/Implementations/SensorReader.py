@@ -28,6 +28,10 @@ class SensorReader(ISensorReader, Subscriptable):
         self._stop_background = False
         self._reading_interval = 1.0  # Read sensors every 1 second
         
+        # Peltier state tracking
+        self._peltier_enabled = False  # Default to enabled
+        self._peltier_state_lock = threading.Lock()
+        
         self.initialise(mcu_config)
         
         # Background reading will be started manually when needed (when cycle starts)
@@ -77,6 +81,8 @@ class SensorReader(ISensorReader, Subscriptable):
                             'cached_at': self._last_reading_time.isoformat(),
                             'is_recent': age < 3.0
                         }
+                        # Apply peltier state correction to cached data
+                        cached_data = self._apply_peltier_state_correction(cached_data)
                         self.notify(cached_data)
                         return cached_data
                     else:
@@ -95,6 +101,9 @@ class SensorReader(ISensorReader, Subscriptable):
             'source': 'direct',
             'read_at': datetime.now().isoformat()
         }
+        
+        # Apply peltier state correction to direct readings
+        sensor_readings = self._apply_peltier_state_correction(sensor_readings)
         
         self.notify(sensor_readings)
         return sensor_readings
@@ -149,18 +158,74 @@ class SensorReader(ISensorReader, Subscriptable):
         sensor_readings = {}
         for sensor in self.sensor_list:
             try:
-                reading = sensor.read()  # e.g., {'DS18B20': {'outside_on_device': 19.9}}
+                reading = sensor.read()  # e.g., {'sensor_name': {'sensor_value': 19.9, 'sensor_source': 'real'}}
                 
-                for sensor_type, data in reading.items():
-                    if sensor_type not in sensor_readings:
-                        sensor_readings[sensor_type] = {}
-                    
-                    sensor_readings[sensor_type].update(data)
+                # Merge sensor readings directly into the main dict
+                sensor_readings.update(reading)
                     
             except Exception as e:
                 print(f"[SensorReader] Error reading sensor {getattr(sensor, 'name', 'unknown')}: {e}")
         
         return sensor_readings
+    
+    def set_peltier_enabled(self, enabled: bool):
+        """Set whether peltier modules are enabled.
+        
+        Args:
+            enabled: True if peltier modules are enabled, False otherwise
+        """
+        with self._peltier_state_lock:
+            self._peltier_enabled = enabled
+            print(f"[SensorReader] Peltier enabled state set to: {enabled}")
+    
+    def _is_current_sensor(self, sensor_name: str) -> bool:
+        """Determine if a sensor measures current based on its name.
+        
+        Args:
+            sensor_name: The name of the sensor
+            
+        Returns:
+            True if the sensor measures current, False otherwise
+        """
+        sensor_name_lower = sensor_name.lower()
+        return 'current' in sensor_name_lower or 'amp' in sensor_name_lower or sensor_name_lower.endswith('_a')
+    
+    def _apply_peltier_state_correction(self, sensor_readings: dict) -> dict:
+        """Apply peltier state correction to sensor readings.
+        
+        When peltier is disabled, current sensors should read 0A as no current flows.
+        
+        Args:
+            sensor_readings: Raw sensor readings
+            
+        Returns:
+            Corrected sensor readings
+        """
+        with self._peltier_state_lock:
+            if not self._peltier_enabled:
+                corrected_readings = sensor_readings.copy()
+                
+                for sensor_name, sensor_data in sensor_readings.items():
+                    # Skip metadata entries
+                    if sensor_name.startswith('_'):
+                        continue
+                        
+                    # Check if this is a current sensor and has valid data structure
+                    if (isinstance(sensor_data, dict) and 
+                        'sensor_value' in sensor_data and 
+                        'sensor_source' in sensor_data and
+                        self._is_current_sensor(sensor_name)):
+                        
+                        # Override current reading to 0 when peltier is disabled
+                        corrected_readings[sensor_name] = {
+                            'sensor_value': 0.0,
+                            'sensor_source': 'peltier_disabled'
+                        }
+                        print(f"[SensorReader] Overrode {sensor_name} to 0A (peltier disabled)")
+                
+                return corrected_readings
+            
+            return sensor_readings
     
     def __del__(self):
         """Cleanup background thread when SensorReader is destroyed."""

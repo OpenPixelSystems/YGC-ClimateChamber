@@ -111,20 +111,59 @@ document.addEventListener('DOMContentLoaded', () => {
     saveBtn.addEventListener('click', function(e) {
         e.preventDefault();
         updateConfigFromForm(configData);
+        
+        // Check if we're editing raspberry_pi_config.json
+        const isRaspberryPiConfig = filename === 'raspberry_pi_config.json';
+        
         fetch('/api/save-config', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ filename: filename, config: configData })
+            body: JSON.stringify({ 
+                filename: filename, 
+                config: configData,
+                skipReload: isRaspberryPiConfig  // Skip automatic reload for raspberry pi config
+            })
         })
         .then(res => res.json())
         .then(data => {
             if (data.success) {
-                alert('Configuration saved successfully!');
+                if (isRaspberryPiConfig) {
+                    // For raspberry_pi_config, restart the entire service
+                    if (confirm('Configuration saved! The service needs to restart to apply GPIO pin changes. Restart now?')) {
+                        restartService();
+                    }
+                } else {
+                    alert('Configuration saved successfully!');
+                }
             } else {
                 alert('Error saving config: ' + (data.error || 'Unknown error'));
             }
         });
     });
+    
+    // Add restart service function (reused from base.js)
+    async function restartService() {
+        try {
+            const response = await fetch('/restart-service', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            if (response.ok) {
+                alert('Service restart initiated. The application will be unavailable for a few moments.');
+                setTimeout(() => {
+                    window.location.reload();
+                }, 3000);
+            } else {
+                const error = await response.json();
+                alert('Failed to restart service: ' + (error.error || 'Unknown error'));
+            }
+        } catch (error) {
+            alert('Error communicating with server: ' + error.message);
+        }
+    }
 
     // Reload config when file changes
     if (fileSelector) {
