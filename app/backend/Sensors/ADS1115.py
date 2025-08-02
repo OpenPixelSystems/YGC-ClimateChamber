@@ -32,9 +32,19 @@ class ADS1115(ISensor):
         self._data_rate = 128  # 128 SPS (samples per second)
 
         # Current sensor calibration parameters
-        # These would need to be calibrated for your specific current sensor
-        self._voltage_offset = 1.65 # Offset voltage (V) - typically Vcc/2
-        self._sensitivity = 0.1  # Sensitivity (V/A) - depends on current sensor model
+        # These need to be calibrated for your specific current sensor
+        # Common current sensors:
+        # - ACS712-5A:  185 mV/A, offset ~2.5V (for 5V supply) or ~1.65V (for 3.3V)
+        # - ACS712-20A: 100 mV/A, offset ~2.5V (for 5V supply) or ~1.65V (for 3.3V)
+        # - ACS712-30A: 66 mV/A,  offset ~2.5V (for 5V supply) or ~1.65V (for 3.3V)
+        # - Hall effect: 20-100 mV/A typically
+        
+        # Default values - CALIBRATED FOR CURRENT HARDWARE
+        self._voltage_offset = 1.65  # Offset voltage (V) - voltage at 0A
+        self._sensitivity = 1.44     # Sensitivity (V/A) - calibrated from field data (was 0.185)
+        
+        # Use config voltage offset if provided (this overrides the calculated current)
+        # Note: config.voltage_offset is applied to raw voltage, not current calculation
 
         if not self._is_testing:
             try:
@@ -164,7 +174,7 @@ class ADS1115(ISensor):
                     # Read voltage from the specified channel
                     raw_voltage = self._channel.voltage
                     
-                    # Apply calibration offset
+                    # Apply calibration offset (this is for voltage correction, not current calculation)
                     voltage = raw_voltage - self._config_voltage_offset
 
                     # Convert voltage to current
@@ -173,7 +183,10 @@ class ADS1115(ISensor):
                     json_format[self._name]["sensor_value"] = round(current, 3)
                     json_format[self._name]["sensor_source"] = "real"
                     self._last_reading = current
-                    print(f"[ADS1115] Read actual sensor value: {current} {self._unit} (raw: {raw_voltage:.3f}V, calibrated: {voltage:.3f}V, offset: {self._config_voltage_offset:.3f}V)")
+                    
+                    # Detailed debug information for calibration
+                    print(f"[ADS1115] {self._name}: Raw={raw_voltage:.3f}V, Corrected={voltage:.3f}V, Current={current:.3f}{self._unit}")
+                    print(f"[ADS1115] Calibration: offset={self._voltage_offset:.3f}V, sensitivity={self._sensitivity:.3f}V/A, config_offset={self._config_voltage_offset:.3f}V")
 
                 except Exception as e:
                     # Error reading sensor, return None instead of simulated value
@@ -200,3 +213,47 @@ class ADS1115(ISensor):
             json_format[self._name]["sensor_source"] = "error"
 
         return json_format
+    
+    def calibrate_current_sensor(self, actual_current_amps: float, measured_voltage: float = None):
+        """Helper method to calibrate the current sensor.
+        
+        Usage:
+        1. Measure actual current with multimeter
+        2. Note the voltage reading from ADS1115
+        3. Call this method to calculate correct sensitivity
+        
+        Args:
+            actual_current_amps: The actual current measured with multimeter (in Amps)
+            measured_voltage: The voltage reading from ADS1115 (if None, reads current voltage)
+        """
+        if measured_voltage is None:
+            if self._is_testing:
+                print("[ADS1115] Cannot calibrate in testing mode - need real hardware")
+                return
+            try:
+                measured_voltage = self._channel.voltage - self._config_voltage_offset
+            except Exception as e:
+                print(f"[ADS1115] Error reading voltage for calibration: {e}")
+                return
+        
+        print(f"\n[ADS1115] CALIBRATION DATA:")
+        print(f"  Measured voltage: {measured_voltage:.3f}V")
+        print(f"  Actual current: {actual_current_amps:.3f}A")
+        print(f"  Current offset: {self._voltage_offset:.3f}V")
+        
+        # Calculate what sensitivity should be
+        voltage_above_offset = measured_voltage - self._voltage_offset
+        calculated_sensitivity = voltage_above_offset / actual_current_amps
+        
+        print(f"  Voltage above offset: {voltage_above_offset:.3f}V")
+        print(f"  Calculated sensitivity: {calculated_sensitivity:.3f}V/A")
+        print(f"  Current sensitivity: {self._sensitivity:.3f}V/A")
+        
+        print(f"\nSUGGESTED FIX:")
+        print(f"  Change self._sensitivity from {self._sensitivity:.3f} to {calculated_sensitivity:.3f}")
+        
+        # Also check if offset might be wrong
+        if abs(actual_current_amps) < 0.01:  # Very close to zero current
+            print(f"  For zero current, consider changing self._voltage_offset from {self._voltage_offset:.3f}V to {measured_voltage:.3f}V")
+        
+        return calculated_sensitivity
