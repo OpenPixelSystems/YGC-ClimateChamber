@@ -174,10 +174,12 @@ def calibrate_single_sensor(sensor_config, climate_chamber):
                             'actual_current': actual_current
                         })
                         
-                        # Run calibration for this data point
-                        if hasattr(sensor, 'calibrate_current_sensor'):
+                        # Run calibration for this data point (only if current is not zero)
+                        if hasattr(sensor, 'calibrate_current_sensor') and actual_current != 0:
                             calculated_sensitivity = sensor.calibrate_current_sensor(actual_current)
                             print(f"Calculated sensitivity for this point: {calculated_sensitivity:.3f} V/A")
+                        elif actual_current == 0:
+                            print(f"Zero current point - will be used for offset calibration")
                         
                     except ValueError:
                         print("Invalid input, skipping this measurement")
@@ -189,26 +191,56 @@ def calibrate_single_sensor(sensor_config, climate_chamber):
             print(f"Could not set peltier to {duty_cycle}% duty cycle")
     
     # Analyze calibration results
-    if len(calibration_results) >= 2:
+    if len(calibration_results) >= 1:
         print(f"\n=== CALIBRATION ANALYSIS for {sensor_config.name} ===")
         
-        # Calculate average sensitivity from multiple points
-        sensitivities = []
-        for result in calibration_results:
-            if result['actual_current'] != 0:  # Avoid division by zero
-                # Calculate voltage above offset
-                voltage_above_offset = result['ads_reading'] * sensor._sensitivity + sensor._voltage_offset - sensor._voltage_offset
-                sensitivity = voltage_above_offset / result['actual_current']
-                sensitivities.append(sensitivity)
-                print(f"  {result['duty_cycle']}% duty: ADS={result['ads_reading']:.3f}A, Actual={result['actual_current']:.3f}A, Sensitivity={sensitivity:.3f}V/A")
+        # Find zero and non-zero current points
+        zero_point = None
+        nonzero_points = []
         
-        if sensitivities:
-            avg_sensitivity = sum(sensitivities) / len(sensitivities)
-            print(f"\nAverage calculated sensitivity: {avg_sensitivity:.3f} V/A")
-            print(f"Current sensitivity in code: {sensor._sensitivity:.3f} V/A")
-            print(f"\nRECOMMENDED UPDATE:")
-            print(f"Change self._sensitivity from {sensor._sensitivity:.3f} to {avg_sensitivity:.3f}")
-            return avg_sensitivity
+        for result in calibration_results:
+            if abs(result['actual_current']) < 0.01:
+                zero_point = result
+            else:
+                nonzero_points.append(result)
+        
+        # Analyze offset from zero current point
+        if zero_point:
+            # Convert ADS reading back to voltage for offset analysis
+            ads_voltage = (zero_point['ads_reading'] * sensor._sensitivity) + sensor._voltage_offset
+            print(f"\nOFFSET ANALYSIS:")
+            print(f"  At 0A: ADS voltage = {ads_voltage:.3f}V")
+            print(f"  Current offset = {sensor._voltage_offset:.3f}V")
+            print(f"  Difference = {abs(ads_voltage - sensor._voltage_offset):.3f}V")
+            
+            if abs(ads_voltage - sensor._voltage_offset) > 0.05:
+                print(f"  SUGGESTED OFFSET FIX: Change self._voltage_offset to {ads_voltage:.3f}V")
+        
+        # Calculate sensitivity from non-zero points
+        if nonzero_points:
+            print(f"\nSENSITIVITY ANALYSIS:")
+            sensitivities = []
+            
+            for result in nonzero_points:
+                # Convert ADS reading back to voltage
+                ads_voltage = (result['ads_reading'] * sensor._sensitivity) + sensor._voltage_offset
+                voltage_above_offset = ads_voltage - sensor._voltage_offset
+                calculated_sensitivity = voltage_above_offset / result['actual_current']
+                sensitivities.append(calculated_sensitivity)
+                
+                print(f"  {result['duty_cycle']}% duty: ADS={result['ads_reading']:.3f}A, Actual={result['actual_current']:.3f}A")
+                print(f"    Voltage above offset: {voltage_above_offset:.3f}V")
+                print(f"    Calculated sensitivity: {calculated_sensitivity:.3f}V/A")
+            
+            if sensitivities:
+                avg_sensitivity = sum(sensitivities) / len(sensitivities)
+                print(f"\n  Average calculated sensitivity: {avg_sensitivity:.3f} V/A")
+                print(f"  Current sensitivity in code: {sensor._sensitivity:.3f} V/A")
+                print(f"  \nSUGGESTED SENSITIVITY FIX:")
+                print(f"  Change self._sensitivity from {sensor._sensitivity:.3f} to {avg_sensitivity:.3f}")
+                return avg_sensitivity
+        
+        print(f"\nNeed both 0A and non-zero current measurements for complete calibration")
     
     return None
 
