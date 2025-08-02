@@ -51,17 +51,17 @@ class ClimateChamberController(IClimateChamberController, LoggingMixin):
         self.climate_chamber.start()
         self.sensor_reader.start_background_reading()  # Start background sensor reading
         self.calculation_service.last_time = datetime.now()  # Initialize timestamp
-        self.print("\n[ClimateChamberController] [start_sensor_stream] ClimateChamberController: Sensor stream started.")
+        self.print("[ClimateChamberController] [start_sensor_stream] ClimateChamberController: Sensor stream started.")
 
     def manual_control(self, power):
         """Manually steer peltier power"""
         if self.guarding_service.get_guarding_state():
             self.print()
             self.current_power = 0
-            self.print(f"\n[ClimateChamberController] [manual_control] Control sensor value exceeded reset peltier power: {self.current_power}")
+            self.print(f"[ClimateChamberController] [manual_control] Control sensor value exceeded reset peltier power: {self.current_power}")
         else:
             self.current_power = power
-            self.print(f"\n[ClimateChamberController] [manual_control] Manually steer peltier power {power}")
+            self.print(f"[ClimateChamberController] [manual_control] Manually steer peltier power {power}")
 
     def stop_sensor_stream(self):
         """Stop the sensor data stream."""
@@ -71,7 +71,7 @@ class ClimateChamberController(IClimateChamberController, LoggingMixin):
         self.climate_chamber.stop()
         self.sensor_reader.stop_background_reading()  # Stop background sensor reading
         self.disable_peltier_driver()
-        self.print("\n[ClimateChamberController] [stop_sensor_stream] Sensor stream stopped.")
+        self.print("[ClimateChamberController] [stop_sensor_stream] Sensor stream stopped.")
 
     def sensor_data_provider(self):
         """Generator function for Server-Sent Events (SSE)."""
@@ -80,11 +80,9 @@ class ClimateChamberController(IClimateChamberController, LoggingMixin):
                 data = self.sensor_reader.read_sensors()
                 # If we have a desired temperature profile, apply control
                 if (self.desired_graph and
-                        'DS18B20' in data and
-                        self.sensor_group in data['DS18B20'] and
-                        self.viable_sensor in data['DS18B20'][self.sensor_group] and
-                        data['DS18B20'][self.sensor_group][self.viable_sensor] is not None): #TODO currently only uses one sensor, extend to average of applicable sensors
-                    current_temp = data['DS18B20'][self.sensor_group][self.viable_sensor]
+                        self.viable_sensor in data and
+                        data[self.viable_sensor]['sensor_value'] is not None): #TODO currently only uses one sensor, extend to average of applicable sensors
+                    current_temp = data[self.viable_sensor]['sensor_value']
                     target_temp = self.desired_graph.get_temperature_at_time()
                     self.print("Target temperature is: ", target_temp)
                     if self.guarding_service.get_guarding_state():
@@ -98,16 +96,14 @@ class ClimateChamberController(IClimateChamberController, LoggingMixin):
                     self.current_power = output
                     # Add control info to the data
                     data['calculation_data'] = {'pid_output':output,'target_temp': target_temp, 'control_error': target_temp - current_temp}
-                elif(not 'DS18B20' in data or
-                        not self.sensor_group in data['DS18B20'] or
-                        not self.viable_sensor in data['DS18B20'][self.sensor_group] or
-                        data['DS18B20'][self.sensor_group][self.viable_sensor] is None):
+                elif(self.viable_sensor not in data or
+                        data[self.viable_sensor]['sensor_value'] is None):
                     print(f"[ClimateChamberController] [sensor_data_provider] No steering possible due to absent sensor data. {self.viable_sensor}")
 
                 else:
                     self.calculation_service.manual_pid_control(self.current_power)
                     data['calculation_data'] = {'Peltier power':self.current_power}
-                self.print(f"[ClimateChamberController] [sensor_data_provider] Sending data to webpage {data}")
+                self.print_debug(f"[ClimateChamberController] [sensor_data_provider] Sending data to webpage {data}")
                 yield f"data: {json.dumps(data)}\n\n"
             except (FileNotFoundError, json.JSONDecodeError) as e:
                 yield f"data: {{\"error\": \"Failed to read sensor data: {str(e)}\"}}\n\n"

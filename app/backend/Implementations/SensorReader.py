@@ -149,13 +149,10 @@ class SensorReader(ISensorReader, Subscriptable):
         sensor_readings = {}
         for sensor in self.sensor_list:
             try:
-                reading = sensor.read()  # e.g., {'DS18B20': {'outside_on_device': 19.9}}
+                reading = sensor.read()  # e.g., {'sensor_name': {'sensor_value': 19.9, 'sensor_source': 'real'}}
                 
-                for sensor_type, data in reading.items():
-                    if sensor_type not in sensor_readings:
-                        sensor_readings[sensor_type] = {}
-                    
-                    sensor_readings[sensor_type].update(data)
+                # Merge sensor readings directly into the main dict
+                sensor_readings.update(reading)
                     
             except Exception as e:
                 print(f"[SensorReader] Error reading sensor {getattr(sensor, 'name', 'unknown')}: {e}")

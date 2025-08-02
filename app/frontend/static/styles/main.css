@@ -23,3 +23,6 @@
 
 /* 7. Alert and notification components */
 @import 'alerts.css';
+
+/* 8. Logs viewer components */
+@import 'logs-viewer.css';

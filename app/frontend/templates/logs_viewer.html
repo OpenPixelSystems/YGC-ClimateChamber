@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block title %}Log Viewer - Climate Chamber{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="input-section">
+        <h1>Log Viewer</h1>
+        
+        <div class="control-group">
+            <h3>Select Run</h3>
+            <p class="help-text">Choose a run date/time to view its log files.</p>
+            <div class="setting-item">
+                <label for="runDropdown">Run Date/Time:</label>
+                <select id="runDropdown" class="form-control">
+                    <option value="">Loading runs...</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="control-group">
+            <h3>Select Log File</h3>
+            <p class="help-text">Choose which component's log to view.</p>
+            <div class="setting-item">
+                <label for="logDropdown">Log File:</label>
+                <select id="logDropdown" class="form-control" disabled>
+                    <option value="">Select a run first</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="control-group">
+            <h3>Actions</h3>
+            <button id="refresh-btn" class="primary-button full-width">Refresh Logs</button>
+            <button id="download-btn" class="success-button full-width" style="display: none;">Download Log</button>
+            <button type="button" class="secondary-button full-width" onclick="window.location.href='/'">Back to Home</button>
+        </div>
+    </div>
+    
+    <div class="graph-section">
+        <div class="logs-header">
+            <h3 id="current-log-title">Select a log to view</h3>
+        </div>
+        <div id="log-content-container" class="log-content-container">
+            <div class="no-log-selected">
+                <p>Select a run and log file from the left panel to view its contents.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/logs-viewer.js') }}"></script>
+{% endblock %}

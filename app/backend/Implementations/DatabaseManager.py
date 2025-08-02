@@ -105,7 +105,7 @@ class DatabaseManager(LoggingMixin):
         """Handle incoming sensor data and log it to the database.
 
         Args:
-            sensor_readings: Dictionary mapping sensor types to readings (DS18B20 has nested groups, others are flat)
+            sensor_readings: Dictionary mapping sensor names to {sensor_value, sensor_source}
         """
         if not self.logging_active or not self.current_cycle_id:
             self.print("No active logging cycle.")
@@ -116,39 +116,37 @@ class DatabaseManager(LoggingMixin):
                 cursor = conn.cursor()
                 timestamp = datetime.now().isoformat()
 
-                # Handle DS18B20 temperature sensors (nested structure)
-                temperature_readings = {}
-                if 'DS18B20' in sensor_readings:
-                    for group_name, readings in sensor_readings['DS18B20'].items():
-                        for sensor_name, temperature in readings.items():
-                            temperature_readings[f"{group_name}_{sensor_name}"] = temperature
-
-                # Handle MPL3115A2 temperature sensors (flat structure)
-                if 'MPL3115A2' in sensor_readings:
-                    for sensor_name, temperature in sensor_readings['MPL3115A2'].items():
-                        temperature_readings[sensor_name] = temperature
-
-                # Handle ADS1115 current sensors (flat structure)
-                current_readings = {}
-                if 'ADS1115' in sensor_readings:
-                    for sensor_name, current in sensor_readings['ADS1115'].items():
-                        current_readings[sensor_name] = current
-
-                # Insert temperature readings
-                for sensor_name, temperature in temperature_readings.items():
+                # Process each sensor in the new flat structure
+                for sensor_name, sensor_info in sensor_readings.items():
+                    # Skip cache info and invalid entries
+                    if sensor_name == '_cache_info' or not isinstance(sensor_info, dict):
+                        continue
+                    
+                    if 'sensor_value' not in sensor_info or sensor_info['sensor_value'] is None:
+                        continue
+                    
+                    sensor_value = sensor_info['sensor_value']
+                    sensor_source = sensor_info.get('sensor_source', 'unknown')
+                    
+                    # Determine sensor type based on known sensor names and their units
+                    # You might want to get this from sensor config instead
+                    if any(temp_keyword in sensor_name.lower() for temp_keyword in ['temp', 'peltier', 'outside', 'inside', 'environment']):
+                        sensor_type = 'temperature'
+                        unit = '°C'
+                    elif 'current' in sensor_name.lower() or sensor_name.startswith(('R_IS_', 'L_IS_')):
+                        sensor_type = 'current'
+                        unit = 'A'
+                    else:
+                        # Default to temperature for DS18B20 sensors, current for ADS sensors
+                        sensor_type = 'temperature'  # Default assumption
+                        unit = '°C'
+                    
+                    # Insert sensor reading
                     cursor.execute(
                         "INSERT INTO sensor_readings (sensor_type, cycle_id, sensor_id, timestamp, value) VALUES (?, ?, ?, ?, ?)",
-                        ('temperature', self.current_cycle_id, sensor_name, timestamp, temperature)
+                        (sensor_type, self.current_cycle_id, sensor_name, timestamp, sensor_value)
                     )
-                    self.print(f"[DatabaseManager] [on_sensor_data]Logged: Sensor {sensor_name}, Temperature: {temperature}°C")
-
-                # Insert current readings
-                for sensor_name, current in current_readings.items():
-                    cursor.execute(
-                        "INSERT INTO sensor_readings (sensor_type, cycle_id, sensor_id, timestamp, value) VALUES (?, ?, ?, ?, ?)",
-                        ('current', self.current_cycle_id, sensor_name, timestamp, current)
-                    )
-                    self.print(f"[DatabaseManager] [on_sensor_data]Logged: Sensor {sensor_name}, Current draw: {current}A")
+                    self.print(f"[DatabaseManager] [on_sensor_data] Logged: Sensor {sensor_name}, {sensor_type}: {sensor_value}{unit} (source: {sensor_source})")
 
                 conn.commit()
         except Exception as e:
