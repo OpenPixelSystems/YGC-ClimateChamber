@@ -285,29 +285,24 @@ export default class UniversalChartManager {
     }
 
     /**
-     * Start the red flashing effect for guarding
+     * Start the guarding notification (no flashing effect)
      */
     startGuardingFlash(chartContainer, guardingInfo) {
-        // Add guarding class for CSS styling
+        // Add guarding class for positioning
         chartContainer.classList.add('guarding-active');
         
         // Create or update guarding notification
-        this.updateGuardingNotification(chartContainer, guardingInfo);
-        
-        // Start flashing animation if not already active
-        if (!chartContainer.classList.contains('guarding-flash')) {
-            chartContainer.classList.add('guarding-flash');
-        }
+        this.updateGuardingNotification(guardingInfo);
     }
 
     /**
-     * Stop the red flashing effect
+     * Stop the guarding notification
      */
     stopGuardingFlash(chartContainer) {
-        chartContainer.classList.remove('guarding-active', 'guarding-flash');
+        chartContainer.classList.remove('guarding-active');
         
-        // Remove guarding notification
-        const notification = chartContainer.querySelector('.guarding-notification');
+        // Remove guarding notification from document body
+        const notification = document.querySelector('.guarding-notification');
         if (notification) {
             notification.remove();
         }
@@ -316,13 +311,13 @@ export default class UniversalChartManager {
     /**
      * Create or update the guarding notification display
      */
-    updateGuardingNotification(chartContainer, guardingInfo) {
-        let notification = chartContainer.querySelector('.guarding-notification');
+    updateGuardingNotification(guardingInfo) {
+        let notification = document.querySelector('.guarding-notification');
         
         if (!notification) {
             notification = document.createElement('div');
             notification.className = 'guarding-notification';
-            chartContainer.appendChild(notification);
+            document.body.appendChild(notification);
         }
 
         // Create reason messages
