@@ -69,12 +69,21 @@ class ClimateChamber(IClimateChamber, LoggingMixin):
         for peltier in self.peltierModules:
             self.print(f"[ClimateChamber] [stop] Stopping peltier module")
             peltier.stop()
+        # When stopping, peltier is effectively disabled
+        self.sensor_reader.set_peltier_enabled(False)
+        self.print("[ClimateChamber] Peltier stopped, notified sensor reader")
 
     def enable_peltier_modules(self):
         for peltier in self.peltierModules:
             peltier.enable()
+        # Notify sensor reader that peltier is enabled
+        self.sensor_reader.set_peltier_enabled(True)
+        self.print("[ClimateChamber] Peltier modules enabled, notified sensor reader")
 
     def disable_peltier_modules(self):
         for peltier in self.peltierModules:
             peltier.disable()
+        # Notify sensor reader that peltier is disabled
+        self.sensor_reader.set_peltier_enabled(False)
+        self.print("[ClimateChamber] Peltier modules disabled, notified sensor reader")
 

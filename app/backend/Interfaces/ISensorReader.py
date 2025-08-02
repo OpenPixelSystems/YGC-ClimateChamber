@@ -16,3 +16,12 @@ class ISensorReader(ABC):
     @abstractmethod
     def subscribe(self,callback):
         pass
+    
+    @abstractmethod
+    def set_peltier_enabled(self, enabled: bool):
+        """Set whether peltier modules are enabled.
+        
+        Args:
+            enabled: True if peltier modules are enabled, False otherwise
+        """
+        pass
