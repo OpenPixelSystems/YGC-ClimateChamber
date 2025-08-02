@@ -41,12 +41,18 @@ def api_save_config():
     data = request.get_json()
     filename = data.get('filename')
     config_data = data.get('config')
+    skip_reload = data.get('skipReload', False)
+    
     if not filename or config_data is None:
         return jsonify({'error': 'Missing filename or config'}), 400
     config_path = os.path.join(CONFIG_DIR, filename)
     try:
         save_config(config_path, config_data)
-        get_app_state().reload_climate_chamber()
+        
+        # Only reload if not explicitly skipped (used for raspberry_pi_config.json)
+        if not skip_reload:
+            get_app_state().reload_climate_chamber()
+            
         return jsonify({'success': True})
     except Exception as e:
         return jsonify({'error': str(e)}), 500

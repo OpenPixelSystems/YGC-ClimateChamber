@@ -118,7 +118,7 @@
             "min_value": -4,
             "safety_critical": 1,
             "voltage_offset": 0.449,
-            "calibrated_sensitivity": 0.040,
+            "calibrated_sensitivity": 0.04,
             "calibrated_offset": 1.668
         },
         "unit": "Amps",
@@ -143,7 +143,7 @@
         "name": "Fan_top",
         "type": "fanModule",
         "editable": {
-            "name": "only fans",
+            "name": "only fan",
             "type": "TB6612FNG",
             "EN": 27
         },
