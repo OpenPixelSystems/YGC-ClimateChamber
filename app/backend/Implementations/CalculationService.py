@@ -81,11 +81,11 @@ class CalculationService(ICalculationService, Subscriptable, LoggingMixin):
         # Update timestamp to prevent large dt on resume
         self.last_time = datetime.now()
         
-        # Maintain current output for bumpless transfer (don't reset to 0)
+        # Keep internal state for bumpless transfer, but report 0 output to database/webpage
         error = target_temp - current_temp if current_temp and target_temp else 0
         
         self.notify({
-            "pid_output": self.current_output,
+            "pid_output": 0.0,  # Report 0 when paused for safety
             "current_temp": current_temp,
             "target_temp": target_temp,
             "error": error,

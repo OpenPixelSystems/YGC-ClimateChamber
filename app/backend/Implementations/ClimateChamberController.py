@@ -92,14 +92,21 @@ class ClimateChamberController(IClimateChamberController, LoggingMixin):
                     if self.guarding_service.get_guarding_state():
                         print("[ClimateChamberController] [sensor_data_provider] Pausing steering, max or min sensor temperature exceeded.")
                         self.calculation_service.pause(current_temp, target_temp)
-                        output = 0
+                        output = 0  # Force output to 0 when guarding is active
+                        control_status = "GUARDED"
                     else:
                         output = self.calculation_service.calculate_pid_control(current_temp, target_temp, current_time_offset)
                         self.print("[ClimateChamberController] [sensor_data_provider] PID steering active")
+                        control_status = "ACTIVE"
 
                     self.current_power = output
-                    # Add control info to the data
-                    data['calculation_data'] = {'pid_output':output,'target_temp': target_temp, 'control_error': target_temp - current_temp}
+                    # Add control info to the data - ensure it reflects actual output being used
+                    data['calculation_data'] = {
+                        'pid_output': output,  # This will be 0 when guarded
+                        'target_temp': target_temp, 
+                        'control_error': target_temp - current_temp,
+                        'control_status': control_status
+                    }
                 elif(self.viable_sensor not in data or
                         data[self.viable_sensor]['sensor_value'] is None):
                     print(f"[ClimateChamberController] [sensor_data_provider] No steering possible due to absent sensor data. {self.viable_sensor}")
@@ -107,8 +114,19 @@ class ClimateChamberController(IClimateChamberController, LoggingMixin):
                 else:
                     # In manual mode, still pass temperature data if available for logging
                     current_temp = data.get(self.viable_sensor, {}).get('sensor_value') if self.viable_sensor in data else None
+                    
+                    # Check if manual power is being overridden by guarding
+                    if self.guarding_service.get_guarding_state():
+                        manual_status = "MANUAL_GUARDED"
+                    else:
+                        manual_status = "MANUAL"
+                    
                     self.calculation_service.manual_pid_control(self.current_power, current_temp, None)
-                    data['calculation_data'] = {'Peltier power':self.current_power}
+                    data['calculation_data'] = {
+                        'pid_output': self.current_power,  # Will be 0 if guarded
+                        'Peltier power': self.current_power,  # Keep for backward compatibility
+                        'control_status': manual_status
+                    }
                 
                 # Add guarding information to the data stream
                 data['guarding_info'] = self.guarding_service.get_guarding_info()
