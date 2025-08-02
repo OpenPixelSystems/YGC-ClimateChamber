@@ -20,6 +20,10 @@ class LogsViewer {
             this.downloadCurrentLog();
         });
 
+        document.getElementById('clear-logs-btn').addEventListener('click', () => {
+            this.clearAllLogs();
+        });
+
         document.getElementById('runDropdown').addEventListener('change', (e) => {
             this.onRunSelected(e.target.value);
         });
@@ -196,6 +200,31 @@ class LogsViewer {
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
+    }
+
+    async clearAllLogs() {
+        if (!confirm('Are you sure you want to clear all log files and folders? This action cannot be undone.')) {
+            return;
+        }
+
+        try {
+            const response = await fetch('/api/logs/clear', {
+                method: 'POST'
+            });
+            const result = await response.json();
+
+            if (response.ok && result.success) {
+                alert('All log files and folders have been cleared successfully.');
+                // Refresh the logs view
+                this.loadRuns();
+                this.clearLogDisplay();
+            } else {
+                throw new Error(result.error || 'Failed to clear logs');
+            }
+        } catch (error) {
+            console.error('Error clearing logs:', error);
+            alert('Error clearing logs: ' + error.message);
+        }
     }
 }
 

@@ -1,5 +1,6 @@
 import os
 import re
+import shutil
 from datetime import datetime
 from flask import Blueprint, render_template, jsonify, request
 from pathlib import Path
@@ -103,3 +104,22 @@ def api_get_log_content():
         return jsonify({'content': content})
     except Exception as e:
         return jsonify({'error': f'Error reading log file: {str(e)}'}), 500
+
+@logs_bp.route('/api/logs/clear', methods=['POST'])
+def api_clear_logs():
+    """API endpoint to clear all log files and folders"""
+    try:
+        log_dir = get_log_directory()
+        if not log_dir.exists():
+            return jsonify({'success': True, 'message': 'Logs directory does not exist'})
+        
+        # Remove all contents of the logs directory
+        for item in log_dir.iterdir():
+            if item.is_file():
+                item.unlink()
+            elif item.is_dir():
+                shutil.rmtree(item)
+        
+        return jsonify({'success': True, 'message': 'All log files and folders cleared successfully'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': f'Error clearing logs: {str(e)}'}), 500
