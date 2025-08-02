@@ -66,10 +66,12 @@
             "max_value": 4,
             "min_value": -4,
             "safety_critical": 1,
-            "voltage_offset": -0.048
+            "voltage_offset": -0.048,
+            "calibrated_sensitivity": 0.047,
+            "calibrated_offset": 1.661
         },
         "unit": "Amps",
-        "_comment": "Current sensor attached to motor driver"
+        "_comment": "Current sensor attached to motor driver - Calibrated 2025-08-02"
     },
     "L_IS_1_Current_sensor": {
         "name": "L_IS_1_Current_sensor",
@@ -81,10 +83,12 @@
             "max_value": 4,
             "min_value": -4,
             "safety_critical": 1,
-            "voltage_offset": 0.014
+            "voltage_offset": 0.014,
+            "calibrated_sensitivity": 0.829,
+            "calibrated_offset": 1.642
         },
         "unit": "Amps",
-        "_comment": "Current sensor attached to motor driver"
+        "_comment": "Current sensor attached to motor driver - Calibrated 2025-08-02"
     },
     "R_IS_2_Current_sensor": {
         "name": "R_IS_2_Current_sensor",
@@ -96,10 +100,12 @@
             "max_value": 4,
             "min_value": -4,
             "safety_critical": 1,
-            "voltage_offset": 0.068
+            "voltage_offset": 0.068,
+            "calibrated_sensitivity": 0.005,
+            "calibrated_offset": 1.661
         },
         "unit": "Amps",
-        "_comment": "Current sensor attached to motor driver"
+        "_comment": "Current sensor attached to motor driver - Calibrated 2025-08-02"
     },
     "L_IS_2_Current_sensor": {
         "name": "L_IS_2_Current_sensor",
@@ -111,10 +117,12 @@
             "max_value": 4,
             "min_value": -4,
             "safety_critical": 1,
-            "voltage_offset": 0.449
+            "voltage_offset": 0.449,
+            "calibrated_sensitivity": 0.040,
+            "calibrated_offset": 1.668
         },
         "unit": "Amps",
-        "_comment": "Current sensor attached to motor driver"
+        "_comment": "Current sensor attached to motor driver - Calibrated 2025-08-02"
     },
     "Peltier_240W": {
         "name": "Peltier_240W",

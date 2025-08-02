@@ -48,22 +48,33 @@ class ADS1115(ISensor):
         # Note: config.voltage_offset is applied to raw voltage, not current calculation
         
         # Override sensitivity and offset based on sensor name (from calibration data)
-        # Note: Some sensors may have inverted polarity (negative sensitivity)
+        # Final calibration values from field testing - all sensors now have positive sensitivity
         sensor_calibration = {
-            'R_IS_1_Current_sensor': {'sensitivity': 0.065, 'offset': 1.661, 'inverted': False},
-            'L_IS_1_Current_sensor': {'sensitivity': 0.738, 'offset': 1.642, 'inverted': False}, 
-            'R_IS_2_Current_sensor': {'sensitivity': 0.039, 'offset': 1.661, 'inverted': False},
-            'L_IS_2_Current_sensor': {'sensitivity': 0.013, 'offset': 1.663, 'inverted': True}  # Negative sensitivity indicates inverted polarity
+            'R_IS_1_Current_sensor': {'sensitivity': 0.047, 'offset': 1.661, 'inverted': False},
+            'L_IS_1_Current_sensor': {'sensitivity': 0.829, 'offset': 1.642, 'inverted': False}, 
+            'R_IS_2_Current_sensor': {'sensitivity': 0.005, 'offset': 1.661, 'inverted': False},
+            'L_IS_2_Current_sensor': {'sensitivity': 0.040, 'offset': 1.668, 'inverted': False}  # Updated offset from 0A measurement
         }
         
         # Apply sensor-specific calibration
         self._inverted_polarity = False
-        if self._name in sensor_calibration:
+        
+        # First, try to use calibration values from config file
+        if hasattr(config, 'calibrated_sensitivity') and config.calibrated_sensitivity is not None:
+            self._sensitivity = config.calibrated_sensitivity
+            print(f"[ADS1115] Using config calibrated sensitivity {self._sensitivity:.3f}V/A for {self._name}")
+            
+        if hasattr(config, 'calibrated_offset') and config.calibrated_offset is not None:
+            self._voltage_offset = config.calibrated_offset
+            print(f"[ADS1115] Using config calibrated offset {self._voltage_offset:.3f}V for {self._name}")
+        
+        # Fallback to hardcoded calibration values if not in config
+        elif self._name in sensor_calibration:
             cal = sensor_calibration[self._name]
             self._sensitivity = cal['sensitivity']
             self._voltage_offset = cal['offset']
             self._inverted_polarity = cal['inverted']
-            print(f"[ADS1115] Using calibrated values for {self._name}: sensitivity={self._sensitivity:.3f}V/A, offset={self._voltage_offset:.3f}V, inverted={self._inverted_polarity}")
+            print(f"[ADS1115] Using hardcoded calibrated values for {self._name}: sensitivity={self._sensitivity:.3f}V/A, offset={self._voltage_offset:.3f}V, inverted={self._inverted_polarity}")
 
         if not self._is_testing:
             try:
