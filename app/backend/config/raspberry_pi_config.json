@@ -67,7 +67,7 @@
             "min_value": -4,
             "safety_critical": 1,
             "voltage_offset": -0.048,
-            "calibrated_sensitivity": 0.047,
+            "calibrated_sensitivity": 0.829,
             "calibrated_offset": 1.661
         },
         "unit": "Amps",
