@@ -100,8 +100,10 @@ def import_cycle():
             
             # Insert calculation data
             for calc_data in calculation_data:
+                # Handle both old format (6 fields) and new format (7 fields with control_status)
                 if len(calc_data) >= 6:
                     calculation_name, timestamp, pid_output, current_temp, target_temp, error = calc_data[:6]
+                    control_status = calc_data[6] if len(calc_data) > 6 else "UNKNOWN"
                     
                     # Convert values to float, skip record if any critical values are None or invalid
                     try:
@@ -113,8 +115,8 @@ def import_cycle():
                         continue
                         
                     cursor.execute(
-                        "INSERT INTO calculation_data (cycle_id, calculation_name, timestamp, pid_output, current_temp, target_temp, error) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                        (cycle_id, calculation_name, timestamp, float_pid_output, float_current_temp, float_target_temp, float_error)
+                        "INSERT INTO calculation_data (cycle_id, calculation_name, timestamp, pid_output, current_temp, target_temp, error, control_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                        (cycle_id, calculation_name, timestamp, float_pid_output, float_current_temp, float_target_temp, float_error, control_status)
                     )
             
             conn.commit()
