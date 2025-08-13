@@ -6,6 +6,7 @@ from datetime import datetime
 from app.backend.Dataclasses.Config import McuConfig
 from app.backend.Interfaces.ISensorReader import ISensorReader
 from app.backend.Sensors.ADS1115 import ADS1115
+from app.backend.Sensors.NTCTemperatureSensor import NTCTemperatureSensor
 from app.backend.Sensors.DS18B20 import DS18B20
 from app.backend.Sensors.DS18B20Cluster import DS18B20Cluster
 from app.backend.Sensors.MPL3115A2 import MPL3115A2
@@ -54,6 +55,8 @@ class SensorReader(ISensorReader, Subscriptable):
                         self.sensor_list.append(DS18B20Cluster(sensor_config))
                 elif sensor_config.type == "ADS1115":
                     self.sensor_list.append(ADS1115(sensor_config))
+                elif sensor_config.type == "NTC":
+                    self.sensor_list.append(NTCTemperatureSensor(sensor_config))
                 elif sensor_config.type == "MPL3115A2":
                     self.sensor_list.append(MPL3115A2(sensor_config.name, sensor_config.SDA,sensor_config.SCL, sensor_config.min_value, sensor_config.max_value, sensor_config.unit))
         except Exception as e:

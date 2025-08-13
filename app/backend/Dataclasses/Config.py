@@ -44,6 +44,17 @@ class ADS1115Config(ISensorConfig):
     voltage_offset: float = 0.0
     calibrated_sensitivity: Optional[float] = None
     calibrated_offset: Optional[float] = None
+    i2c_address: Optional[int] = None
+
+@dataclass
+class NTCConfig(ISensorConfig):
+    read_pin: int = None
+    SDA: int = None
+    SCL: int = None
+    i2c_address: Optional[int] = None
+    beta_coefficient: float = 3600.0
+    reference_resistance: float = 10000.0
+    reference_voltage: float = 3.3
 
 @dataclass
 class MPL3115A2Config(ISensorConfig):
