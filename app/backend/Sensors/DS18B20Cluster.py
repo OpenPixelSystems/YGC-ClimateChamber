@@ -31,17 +31,12 @@ class DS18B20Cluster(ISensor):
     def read(self) -> Dict[str, Optional[float]]:
         sensor_readings = {}
         for sensor in self.sensors:
-            reading = sensor.read()  # e.g., {'DS18B20': {'outside_on_device': 19.9}}
-
-            for sensor_type, data in reading.items():
-                if sensor_type not in sensor_readings:
-                    sensor_readings[sensor_type] = {}
-
-                if self.group_name not in sensor_readings[sensor_type]:
-                    sensor_readings[sensor_type][self.group_name] = {}
-
-                sensor_readings[sensor_type][self.group_name].update(data)
-        return sensor_readings#should show where temps come from #TODO
+            reading = sensor.read()  # e.g., {'sensor_name': {'sensor_value': 19.9, 'sensor_source': 'test'}}
+            
+            # With the new flat structure, we can directly merge the readings
+            sensor_readings.update(reading)
+            
+        return sensor_readings
 
 
     @property

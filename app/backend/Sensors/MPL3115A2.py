@@ -156,16 +156,26 @@ class MPL3115A2(ISensor):
                         value = pressure
                         measurement_type = 'pressure'
 
-                    json_format[self._type] = {self._name: round(value, 2)}
+                    # Add data source metadata (backward compatible)
+                    data_source_key = f"{self._name}_data_source"
+                    json_format[self._type] = {
+                        self._name: round(value, 2),
+                        data_source_key: "real"
+                    }
                     print(f"[MPL3115A2] Read actual sensor {measurement_type}: {value:.2f} {self._unit}")
 
                 except Exception as e:
                     # Error reading sensor, return None instead of simulated values
-                    json_format[self._type] = {self._name: None}
+                    data_source_key = f"{self._name}_data_source"
+                    json_format[self._type] = {
+                        self._name: None,
+                        data_source_key: "error"
+                    }
                     print(f"[MPL3115A2] Error reading real sensor: {str(e)}, returning None")
             else:
                 # We're in a test environment or sensor initialization failed
                 # Only use simulated values in testing environment
+                data_source_key = f"{self._name}_data_source"
                 if self._is_testing:
                     simulated_values = self._get_simulated_values()
 
@@ -178,16 +188,26 @@ class MPL3115A2(ISensor):
                     else:
                         value = simulated_values['pressure']
 
-                    json_format[self._type] = {self._name: value}
+                    json_format[self._type] = {
+                        self._name: value,
+                        data_source_key: "test"
+                    }
                     print(f"[MPL3115A2] In testing environment, using simulated value: {value} {self._unit}")
                 else:
                     # On real hardware but sensor failed to initialize
-                    json_format[self._type] = {self._name: None}
+                    json_format[self._type] = {
+                        self._name: None,
+                        data_source_key: "failed"
+                    }
                     print(f"[MPL3115A2] Sensor initialization failed on real hardware, returning None")
 
         except Exception as e:
             print(f"[MPL3115A2] Critical error reading sensor {self._name}: {str(e)}")
-            json_format[self._type] = {self._name: None}
+            data_source_key = f"{self._name}_data_source"
+            json_format[self._type] = {
+                self._name: None,
+                data_source_key: "error"
+            }
 
         return json_format
 

@@ -42,6 +42,13 @@ async function restartService() {
 }
 
 /**
+ * Navigate to settings page
+ */
+function navigateToSettings() {
+    window.location.href = '/edit-config';
+}
+
+/**
  * Initialize dark mode based on stored preference
  */
 function initializeDarkMode() {

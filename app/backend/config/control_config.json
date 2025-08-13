@@ -11,7 +11,7 @@
     "kp": {
         "name": "kp",
         "editable": {
-            "value": 1.1
+            "value": 0.5
         },
         "unit": "",
         "_comment": "Proportional control"
@@ -19,7 +19,7 @@
     "ki": {
         "name": "ki",
         "editable": {
-            "value": 1
+            "value": 0.1
         },
         "unit": "",
         "_comment": "Integral control"
@@ -27,7 +27,7 @@
     "kd": {
         "name": "kd",
         "editable": {
-            "value": 0
+            "value": 2
         },
         "unit": "",
         "_comment": "Differential control"

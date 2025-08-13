@@ -229,7 +229,7 @@ export default class UniversalChartManager {
     /**
      * Update chart data (for real-time)
      */
-    updateRealTimeData(data, elapsedSeconds, selectedSensors = new Set()) {
+    updateRealTimeData(data, elapsedSeconds, selectedSensors = new Set(), guardingInfo = null) {
         if (!this.chartInstance || this.config.type !== 'realtime') return;
 
         // Update max elapsed time
@@ -258,9 +258,81 @@ export default class UniversalChartManager {
             }
         });
 
+        // Handle guarding information
+        this.handleGuardingInfo(guardingInfo);
+
         // Update time axis
         this.updateTimeAxis(elapsedSeconds);
         this.chartInstance.update();
+    }
+
+    /**
+     * Handle guarding information and apply visual effects
+     */
+    handleGuardingInfo(guardingInfo) {
+        if (!this.chartInstance || !guardingInfo) return;
+
+        const chartCanvas = this.chartInstance.canvas;
+        const chartContainer = chartCanvas.parentElement;
+
+        if (guardingInfo.is_guarding) {
+            // Apply red flashing effect
+            this.startGuardingFlash(chartContainer, guardingInfo);
+        } else {
+            // Remove guarding effects
+            this.stopGuardingFlash(chartContainer);
+        }
+    }
+
+    /**
+     * Start the guarding notification (no flashing effect)
+     */
+    startGuardingFlash(chartContainer, guardingInfo) {
+        // Add guarding class for positioning
+        chartContainer.classList.add('guarding-active');
+        
+        // Create or update guarding notification
+        this.updateGuardingNotification(guardingInfo);
+    }
+
+    /**
+     * Stop the guarding notification
+     */
+    stopGuardingFlash(chartContainer) {
+        chartContainer.classList.remove('guarding-active');
+        
+        // Remove guarding notification from document body
+        const notification = document.querySelector('.guarding-notification');
+        if (notification) {
+            notification.remove();
+        }
+    }
+
+    /**
+     * Create or update the guarding notification display
+     */
+    updateGuardingNotification(guardingInfo) {
+        let notification = document.querySelector('.guarding-notification');
+        
+        if (!notification) {
+            notification = document.createElement('div');
+            notification.className = 'guarding-notification';
+            document.body.appendChild(notification);
+        }
+
+        // Create reason messages
+        const reasonMessages = guardingInfo.reasons.map(reason => reason.message).join(', ');
+        const statusMessage = guardingInfo.stop_steering_temperature && guardingInfo.stop_steering_current 
+            ? 'Temperature & Current Limits Exceeded' 
+            : guardingInfo.stop_steering_temperature 
+            ? 'Temperature Limit Exceeded' 
+            : 'Current Limit Exceeded';
+
+        notification.innerHTML = `
+            <div class="guarding-title">⚠️ STEERING DISABLED</div>
+            <div class="guarding-status">${statusMessage}</div>
+            <div class="guarding-reasons">${reasonMessages}</div>
+        `;
     }
 
     /**
@@ -470,6 +542,26 @@ export default class UniversalChartManager {
     }
 
     /**
+     * Update the x range of temperature limit annotations when x-axis extends
+     */
+    updateTemperatureLimitAnnotationsXRange(newMaxX) {
+        if (!this.chartInstance || !this.chartInstance.options.plugins?.annotation?.annotations) return;
+
+        const annotations = this.chartInstance.options.plugins.annotation.annotations;
+        
+        // Update red zone annotations with new x range
+        if (annotations.redZoneLow) {
+            annotations.redZoneLow.xMax = newMaxX;
+        }
+        
+        if (annotations.redZoneHigh) {
+            annotations.redZoneHigh.xMax = newMaxX;
+        }
+        
+        console.log(`[ChartManager] Temperature limit annotations updated to x-max: ${newMaxX}`);
+    }
+
+    /**
      * Handle chart click (for setup page)
      */
     handleChartClick(event) {
@@ -483,6 +575,7 @@ export default class UniversalChartManager {
         const roundedX = Math.round(x / 5) * 5;
         const roundedY = Math.round(y);
 
+        // Note: addPoint() will handle dynamic x-axis scaling automatically
         this.addPoint(roundedX, roundedY);
     }
 
@@ -492,14 +585,34 @@ export default class UniversalChartManager {
     addPoint(x, y) {
         if (this.config.type !== 'setup') return;
 
-        // Validate ranges
-        if (x < 0 || x > 120) {
-            alert('Time must be between 0 and 120 minutes');
+        // Get current x-axis maximum
+        const currentMaxX = this.chartInstance.options.scales.x.max;
+        const threeFourthsPoint = currentMaxX * 0.75;
+        
+        // Validate minimum ranges
+        if (x < 0) {
+            alert('Time must be greater than 0 minutes');
             return;
         }
         if (y < -20 || y > 180) {
             alert('Temperature must be between -20 and 180°C');
             return;
+        }
+
+        // Dynamic x-axis scaling: extend if point is past 3/4 of current range
+        if (x > threeFourthsPoint) {
+            // Calculate new maximum - extend by 50% or ensure at least 20 minutes beyond the new point
+            const extensionOption1 = currentMaxX * 1.5;
+            const extensionOption2 = x + 20;
+            const newMaxX = Math.max(extensionOption1, extensionOption2);
+            
+            // Update x-axis maximum
+            this.chartInstance.options.scales.x.max = newMaxX;
+            
+            // Also update any temperature limit annotations to match new x range
+            this.updateTemperatureLimitAnnotationsXRange(newMaxX);
+            
+            console.log(`[ChartManager] X-axis extended from ${currentMaxX} to ${newMaxX} minutes (point at ${x} minutes)`);
         }
 
         // Check for duplicate time points

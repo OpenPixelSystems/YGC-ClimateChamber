@@ -8,6 +8,7 @@ export default class SensorManager {
     this.availableSensors = new Set();
     this.selectedSensors = new Set();
     this.currentReadings = new Map(); // Store current sensor readings
+    this.dataSources = new Map(); // Store data source information for each sensor
   }
 
   /**
@@ -51,13 +52,38 @@ export default class SensorManager {
       return;
     }
 
-    // Flatten the nested sensor data structure
-    const flattenedData = this.flattenSensorData(data);
+    // Check cache information from SensorReader
+    const cacheInfo = data._cache_info;
+    let cacheDataSource = null;
+    
+    if (cacheInfo) {
+      // Use the specific cache status (cached_recent or cached_old)
+      cacheDataSource = cacheInfo.source;
+    }
 
-    // Update current readings
+    // Extract guarding information
+    const guardingInfo = data.guarding_info || {
+      is_guarding: false,
+      reasons: [],
+      last_violation_time: null,
+      stop_steering_temperature: false,
+      stop_steering_current: false
+    };
+
+    // Flatten the nested sensor data structure and extract data sources
+    const { flattenedData, dataSources } = this.flattenSensorData(data);
+
+    // Update current readings and data sources
     Object.entries(flattenedData).forEach(([sensorName, value]) => {
       if (typeof value === 'number') {
         this.currentReadings.set(sensorName, value);
+        
+        // Determine data source: cache info overrides individual sensor sources
+        let dataSource = dataSources[sensorName] || 'unknown';
+        if (cacheDataSource && (dataSource === 'real' || dataSource === 'unknown')) {
+          dataSource = cacheDataSource; // Will be 'cached_recent' or 'cached_old'
+        }
+        this.dataSources.set(sensorName, dataSource);
       }
     });
 
@@ -66,55 +92,42 @@ export default class SensorManager {
 
     if (this.sensorGraph.chartManager.chartInstance) {
       const elapsedSeconds = (Date.now() - startTime) / 1000;
-      this.sensorGraph.chartManager.updateChartData(flattenedData, elapsedSeconds, this.selectedSensors);
+      this.sensorGraph.chartManager.updateChartData(flattenedData, elapsedSeconds, this.selectedSensors, guardingInfo);
       this.sensorGraph.chartManager.updateChartXAxisRange(elapsedSeconds);
     }
   }
 
   /**
-   * Flattens the nested sensor data structure into a flat object
-   * @param {Object} data - The nested sensor data
-   * @returns {Object} Flattened sensor data
+   * Flattens the sensor data structure and extracts data sources
+   * @param {Object} data - The sensor data (now using new flat structure)
+   * @returns {Object} Object containing flattened sensor data and data sources
    */
   flattenSensorData(data) {
       const flattened = {};
+      const dataSources = {};
 
-      // Process sensor chip data (ADS1115, DS18B20, etc.)
-      Object.entries(data).forEach(([chipType, chipData]) => {
-        if (chipType === 'calculation_data') {
+      // Process all entries in the data object
+      Object.entries(data).forEach(([key, value]) => {
+        if (key === 'calculation_data') {
           // Handle calculation data separately
-          if (typeof chipData === 'object' && chipData !== null) {
-            Object.entries(chipData).forEach(([calcName, calcValue]) => {
+          if (typeof value === 'object' && value !== null) {
+            Object.entries(value).forEach(([calcName, calcValue]) => {
               // Prefix calculation data to distinguish from sensor data
               flattened[`calc_${calcName}`] = calcValue;
+              dataSources[`calc_${calcName}`] = 'calculated';
             });
           }
-        } else if (chipType === 'DS18B20') {
-          // Handle DS18B20's nested structure: chipType -> groupName -> sensorName -> value
-          if (typeof chipData === 'object' && chipData !== null) {
-            Object.entries(chipData).forEach(([groupName, groupData]) => {
-              if (typeof groupData === 'object' && groupData !== null) {
-                Object.entries(groupData).forEach(([sensorName, sensorValue]) => {
-                  if (typeof sensorValue === 'number') {
-                    // Combine group name and sensor name for DS18B20
-                    flattened[`${groupName}_${sensorName}`] = sensorValue;
-                  }
-                });
-              }
-            });
-          }
-        } else if (typeof chipData === 'object' && chipData !== null) {
-          // Handle other sensor data from chips (MPL3115A2, ADS1115, etc.) - flat structure
-          Object.entries(chipData).forEach(([sensorName, sensorValue]) => {
-            if (typeof sensorValue === 'number') {
-              // Use the sensor name directly for non-DS18B20 sensors
-              flattened[sensorName] = sensorValue;
-            }
-          });
+        } else if (key === '_cache_info') {
+          // Skip cache info
+          return;
+        } else if (typeof value === 'object' && value !== null && 'sensor_value' in value && 'sensor_source' in value) {
+          // Handle new sensor structure: sensor_name: {sensor_value: value, sensor_source: source}
+          flattened[key] = value.sensor_value;
+          dataSources[key] = value.sensor_source;
         }
       });
 
-      return flattened;
+      return { flattenedData: flattened, dataSources };
     }
 
   /**
@@ -204,8 +217,11 @@ export default class SensorManager {
           readingSpan.className = 'sensor-reading';
           readingSpan.id = `reading-${sensorName}`;
           readingSpan.style.fontWeight = 'bold';
-          readingSpan.style.color = '#0066cc';
           readingSpan.textContent = this.formatSensorReading(sensorName);
+          
+          // Apply data source color coding
+          const dataSource = this.dataSources.get(sensorName) || 'unknown';
+          readingSpan.classList.add(`data-source-${dataSource}`);
 
           leftContainer.appendChild(checkbox);
           leftContainer.appendChild(label);
@@ -280,13 +296,26 @@ export default class SensorManager {
   }
 
   /**
-   * Updates the displayed sensor readings
+   * Updates the displayed sensor readings with data source color coding
    */
   updateSensorReadings() {
     this.currentReadings.forEach((reading, sensorName) => {
       const readingElement = document.getElementById(`reading-${sensorName}`);
       if (readingElement) {
         readingElement.textContent = this.formatSensorReading(sensorName);
+        
+        // Apply data source color coding
+        const dataSource = this.dataSources.get(sensorName) || 'unknown';
+        
+        // Remove existing data source classes
+        readingElement.classList.remove(
+          'data-source-real', 'data-source-cached', 'data-source-cached_recent', 
+          'data-source-cached_old', 'data-source-test', 'data-source-fallback', 
+          'data-source-failed', 'data-source-error'
+        );
+        
+        // Add appropriate data source class
+        readingElement.classList.add(`data-source-${dataSource}`);
       }
     });
   }

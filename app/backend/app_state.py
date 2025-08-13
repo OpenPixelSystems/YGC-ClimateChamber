@@ -104,9 +104,16 @@ class AppState(metaclass=SingletonMeta):
         return TemperatureService(self.config_manager, self.controller)
 
     def reload_climate_chamber(self):
+        """
+        Reload the climate chamber components after config changes.
+        
+        WARNING: This method should NOT be used for raspberry_pi_config.json changes
+        as it struggles with overwriting PWM configured pins. For raspberry_pi_config
+        changes, use restart_climate_chamber_service() instead to fully restart the service.
+        """
         print("[app_state] [reload_climate_chamber] Reloading climate chamber")
         #TODO check new config before loading in climate chamber, check should happen in config manager
-        #TODO reload struggles with overwriting PWM configured pin
+        #TODO reload struggles with overwriting PWM configured pin - use restart_climate_chamber_service for GPIO changes
         GPIO.cleanup()
         self.__climate_chamber_factory()
 
