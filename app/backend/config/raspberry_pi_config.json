@@ -37,7 +37,7 @@
             "rom_address": "00000055267f",
             "max_value": 120,
             "min_value": -40,
-            "safety_critical": 1
+            "safety_critical": 0
         },
         "unit": "degrees",
         "_comment": "Temperature sensor outside peltier device"
@@ -56,6 +56,74 @@
         "unit": "degrees",
         "_comment": "Temperature sensor inside peltier device"
     },
+    "NTC_peltier_1_temperature": {
+      "name": "NTC_peltier_1_temperature",
+      "type": "NTC",
+      "editable": {
+            "SDA": 2,
+            "SCL": 3,
+            "read_pin": 0,
+            "max_value": 120,
+            "min_value": -10,
+            "safety_critical": 0,
+            "i2c_address": 49,
+            "beta_coefficient": 3600.0,
+            "reference_resistance": 10000.0,
+            "reference_voltage": 3.3
+      },
+      "unit": "degrees"
+    },
+    "NTC_peltier_2_temperature": {
+      "name": "NTC_peltier_2_temperature",
+      "type": "NTC",
+      "editable": {
+            "SDA": 2,
+            "SCL": 3,
+            "read_pin": 1,
+            "max_value": 120,
+            "min_value": -10,
+            "safety_critical": 0,
+            "i2c_address": 49,
+            "beta_coefficient": 3600.0,
+            "reference_resistance": 10000.0,
+            "reference_voltage": 3.3
+      },
+      "unit": "degrees"
+    },
+    "NTC_peltier_3_temperature": {
+      "name": "NTC_peltier_3_temperature",
+      "type": "NTC",
+      "editable": {
+            "SDA": 2,
+            "SCL": 3,
+            "read_pin": 2,
+            "max_value": 120,
+            "min_value": -10,
+            "safety_critical": 0,
+            "i2c_address": 49,
+            "beta_coefficient": 3600.0,
+            "reference_resistance": 10000.0,
+            "reference_voltage": 3.3
+      },
+      "unit": "degrees"
+    },
+    "NTC_peltier_4_temperature": {
+      "name": "NTC_peltier_4_temperature",
+      "type": "NTC",
+      "editable": {
+            "SDA": 2,
+            "SCL": 3,
+            "read_pin": 3,
+            "max_value": 120,
+            "min_value": -10,
+            "safety_critical": 0,
+            "i2c_address": 49,
+            "beta_coefficient": 3600.0,
+            "reference_resistance": 10000.0,
+            "reference_voltage": 3.3
+      },
+      "unit": "degrees"
+    },
     "R_IS_1_Current_sensor": {
         "name": "R_IS_1_Current_sensor",
         "type": "ADS1115",
@@ -65,7 +133,8 @@
             "read_pin": 0,
             "max_value": 4,
             "min_value": -4,
-            "safety_critical": 1,
+            "safety_critical": 0,
+            "i2c_address": 48,
             "voltage_offset": -0.048,
             "calibrated_sensitivity": 0.829,
             "calibrated_offset": 1.661
@@ -82,7 +151,8 @@
             "read_pin": 1,
             "max_value": 4,
             "min_value": -4,
-            "safety_critical": 1,
+            "safety_critical": 0,
+            "i2c_address": 48,
             "voltage_offset": 0.014,
             "calibrated_sensitivity": 0.829,
             "calibrated_offset": 1.642
@@ -99,7 +169,8 @@
             "read_pin": 2,
             "max_value": 4,
             "min_value": -4,
-            "safety_critical": 1,
+            "safety_critical": 0,
+            "i2c_address": 48,
             "voltage_offset": 0.068,
             "calibrated_sensitivity": 0.005,
             "calibrated_offset": 1.661
@@ -116,7 +187,8 @@
             "read_pin": 3,
             "max_value": 4,
             "min_value": -4,
-            "safety_critical": 1,
+            "safety_critical": 0,
+            "i2c_address": 48,
             "voltage_offset": 0.449,
             "calibrated_sensitivity": 0.04,
             "calibrated_offset": 1.668
@@ -149,73 +221,5 @@
         },
         "unit": "degrees",
         "_comment": "Fans located outside of climate chamber"
-    },
-    "NTC_peltier_1_temperature": {
-      "name": "NTC_peltier_1_temperature",
-      "type": "NTC",
-      "editable": {
-            "SDA": 2,
-            "SCL": 3,
-            "read_pin": 0,
-            "max_value": 120,
-            "min_value": -10,
-            "safety_critical": 1,
-            "i2c_address": 73,
-            "beta_coefficient": 3600.0,
-            "reference_resistance": 10000.0,
-            "reference_voltage": 3.3
-      },
-      "unit": "degrees"
-    },
-    "NTC_peltier_2_temperature": {
-      "name": "NTC_peltier_2_temperature",
-      "type": "NTC",
-      "editable": {
-            "SDA": 2,
-            "SCL": 3,
-            "read_pin": 1,
-            "max_value": 120,
-            "min_value": -10,
-            "safety_critical": 1,
-            "i2c_address": 73,
-            "beta_coefficient": 3600.0,
-            "reference_resistance": 10000.0,
-            "reference_voltage": 3.3
-      },
-      "unit": "degrees"
-    },
-    "NTC_peltier_3_temperature": {
-      "name": "NTC_peltier_3_temperature",
-      "type": "NTC",
-      "editable": {
-            "SDA": 2,
-            "SCL": 3,
-            "read_pin": 2,
-            "max_value": 120,
-            "min_value": -10,
-            "safety_critical": 1,
-            "i2c_address": 73,
-            "beta_coefficient": 3600.0,
-            "reference_resistance": 10000.0,
-            "reference_voltage": 3.3
-      },
-      "unit": "degrees"
-    },
-    "NTC_peltier_4_temperature": {
-      "name": "NTC_peltier_4_temperature",
-      "type": "NTC",
-      "editable": {
-            "SDA": 2,
-            "SCL": 3,
-            "read_pin": 3,
-            "max_value": 120,
-            "min_value": -10,
-            "safety_critical": 1,
-            "i2c_address": 73,
-            "beta_coefficient": 3600.0,
-            "reference_resistance": 10000.0,
-            "reference_voltage": 3.3
-      },
-      "unit": "degrees"
     }
 }
