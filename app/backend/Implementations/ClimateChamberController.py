@@ -23,7 +23,7 @@ class ClimateChamberController(IClimateChamberController, LoggingMixin):
         """Initialize the controller with the climate chamber instance and config."""
         super().__init__()
         self.sensor_group = "Peltier"
-        self.viable_sensor = "inside_on_peltier"
+        self.viable_sensor = "NTC_peltier_3_temperature"
         self.sensor_reader = sensor_reader
         self.config_manager = config_manager
         self.climate_chamber = climate_chamber
