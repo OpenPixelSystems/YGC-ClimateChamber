@@ -49,6 +49,7 @@ class NTCTemperatureSensor(ISensor):
                 i2c = busio.I2C(board.SCL, board.SDA)
 
                 # Create ADS1115 object
+                print(f"[NTC] Creating ads component with address {self._i2c_address}")
                 self._ads = ADS.ADS1115(i2c, address=self._i2c_address)
                 self._ads.gain = self._gain
                 self._ads.data_rate = self._data_rate
