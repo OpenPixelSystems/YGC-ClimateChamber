@@ -66,7 +66,7 @@
             "max_value": 120,
             "min_value": -10,
             "safety_critical": 0,
-            "i2c_address": "0x49",
+            "i2c_address": "0x4B",
             "beta_coefficient": 3600.0,
             "reference_resistance": 10000.0,
             "reference_voltage": 3.3
@@ -83,7 +83,7 @@
             "max_value": 120,
             "min_value": -10,
             "safety_critical": 0,
-            "i2c_address": "0x49",
+            "i2c_address": "0x4B",
             "beta_coefficient": 3600.0,
             "reference_resistance": 10000.0,
             "reference_voltage": 3.3
@@ -100,7 +100,7 @@
             "max_value": 120,
             "min_value": -10,
             "safety_critical": 0,
-            "i2c_address": "0x49",
+            "i2c_address": "0x4B",
             "beta_coefficient": 3600.0,
             "reference_resistance": 10000.0,
             "reference_voltage": 3.3
@@ -117,7 +117,7 @@
             "max_value": 120,
             "min_value": -10,
             "safety_critical": 0,
-            "i2c_address": "0x49",
+            "i2c_address": "0x4B",
             "beta_coefficient": 3600.0,
             "reference_resistance": 10000.0,
             "reference_voltage": 3.3
