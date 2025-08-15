@@ -101,6 +101,7 @@ class ClimateChamberController(IClimateChamberController, LoggingMixin):
                     print(f"[ClimateChamberController] [sensor_data_provider] No steering possible due to absent sensor data. {self.viable_sensor}")
 
                 else:
+                    print(f"[ClimateChamberController] [sensor_data_provider] steering manual control {self.current_power}")
                     self.calculation_service.manual_pid_control(self.current_power)
                     data['calculation_data'] = {'Peltier power':self.current_power}
                 
