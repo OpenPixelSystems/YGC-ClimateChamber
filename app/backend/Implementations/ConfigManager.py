@@ -113,7 +113,7 @@ class ConfigManager(IConfigManager, LoggingMixin):
                         voltage_offset=value["editable"]["voltage_offset"],
                         calibrated_sensitivity=value["editable"].get("calibrated_sensitivity"),
                         calibrated_offset=value["editable"].get("calibrated_offset"),
-                        i2c_address=value["editable"].get("i2c_address")
+                        i2c_address=int(value["editable"].get("i2c_address"), 16)
                     ))
                 elif value["type"] == "NTC":
                     sensors.append(NTCConfig(
@@ -126,7 +126,7 @@ class ConfigManager(IConfigManager, LoggingMixin):
                         min_value=value["editable"]["min_value"],
                         critical=value["editable"]["safety_critical"]==1,
                         unit=value["unit"],
-                        i2c_address=value["editable"].get("i2c_address"),
+                        i2c_address=int(value["editable"].get("i2c_address"), 16),
                         beta_coefficient=value["editable"].get("beta_coefficient", 3600.0),
                         reference_resistance=value["editable"].get("reference_resistance", 10000.0),
                         reference_voltage=value["editable"].get("reference_voltage", 3.3)
