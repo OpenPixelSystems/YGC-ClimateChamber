@@ -91,7 +91,7 @@ class ConfigManager(IConfigManager, LoggingMixin):
                     sensors.append(DS18B20Config(
                         name=value["name"],
                         type=value["type"],
-                        group_name=value["editable"]["sensor_group"],
+                        sensor_location=value["editable"].get("sensor_location", "default"),
                         rom_address=value["editable"]["rom_address"],
                         gpio_pin=value["editable"]["gpio_pin"],
                         max_value=value["editable"]["max_value"],
@@ -121,6 +121,7 @@ class ConfigManager(IConfigManager, LoggingMixin):
                         type=value["type"],
                         SDA=value["editable"]["SDA"],
                         SCL=value["editable"]["SCL"],
+                        sensor_location=value["editable"].get("sensor_location", "default"),
                         read_pin=value["editable"]["read_pin"],
                         max_value=value["editable"]["max_value"],
                         min_value=value["editable"]["min_value"],

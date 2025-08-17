@@ -25,3 +25,21 @@ class ISensorReader(ABC):
             enabled: True if peltier modules are enabled, False otherwise
         """
         pass
+
+    @abstractmethod
+    def start_background_reading(self):
+        """Set whether peltier modules are enabled.
+
+        Args:
+            enabled: True if peltier modules are enabled, False otherwise
+        """
+        pass
+
+    @abstractmethod
+    def stop_background_reading(self):
+        """Set whether peltier modules are enabled.
+
+        Args:
+            enabled: True if peltier modules are enabled, False otherwise
+        """
+        pass

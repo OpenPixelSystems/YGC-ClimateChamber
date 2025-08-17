@@ -6,7 +6,7 @@
         "editable": {
             "gpio_pin": 4,
             "rom_address": 1234,
-            "sensor_group": "Environment",
+            "sensor_location": "Environment",
             "max_value": 21,
             "min_value": -40,
             "safety_critical": 0
@@ -19,7 +19,7 @@
         "type": "DS18B20",
         "editable": {
             "gpio_pin": 4,
-            "sensor_group": "Inside",
+            "sensor_location": "Inside",
             "rom_address": "00000054e526",
             "max_value": 120,
             "min_value": -40,
@@ -33,7 +33,7 @@
         "type": "DS18B20",
         "editable": {
             "gpio_pin": 4,
-            "sensor_group": "Peltier",
+            "sensor_location": "Peltier",
             "rom_address": "00000055267f",
             "max_value": 120,
             "min_value": -40,
@@ -47,7 +47,7 @@
         "type": "DS18B20",
         "editable": {
             "gpio_pin": 4,
-            "sensor_group": "Peltier",
+            "sensor_location": "Peltier",
             "rom_address": "00000050dab2",
             "max_value": 120,
             "min_value": -40,
@@ -62,6 +62,7 @@
       "editable": {
             "SDA": 2,
             "SCL": 3,
+            "sensor_location": "Inside",
             "read_pin": 0,
             "max_value": 120,
             "min_value": -10,
@@ -79,6 +80,7 @@
       "editable": {
             "SDA": 2,
             "SCL": 3,
+            "sensor_location": "Inside",
             "read_pin": 1,
             "max_value": 120,
             "min_value": -10,
@@ -96,6 +98,7 @@
       "editable": {
             "SDA": 2,
             "SCL": 3,
+            "sensor_location": "Inside",
             "read_pin": 2,
             "max_value": 120,
             "min_value": -10,
@@ -113,6 +116,7 @@
       "editable": {
             "SDA": 2,
             "SCL": 3,
+            "sensor_location": "Inside",
             "read_pin": 3,
             "max_value": 120,
             "min_value": -10,

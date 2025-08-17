@@ -32,7 +32,7 @@ class ISensorConfig:
 @dataclass
 class DS18B20Config(ISensorConfig):
     """Configuration for DS18B20 parameters."""
-    group_name: str = ""
+    sensor_location: str = ""
     rom_address: str = ""
     gpio_pin: int = 4
 
@@ -51,6 +51,7 @@ class NTCConfig(ISensorConfig):
     read_pin: int = None
     SDA: int = None
     SCL: int = None
+    sensor_location: str = ""
     i2c_address: Optional[int] = None
     beta_coefficient: float = 3600.0
     reference_resistance: float = 10000.0

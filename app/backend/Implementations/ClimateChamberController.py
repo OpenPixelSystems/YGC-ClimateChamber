@@ -22,8 +22,7 @@ class ClimateChamberController(IClimateChamberController, LoggingMixin):
                  calculation_service: CalculationService, guarding_service: IGuardingService):
         """Initialize the controller with the climate chamber instance and config."""
         super().__init__()
-        self.sensor_group = "Peltier"
-        self.viable_sensor = "NTC_peltier_3_temperature"
+        self.viable_sensors = []
         self.sensor_reader = sensor_reader
         self.config_manager = config_manager
         self.climate_chamber = climate_chamber
@@ -33,6 +32,13 @@ class ClimateChamberController(IClimateChamberController, LoggingMixin):
         self.running = False
         self.desired_graph : Graph = None
         self.current_power = 0
+
+        self.get_inside_sensors()
+
+    def get_inside_sensors(self):
+        for sensor in self.config_manager.mcu_config.sensors:
+            if sensor.type == 'NTC' and sensor.sensor_location == "Inside":
+                self.viable_sensors.append(sensor.name)
 
     def set_desired_graph(self, graph):
         """Set the desired temperature profile."""
@@ -78,11 +84,16 @@ class ClimateChamberController(IClimateChamberController, LoggingMixin):
         while self.running:
             try:
                 data = self.sensor_reader.read_sensors()
-                # If we have a desired temperature profile, apply control
-                if (self.desired_graph and
-                        self.viable_sensor in data and
-                        data[self.viable_sensor]['sensor_value'] is not None): #TODO currently only uses one sensor, extend to average of applicable sensors
-                    current_temp = data[self.viable_sensor]['sensor_value']
+                
+                # Collect all available viable sensor values
+                available_sensor_values = []
+                for sensor_name in self.viable_sensors:
+                    if sensor_name in data and data[sensor_name]['sensor_value'] is not None:
+                        available_sensor_values.append(data[sensor_name]['sensor_value'])
+                
+                # If we have a desired temperature profile and any viable sensors, apply control
+                if self.desired_graph and available_sensor_values:
+                    current_temp = sum(available_sensor_values) / len(available_sensor_values)
                     target_temp = self.desired_graph.get_temperature_at_time()
                     self.print("Target temperature is: ", target_temp)
                     if self.guarding_service.get_guarding_state():
@@ -96,9 +107,8 @@ class ClimateChamberController(IClimateChamberController, LoggingMixin):
                     self.current_power = output
                     # Add control info to the data
                     data['calculation_data'] = {'pid_output':output,'target_temp': target_temp, 'control_error': target_temp - current_temp}
-                elif(self.viable_sensor not in data or
-                        data[self.viable_sensor]['sensor_value'] is None):
-                    print(f"[ClimateChamberController] [sensor_data_provider] No steering possible due to absent sensor data. {self.viable_sensor}")
+                elif not available_sensor_values:
+                    print(f"[ClimateChamberController] [sensor_data_provider] No steering possible due to absent viable sensor data. Available sensors: {list(data.keys())}")
 
                 else:
                     print(f"[ClimateChamberController] [sensor_data_provider] steering manual control {self.current_power}")

@@ -12,3 +12,7 @@ class IGuardingService(ABC):
     @abstractmethod
     def get_guarding_state(self):
         pass
+
+    @abstractmethod
+    def get_guarding_info(self):
+        pass

@@ -46,7 +46,7 @@ class SensorReader(ISensorReader, Subscriptable):
                 if sensor_config.type == "DS18B20":
                     existing_cluster = None
                     for sensor in self.sensor_list:
-                        if isinstance(sensor, DS18B20Cluster) and sensor.group_name == sensor_config.group_name:
+                        if isinstance(sensor, DS18B20Cluster) and sensor.sensor_location == sensor_config.sensor_location:
                             existing_cluster = sensor
                             break
                     if existing_cluster:
