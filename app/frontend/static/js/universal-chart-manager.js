@@ -23,9 +23,10 @@ export default class UniversalChartManager {
         this.startTimeLineConfig = null;
         
         // Static/setup specific properties
-        this.points = [];
+        this.points = []; // Store as {x: offsetSeconds, y: temperature}
         this.unsavedChanges = false;
         this.onPointAddedCallback = null;
+        this.referenceStartTime = null; // Reference time for converting offsets to display times
 
         // Zoom functionality properties
         this.isDragging = false;
@@ -183,16 +184,34 @@ export default class UniversalChartManager {
      * Create scales for setup/editor charts
      */
     createSetupScales() {
+        // Create base time starting at 00:00:00 for relative time display
+        const baseTime = new Date(2000, 0, 1, 0, 0, 0); // January 1, 2000 00:00:00
+        const twoHoursLater = new Date(baseTime.getTime() + 2 * 60 * 60 * 1000); // 2 hours from 00:00
+        
         return {
             x: {
-                type: 'linear',
+                type: 'time',
                 position: 'bottom',
-                min: 0,
-                max: 120, // 2 hours default
+                min: baseTime,
+                max: twoHoursLater,
+                time: {
+                    unit: 'minute',
+                    displayFormats: {
+                        minute: 'HH:mm',
+                        hour: 'HH:mm'
+                    },
+                    tooltipFormat: 'HH:mm:ss'
+                },
                 title: {
                     display: true,
-                    text: 'Time (minutes)',
+                    text: 'Cycle Time',
                     font: { size: 14 }
+                },
+                ticks: {
+                    maxTicksLimit: 8,
+                    major: {
+                        enabled: true
+                    }
                 }
             },
             y: {
@@ -205,6 +224,32 @@ export default class UniversalChartManager {
                 }
             }
         };
+    }
+
+    /**
+     * Set the reference start time for offset calculations
+     */
+    setReferenceStartTime(startTime) {
+        this.referenceStartTime = startTime || new Date();
+        console.log(`[ChartManager] Reference start time set to: ${this.referenceStartTime.toLocaleString()}`);
+    }
+
+    /**
+     * Convert offset seconds to relative datetime for display (starting from 00:00)
+     */
+    offsetToDateTime(offsetSeconds) {
+        // Create a base date starting at 00:00:00 for relative time display
+        const baseDate = new Date(2000, 0, 1, 0, 0, 0); // January 1, 2000 00:00:00
+        return new Date(baseDate.getTime() + offsetSeconds * 1000);
+    }
+
+    /**
+     * Convert relative datetime to offset seconds
+     */
+    dateTimeToOffset(dateTime) {
+        const baseDate = new Date(2000, 0, 1, 0, 0, 0); // January 1, 2000 00:00:00
+        const timestamp = dateTime instanceof Date ? dateTime.getTime() : new Date(dateTime).getTime();
+        return (timestamp - baseDate.getTime()) / 1000;
     }
 
     /**
@@ -452,8 +497,8 @@ export default class UniversalChartManager {
         if (minTemp > yMin) {
             this.chartInstance.options.plugins.annotation.annotations.redZoneLow = {
                 type: 'box',
-                xMin: 0,
-                xMax: this.chartInstance.options.scales.x.max || 120,
+                xMin: this.chartInstance.options.scales.x.min,
+                xMax: this.chartInstance.options.scales.x.max,
                 yMin: yMin,
                 yMax: minTemp,
                 backgroundColor: 'rgba(255, 0, 0, 0.15)',
@@ -476,8 +521,8 @@ export default class UniversalChartManager {
         if (maxTemp < yMax) {
             this.chartInstance.options.plugins.annotation.annotations.redZoneHigh = {
                 type: 'box',
-                xMin: 0,
-                xMax: this.chartInstance.options.scales.x.max || 120,
+                xMin: this.chartInstance.options.scales.x.min,
+                xMax: this.chartInstance.options.scales.x.max,
                 yMin: maxTemp,
                 yMax: yMax,
                 backgroundColor: 'rgba(255, 0, 0, 0.15)',
@@ -544,21 +589,25 @@ export default class UniversalChartManager {
     /**
      * Update the x range of temperature limit annotations when x-axis extends
      */
-    updateTemperatureLimitAnnotationsXRange(newMaxX) {
+    updateTemperatureLimitAnnotationsXRange() {
         if (!this.chartInstance || !this.chartInstance.options.plugins?.annotation?.annotations) return;
 
         const annotations = this.chartInstance.options.plugins.annotation.annotations;
+        const currentMinX = this.chartInstance.options.scales.x.min;
+        const currentMaxX = this.chartInstance.options.scales.x.max;
         
         // Update red zone annotations with new x range
         if (annotations.redZoneLow) {
-            annotations.redZoneLow.xMax = newMaxX;
+            annotations.redZoneLow.xMin = currentMinX;
+            annotations.redZoneLow.xMax = currentMaxX;
         }
         
         if (annotations.redZoneHigh) {
-            annotations.redZoneHigh.xMax = newMaxX;
+            annotations.redZoneHigh.xMin = currentMinX;
+            annotations.redZoneHigh.xMax = currentMaxX;
         }
         
-        console.log(`[ChartManager] Temperature limit annotations updated to x-max: ${newMaxX}`);
+        console.log(`[ChartManager] Temperature limit annotations updated to range: ${currentMinX} - ${currentMaxX}`);
     }
 
     /**
@@ -571,12 +620,13 @@ export default class UniversalChartManager {
         const x = this.chartInstance.scales.x.getValueForPixel(canvasPosition.x);
         const y = this.chartInstance.scales.y.getValueForPixel(canvasPosition.y);
 
-        // Round to reasonable increments
-        const roundedX = Math.round(x / 5) * 5;
+        // x is a timestamp, convert to offset seconds and round to nearest minute (60 seconds)
+        const offsetSeconds = this.dateTimeToOffset(new Date(x));
+        const roundedOffsetSeconds = Math.round(offsetSeconds / 60) * 60;
         const roundedY = Math.round(y);
 
         // Note: addPoint() will handle dynamic x-axis scaling automatically
-        this.addPoint(roundedX, roundedY);
+        this.addPoint(roundedOffsetSeconds, roundedY);
     }
 
     /**
@@ -585,13 +635,12 @@ export default class UniversalChartManager {
     addPoint(x, y) {
         if (this.config.type !== 'setup') return;
 
-        // Get current x-axis maximum
-        const currentMaxX = this.chartInstance.options.scales.x.max;
-        const threeFourthsPoint = currentMaxX * 0.75;
+        // x should be offset seconds, convert if it's a Date
+        const offsetSeconds = (x instanceof Date) ? this.dateTimeToOffset(x) : x;
         
-        // Validate minimum ranges
-        if (x < 0) {
-            alert('Time must be greater than 0 minutes');
+        // Validate ranges
+        if (offsetSeconds < 0) {
+            alert('Time must be after the start time');
             return;
         }
         if (y < -20 || y > 180) {
@@ -599,31 +648,41 @@ export default class UniversalChartManager {
             return;
         }
 
-        // Dynamic x-axis scaling: extend if point is past 3/4 of current range
-        if (x > threeFourthsPoint) {
-            // Calculate new maximum - extend by 50% or ensure at least 20 minutes beyond the new point
-            const extensionOption1 = currentMaxX * 1.5;
-            const extensionOption2 = x + 20;
-            const newMaxX = Math.max(extensionOption1, extensionOption2);
+        // Dynamic x-axis scaling: extend if point approaches current maximum
+        const currentMinX = new Date(this.chartInstance.options.scales.x.min);
+        const currentMaxX = new Date(this.chartInstance.options.scales.x.max);
+        const pointDateTime = this.offsetToDateTime(offsetSeconds);
+        
+        const currentRange = currentMaxX.getTime() - currentMinX.getTime();
+        const threeFourthsPoint = new Date(currentMinX.getTime() + currentRange * 0.75);
+        
+        if (pointDateTime > threeFourthsPoint) {
+            // Extend by 50% of current range or at least 30 minutes beyond the new point
+            const extensionOption1 = new Date(currentMaxX.getTime() + currentRange * 0.5);
+            const extensionOption2 = new Date(pointDateTime.getTime() + 30 * 60 * 1000); // 30 minutes
+            const newMaxX = new Date(Math.max(extensionOption1.getTime(), extensionOption2.getTime()));
             
             // Update x-axis maximum
             this.chartInstance.options.scales.x.max = newMaxX;
             
-            // Also update any temperature limit annotations to match new x range
-            this.updateTemperatureLimitAnnotationsXRange(newMaxX);
+            // Update temperature limit annotations to match new range
+            this.updateTemperatureLimitAnnotationsXRange();
             
-            console.log(`[ChartManager] X-axis extended from ${currentMaxX} to ${newMaxX} minutes (point at ${x} minutes)`);
+            console.log(`[ChartManager] X-axis extended to ${newMaxX.toLocaleTimeString()} (point at ${pointDateTime.toLocaleTimeString()})`);
         }
 
-        // Check for duplicate time points
-        const existingIndex = this.points.findIndex(point => point.x === x);
+        // Check for duplicate time points (within 1 minute tolerance)
+        const existingIndex = this.points.findIndex(point => Math.abs(point.x - offsetSeconds) < 60);
+        
         if (existingIndex !== -1) {
-            this.points[existingIndex].y = y;
+            this.points[existingIndex] = { x: offsetSeconds, y };
         } else {
-            this.points.push({ x, y });
+            this.points.push({ x: offsetSeconds, y });
         }
 
+        // Update chart with dynamic scaling
         this.updateSetupChart();
+        this.updateDynamicScaling();
         this.unsavedChanges = true;
         
         // Call callback if set
@@ -633,16 +692,52 @@ export default class UniversalChartManager {
     }
 
     /**
+     * Update dynamic scaling based on setpoint data
+     */
+    updateDynamicScaling() {
+        if (this.config.type !== 'setup' || !this.chartInstance || this.points.length === 0) return;
+
+        // Find min and max offset seconds in the data
+        const offsetSeconds = this.points.map(point => point.x);
+        const minOffset = Math.min(...offsetSeconds);
+        const maxOffset = Math.max(...offsetSeconds);
+        
+        // Calculate appropriate range (at least 2 hours, but expand as needed)
+        const dataRange = maxOffset - minOffset;
+        const minRange = 2 * 60 * 60; // 2 hours in seconds
+        const padding = Math.max(minRange * 0.1, dataRange * 0.1); // 10% padding
+        
+        // Convert back to relative datetime for chart display
+        const newMinX = this.offsetToDateTime(Math.max(0, minOffset - padding)); // Don't go before 00:00
+        const newMaxX = this.offsetToDateTime(Math.max(maxOffset + padding, minRange));
+        
+        // Update chart scales
+        this.chartInstance.options.scales.x.min = newMinX;
+        this.chartInstance.options.scales.x.max = newMaxX;
+        
+        // Update temperature limit annotations to match new range
+        this.updateTemperatureLimitAnnotationsXRange();
+        
+        console.log(`[ChartManager] Dynamic scaling: ${newMinX.toLocaleTimeString()} to ${newMaxX.toLocaleTimeString()}`);
+    }
+
+    /**
      * Update setup chart
      */
     updateSetupChart() {
         if (this.config.type !== 'setup' || !this.chartInstance) return;
 
-        // Sort points by time
+        // Sort points by offset seconds
         this.points.sort((a, b) => a.x - b.x);
         
+        // Convert offset seconds to datetime for chart display
+        const displayPoints = this.points.map(point => ({
+            x: this.offsetToDateTime(point.x),
+            y: point.y
+        }));
+        
         // Update chart data
-        this.chartInstance.data.datasets[0].data = [...this.points];
+        this.chartInstance.data.datasets[0].data = displayPoints;
         this.chartInstance.update('none');
     }
 

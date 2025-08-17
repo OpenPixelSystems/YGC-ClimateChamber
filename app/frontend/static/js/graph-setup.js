@@ -14,6 +14,10 @@ class GraphSetup {
 
         this.unsavedChanges = false;
         this.startingTemperature = null;
+        
+        // Set reference start time to current time
+        this.chartManager.setReferenceStartTime(new Date());
+        
         this.initChart();
         this.bindEvents();
         this.updateUndoButton();
@@ -83,9 +87,18 @@ class GraphSetup {
             return;
         }
         
-        // Add point at (x=timeOffset, y=temperature)
-        // Starting point is already handled by updateFirstSetpoint()
-        this.chartManager.addPoint(timeOffsetSeconds, temperature);
+        // Find the last (highest) time point to add offset to
+        let targetTime = timeOffsetSeconds; // Default to offset from start (0)
+        
+        if (this.chartManager.points.length > 0) {
+            // Sort points by time to find the latest one
+            const sortedPoints = [...this.chartManager.points].sort((a, b) => a.x - b.x);
+            const lastPoint = sortedPoints[sortedPoints.length - 1];
+            targetTime = lastPoint.x + timeOffsetSeconds; // Add offset to last point's time
+        }
+        
+        // Add point at cumulative time
+        this.chartManager.addPoint(targetTime, temperature);
         this.unsavedChanges = this.chartManager.unsavedChanges;
         this.updateUndoButton();
         
@@ -184,20 +197,26 @@ class GraphSetup {
     updateFirstSetpoint(temperature) {
         // Check if there are existing points
         if (this.chartManager.points.length > 0) {
-            // Replace the first point if it's at time 0 (starting point)
-            if (this.chartManager.points[0].x === 0) {
-                this.chartManager.points[0].y = temperature;
+            // Sort points by offset to find the earliest
+            const sortedPoints = [...this.chartManager.points].sort((a, b) => a.x - b.x);
+            const firstPoint = sortedPoints[0];
+            
+            // If the first point is at time 0 (or within 5 minutes), replace it
+            if (firstPoint.x <= 300) { // 5 minutes in seconds
+                const index = this.chartManager.points.findIndex(p => p === firstPoint);
+                this.chartManager.points[index] = {x: 0, y: temperature};
             } else {
-                // Insert new starting point at the beginning
+                // Insert new starting point at time 0
                 this.chartManager.points.unshift({x: 0, y: temperature});
             }
         } else {
-            // Add the starting point as the first point
+            // Add the starting point as the first point at time 0
             this.chartManager.addPoint(0, temperature);
         }
         
         // Update the chart to show the new starting point
         this.chartManager.updateSetupChart();
+        this.chartManager.updateDynamicScaling();
         this.updateUndoButton();
     }
 
@@ -239,12 +258,15 @@ class GraphSetup {
         }
 
         try {
+            // Points are already stored as offset seconds, just sort them
+            const sortedPoints = [...this.chartManager.points].sort((a, b) => a.x - b.x);
+
             const response = await fetch('/store-graph-data', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify([{
                     label: 'Temperature Profile',
-                    data: this.chartManager.points
+                    data: sortedPoints
                 }])
             });
 
