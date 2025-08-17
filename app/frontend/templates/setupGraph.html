@@ -7,9 +7,18 @@
         <h1>Climate Chamber Graph Editor</h1>
         
         <div class="control-group">
+            <h3>Starting Temperature</h3>
+            <div id="startingTempDisplay" class="temp-display">
+                <span id="startingTempValue">Loading...</span>°C
+                <button type="button" id="refreshStartingTemp" class="small-button">Refresh</button>
+            </div>
+        </div>
+
+        <div class="control-group">
             <h3>Add Temperature Points</h3>
             <form id="pointForm" class="vertical-form">
-                <input type="text" id="pointInput" placeholder="Time,Temperature (e.g. 30,25)" required class="full-width">
+                <input type="number" id="temperatureInput" placeholder="Temperature (°C)" step="0.1" required class="full-width">
+                <input type="text" id="timeOffsetInput" placeholder="Time offset (e.g. 2h, 30m, 90s)" required class="full-width">
                 <div class="button-group">
                     <button type="submit" id="addPointBtn" class="full-width">Add Point</button>
                     <button type="button" id="undoButton" class="full-width">Undo Last</button>

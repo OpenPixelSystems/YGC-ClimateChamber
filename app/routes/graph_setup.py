@@ -59,3 +59,28 @@ def get_graph_min_max_temp():
         'min_temp': config.min_y,
         'max_temp': config.max_y
     })
+
+
+@graph_bp.route('/get_starting_temperature', methods=['GET'])
+def get_starting_temperature():
+    """Get the current starting temperature from sensors"""
+    try:
+        starting_temp = get_app_state().sensor_reader.read_inside_sensors()
+        print(f"[graph_setup] read inside average temperature: {starting_temp}")
+        if starting_temp is not None:
+            return jsonify({
+                'starting_temperature': round(starting_temp, 2),
+                'success': True
+            })
+        else:
+            return jsonify({
+                'starting_temperature': None,
+                'success': False,
+                'message': 'No viable temperature sensors found'
+            })
+    except Exception as e:
+        return jsonify({
+            'starting_temperature': None,
+            'success': False,
+            'message': f'Error reading sensors: {str(e)}'
+        })

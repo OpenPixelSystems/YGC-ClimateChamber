@@ -20,6 +20,7 @@ class SensorReader(ISensorReader, Subscriptable):
     def __init__(self, mcu_config: McuConfig):
         super().__init__()
         self.sensor_list = []
+        self.inside_sensors_list = []
         
         # Background reading setup
         self._cached_sensor_data = {}
@@ -34,6 +35,7 @@ class SensorReader(ISensorReader, Subscriptable):
         self._peltier_state_lock = threading.Lock()
         
         self.initialise(mcu_config)
+        self.set_inside_sensors()
         
         # Background reading will be started manually when needed (when cycle starts)
 
@@ -61,6 +63,27 @@ class SensorReader(ISensorReader, Subscriptable):
                     self.sensor_list.append(MPL3115A2(sensor_config.name, sensor_config.SDA,sensor_config.SCL, sensor_config.min_value, sensor_config.max_value, sensor_config.unit))
         except Exception as e:
             raise RuntimeError(f"Configuration error: {str(e)}")
+
+    def set_inside_sensors(self):
+        for sensor in self.sensor_list:
+            if (sensor.type == 'NTC') and sensor.sensor_location == "Inside":
+                self.inside_sensors_list.append(sensor)
+
+    def read_inside_sensors(self):
+        print(f"[SensorReader] reading inside sensors")
+        temperature_readings = []
+        for sensor in self.inside_sensors_list:
+            try:
+                reading = sensor.read()  # e.g., {'sensor_name': {'sensor_value': 19.9, 'sensor_source': 'real'}}
+
+                # Extract sensor values from the reading dictionary
+                for sensor_name, sensor_data in reading.items():
+                    if isinstance(sensor_data, dict) and 'sensor_value' in sensor_data:
+                        temperature_readings.append(sensor_data['sensor_value'])
+            except Exception as e:
+                print(f"[SensorReader] Error reading sensor {getattr(sensor, 'name', 'unknown')}: {e}")
+
+        return sum(temperature_readings) / len(temperature_readings)
 
     """Return cached sensor values (instant response) or direct read if no cache available"""
     def read_sensors(self):
@@ -230,6 +253,69 @@ class SensorReader(ISensorReader, Subscriptable):
             
             return sensor_readings
     
+    def get_starting_temperature(self):
+        """Get the average temperature of all Inside temperature sensors (NTC and DS18B20).
+        
+        Returns:
+            float: Average temperature of all viable temperature sensors, or None if no sensors available
+        """
+        try:
+            # Read current sensor data
+            sensor_data = self.read_sensors()
+            
+            # Collect temperature values from Inside sensors
+            temperature_values = []
+            
+            for sensor_name, sensor_info in sensor_data.items():
+                # Skip metadata entries
+                if sensor_name.startswith('_'):
+                    continue
+                    
+                # Check if sensor data is valid
+                if not isinstance(sensor_info, dict) or 'sensor_value' not in sensor_info:
+                    continue
+                    
+                sensor_value = sensor_info['sensor_value']
+                if sensor_value is None:
+                    continue
+                
+                # Find the sensor configuration to check type and location
+                for sensor in self.sensor_list:
+                    sensor_names = []
+                    
+                    # Handle different sensor types
+                    if hasattr(sensor, 'name'):
+                        sensor_names.append(sensor.name)
+                    elif hasattr(sensor, 'sensors'):  # DS18B20Cluster
+                        sensor_names.extend([s.name for s in sensor.sensors])
+                    
+                    if sensor_name in sensor_names:
+                        # Check if it's a temperature sensor located Inside
+                        if hasattr(sensor, 'sensor_location') and sensor.sensor_location == "Inside":
+                            # Check if it's NTC or DS18B20
+                            if hasattr(sensor, 'type') and sensor.type in ['NTC', 'DS18B20']:
+                                temperature_values.append(sensor_value)
+                                break
+                        elif hasattr(sensor, 'sensors'):  # DS18B20Cluster case
+                            for sub_sensor in sensor.sensors:
+                                if sub_sensor.name == sensor_name and sub_sensor.sensor_location == "Inside":
+                                    temperature_values.append(sensor_value)
+                                    break
+                            break
+            
+            # Return average if we have temperature values
+            if temperature_values:
+                average_temp = sum(temperature_values) / len(temperature_values)
+                print(f"[SensorReader] Starting temperature calculated: {average_temp:.2f}°C from {len(temperature_values)} sensors")
+                return average_temp
+            else:
+                print("[SensorReader] No viable Inside temperature sensors found for starting temperature")
+                return None
+                
+        except Exception as e:
+            print(f"[SensorReader] Error getting starting temperature: {e}")
+            return None
+
     def __del__(self):
         """Cleanup background thread when SensorReader is destroyed."""
         self.stop_background_reading()

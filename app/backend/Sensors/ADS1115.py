@@ -13,7 +13,7 @@ class ADS1115(ISensor):
     def __init__(self, config: ADS1115Config):
         """Initialize the ADS1115 current sensor."""
 
-        self._type = 'ADS1115'
+        self.type = 'ADS1115'
         self._name = config.name
         self._sda_pin = config.SDA
         self._scl_pin = config.SCL

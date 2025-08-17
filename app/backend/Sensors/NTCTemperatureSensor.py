@@ -14,8 +14,9 @@ class NTCTemperatureSensor(ISensor):
     def __init__(self, config: NTCConfig):
         """Initialize the NTC temperature sensor."""
 
-        self._type = 'NTC'
-        self._name = config.name
+        self.type = 'NTC'
+        self.name = config.name
+        self.sensor_location = config.sensor_location
         self._sda_pin = config.SDA
         self._scl_pin = config.SCL
         self._pin = config.read_pin
@@ -101,7 +102,7 @@ class NTCTemperatureSensor(ISensor):
         """Initialize the sensor hardware."""
         gpio.setmode(gpio.BCM)
         print(
-            f"[NTC] Initialized NTC temperature sensor '{self._name}' on channel A{self._pin}, testing mode: {self._is_testing}")
+            f"[NTC] Initialized NTC temperature sensor '{self.name}' on channel A{self._pin}, testing mode: {self._is_testing}")
 
     def _voltage_to_temperature(self, voltage: float) -> float:
         """Convert voltage reading to temperature using NTC thermistor equation.
@@ -169,7 +170,7 @@ class NTCTemperatureSensor(ISensor):
         Returns:
             Dictionary mapping sensor name to sensor_value and sensor_source
         """
-        json_format = {self._name: {"sensor_value": None, "sensor_source": "unknown"}}
+        json_format = {self.name: {"sensor_value": None, "sensor_source": "unknown"}}
 
         try:
             if not self._is_testing:
@@ -181,36 +182,36 @@ class NTCTemperatureSensor(ISensor):
                     # Convert voltage to temperature
                     temperature = self._voltage_to_temperature(voltage)
 
-                    json_format[self._name]["sensor_value"] = round(temperature, 2)
-                    json_format[self._name]["sensor_source"] = "real"
+                    json_format[self.name]["sensor_value"] = round(temperature, 2)
+                    json_format[self.name]["sensor_source"] = "real"
                     self._last_reading = temperature
                     
                     # Debug information
-                    print(f"[NTC] {self._name}: Voltage={voltage:.3f}V, Temperature={temperature:.2f}°C")
+                    print(f"[NTC] {self.name}: Voltage={voltage:.3f}V, Temperature={temperature:.2f}°C")
 
                 except Exception as e:
                     # Error reading sensor, return None instead of simulated value
-                    json_format[self._name]["sensor_value"] = None
-                    json_format[self._name]["sensor_source"] = "error"
+                    json_format[self.name]["sensor_value"] = None
+                    json_format[self.name]["sensor_source"] = "error"
                     print(f"[NTC] Error reading real sensor: {str(e)}, returning None")
             else:
                 # We're in a test environment or sensor initialization failed
                 # Only use simulated values in testing environment
                 if self._is_testing:
                     value = self._get_simulated_value()
-                    json_format[self._name]["sensor_value"] = value
-                    json_format[self._name]["sensor_source"] = "test"
+                    json_format[self.name]["sensor_value"] = value
+                    json_format[self.name]["sensor_source"] = "test"
                     print(f"[NTC] In testing environment, using simulated value: {value} {self._unit}")
                 else:
                     # On real hardware but sensor failed to initialize
-                    json_format[self._name]["sensor_value"] = None
-                    json_format[self._name]["sensor_source"] = "failed"
+                    json_format[self.name]["sensor_value"] = None
+                    json_format[self.name]["sensor_source"] = "failed"
                     print(f"[NTC] Sensor initialization failed on real hardware, returning None")
 
         except Exception as e:
-            print(f"[NTC] Critical error reading sensor {self._name}: {str(e)}")
-            json_format[self._name]["sensor_value"] = None
-            json_format[self._name]["sensor_source"] = "error"
+            print(f"[NTC] Critical error reading sensor {self.name}: {str(e)}")
+            json_format[self.name]["sensor_value"] = None
+            json_format[self.name]["sensor_source"] = "error"
 
         return json_format
     

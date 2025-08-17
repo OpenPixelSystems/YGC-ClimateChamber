@@ -6,7 +6,7 @@
         "editable": {
             "gpio_pin": 4,
             "rom_address": 1234,
-            "sensor_location": "Environment",
+            "sensor_location": "Inside",
             "max_value": 21,
             "min_value": -40,
             "safety_critical": 0
