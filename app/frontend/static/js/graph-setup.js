@@ -261,12 +261,33 @@ class GraphSetup {
             // Points are already stored as offset seconds, just sort them
             const sortedPoints = [...this.chartManager.points].sort((a, b) => a.x - b.x);
 
+            // Calculate dynamic scaling values based on graph data
+            const xValues = sortedPoints.map(point => point.x);
+            const yValues = sortedPoints.map(point => point.y);
+            
+            const xMax = Math.max(...xValues);
+            const yMax = Math.max(...yValues);
+            const yMin = Math.min(...yValues);
+            
+            // Add padding for better visualization
+            const xPadding = Math.max(300, xMax * 0.1); // At least 5 minutes or 10% of max time
+            const yPadding = Math.max(5, (yMax - yMin) * 0.1); // At least 5°C or 10% of range
+            
+            const dynamicXMax = xMax + xPadding;
+            const dynamicYMax = yMax + yPadding;
+            const dynamicYMin = yMin - yPadding;
+
             const response = await fetch('/store-graph-data', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify([{
                     label: 'Temperature Profile',
-                    data: sortedPoints
+                    data: sortedPoints,
+                    scaling: {
+                        xMax: dynamicXMax,
+                        yMax: dynamicYMax,
+                        yMin: dynamicYMin
+                    }
                 }])
             });
 

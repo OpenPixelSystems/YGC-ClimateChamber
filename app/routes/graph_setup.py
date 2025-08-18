@@ -17,8 +17,22 @@ def store_graph_data():
         if not graph_data:
             return jsonify({"error": "No data received"}), 400
 
+        # Extract the first (and typically only) dataset
+        dataset = graph_data[0]
+        points_data = dataset['data']
+        scaling_data = dataset.get('scaling', {})
+
+        # Store scaling information if provided
+        if scaling_data:
+            app_state = get_app_state()
+            if hasattr(app_state, 'dynamic_scaling'):
+                app_state.dynamic_scaling = scaling_data
+            else:
+                # Store scaling data as an attribute
+                setattr(app_state, 'dynamic_scaling', scaling_data)
+
         # Process the temperature profile
-        success, message, graph = get_app_state().temperature_service.set_temperature_profile(graph_data[0]['data'])
+        success, message, graph = get_app_state().temperature_service.set_temperature_profile(points_data)
         
         if success:
             get_app_state().controller.desired_graph = graph
@@ -33,20 +47,25 @@ def store_graph_data():
 def get_stored_graph_data():
     """Get the current graph data for display"""
     config = get_app_state().config_manager.graph_config
+    app_state = get_app_state()
     
     # Convert Graph object's setpoints to the format expected by frontend
     desired_path = None
-    if get_app_state().controller.desired_graph:
+    if app_state.controller.desired_graph:
         desired_path = [
             {"x": x, "y": y} 
-            for x, y in get_app_state().controller.desired_flow_graph.setpoints
+            for x, y in app_state.controller.desired_flow_graph.setpoints
         ]
+    
+    # Get dynamic scaling if available
+    dynamic_scaling = getattr(app_state, 'dynamic_scaling', {})
         
     return jsonify({
         'desired_path': desired_path,
         'config': {
             'max_rico': config.max_rico
-        }
+        },
+        'scaling': dynamic_scaling
     })
 
 

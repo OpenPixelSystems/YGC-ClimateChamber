@@ -60,8 +60,8 @@ export default class UniversalChartManager {
             this.setupInteractiveChart();
         }
         
-        // Add zoom functionality for database charts
-        if (this.config.type === 'database') {
+        // Add zoom functionality for database and realtime charts
+        if (this.config.type === 'database' || this.config.type === 'realtime') {
             this.setupZoomFunctionality();
         }
 
@@ -123,7 +123,7 @@ export default class UniversalChartManager {
                 type: 'linear',
                 position: 'bottom',
                 min: 0,
-                max: 300, // 5 minutes default
+                max: this.config.xMax || 300, // Use dynamic xMax or 5 minutes default
                 title: {
                     display: true,
                     text: 'Time (seconds)',
@@ -820,10 +820,10 @@ export default class UniversalChartManager {
     }
 
     /**
-     * Setup zoom functionality for database charts
+     * Setup zoom functionality for database and realtime charts
      */
     setupZoomFunctionality() {
-        if (this.config.type !== 'database' || !this.chartInstance) return;
+        if ((this.config.type !== 'database' && this.config.type !== 'realtime') || !this.chartInstance) return;
         
         const canvas = this.chartInstance.canvas;
         
@@ -832,6 +832,7 @@ export default class UniversalChartManager {
             min: this.chartInstance.options.scales.x.min,
             max: this.chartInstance.options.scales.x.max
         };
+        
         
         // Mouse event handlers
         canvas.addEventListener('mousedown', (e) => this.handleMouseDown(e));
@@ -881,7 +882,7 @@ export default class UniversalChartManager {
      * Handle mouse down event for drag selection
      */
     handleMouseDown(e) {
-        if (this.config.type !== 'database' || !this.chartInstance) return;
+        if ((this.config.type !== 'database' && this.config.type !== 'realtime') || !this.chartInstance) return;
         
         // Only start drag on left mouse button
         if (e.button !== 0) return;
@@ -912,7 +913,7 @@ export default class UniversalChartManager {
      * Handle mouse move event for drag selection
      */
     handleMouseMove(e) {
-        if (!this.isDragging || this.config.type !== 'database' || !this.chartInstance) return;
+        if (!this.isDragging || (this.config.type !== 'database' && this.config.type !== 'realtime') || !this.chartInstance) return;
         
         const rect = this.chartInstance.canvas.getBoundingClientRect();
         const canvasPosition = Chart.helpers.getRelativePosition(e, this.chartInstance);
@@ -932,7 +933,7 @@ export default class UniversalChartManager {
      * Handle mouse up event for drag selection
      */
     handleMouseUp(e) {
-        if (!this.isDragging || this.config.type !== 'database' || !this.chartInstance) return;
+        if (!this.isDragging || (this.config.type !== 'database' && this.config.type !== 'realtime') || !this.chartInstance) return;
         
         this.isDragging = false;
         
@@ -999,19 +1000,35 @@ export default class UniversalChartManager {
     performZoom() {
         if (!this.dragStart || !this.dragEnd || !this.chartInstance) return;
         
-        // Calculate the selected time range
+        // Calculate the selected range
         const startX = Math.min(this.dragStart.x, this.dragEnd.x);
         const endX = Math.max(this.dragStart.x, this.dragEnd.x);
+        const startY = Math.min(this.dragStart.y, this.dragEnd.y);
+        const endY = Math.max(this.dragStart.y, this.dragEnd.y);
         
         // Convert pixel positions to data values
-        const startValue = this.chartInstance.scales.x.getValueForPixel(startX);
-        const endValue = this.chartInstance.scales.x.getValueForPixel(endX);
+        const startXValue = this.chartInstance.scales.x.getValueForPixel(startX);
+        const endXValue = this.chartInstance.scales.x.getValueForPixel(endX);
         
         // Only zoom if there's a reasonable selection
         if (Math.abs(endX - startX) > 10) {
-            // Update chart x-axis limits
-            this.chartInstance.options.scales.x.min = startValue;
-            this.chartInstance.options.scales.x.max = endValue;
+            // For realtime charts, ensure we don't zoom past the starting point (time 0)
+            let finalStartValue = startXValue;
+            let finalEndValue = endXValue;
+            
+            if (this.config.type === 'realtime') {
+                finalStartValue = Math.max(0, startXValue);
+                finalEndValue = Math.max(0, endXValue);
+                
+                // If both values would be negative, don't zoom
+                if (startXValue < 0 && endXValue < 0) {
+                    return;
+                }
+            }
+            
+            // Update chart x-axis limits only
+            this.chartInstance.options.scales.x.min = finalStartValue;
+            this.chartInstance.options.scales.x.max = finalEndValue;
             this.chartInstance.update('none');
         }
     }
@@ -1020,9 +1037,9 @@ export default class UniversalChartManager {
      * Reset zoom to original limits
      */
     resetZoom() {
-        if (!this.chartInstance || this.config.type !== 'database') return;
+        if (!this.chartInstance || (this.config.type !== 'database' && this.config.type !== 'realtime')) return;
         
-        // Reset to original limits or auto-fit to data
+        // Reset X-axis to original limits or auto-fit to data
         if (this.originalXLimits && (this.originalXLimits.min !== undefined || this.originalXLimits.max !== undefined)) {
             this.chartInstance.options.scales.x.min = this.originalXLimits.min;
             this.chartInstance.options.scales.x.max = this.originalXLimits.max;
@@ -1031,6 +1048,7 @@ export default class UniversalChartManager {
             delete this.chartInstance.options.scales.x.min;
             delete this.chartInstance.options.scales.x.max;
         }
+        
         
         this.chartInstance.update('none');
     }
