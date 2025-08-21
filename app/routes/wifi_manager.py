@@ -10,9 +10,21 @@ from flask import Blueprint, render_template, request, jsonify, flash, redirect,
 
 wifi_bp = Blueprint('wifi', __name__)
 
+def check_nmcli_available():
+    """Check if nmcli is available on the system"""
+    try:
+        result = subprocess.run(['which', 'nmcli'], capture_output=True, text=True, timeout=5)
+        return result.returncode == 0
+    except Exception:
+        return False
+
 def scan_wifi_networks():
     """Scan for available WiFi networks using nmcli"""
     try:
+        # Check if nmcli is available
+        if not check_nmcli_available():
+            return {"success": False, "error": "NetworkManager (nmcli) not available on this system"}
+        
         # Use nmcli to scan for networks
         result = subprocess.run(['nmcli', '-t', '-f', 'SSID,SIGNAL,SECURITY', 'dev', 'wifi'], 
                               capture_output=True, text=True, timeout=30)
@@ -52,12 +64,25 @@ def scan_wifi_networks():
         
     except subprocess.TimeoutExpired:
         return {"success": False, "error": "Network scan timeout"}
+    except FileNotFoundError:
+        return {"success": False, "error": "NetworkManager (nmcli) command not found"}
     except Exception as e:
         return {"success": False, "error": f"Scan failed: {str(e)}"}
 
 def connect_to_network(ssid, password=None):
     """Connect to a WiFi network using nmcli"""
     try:
+        # Check if nmcli is available
+        if not check_nmcli_available():
+            return {"success": False, "error": "NetworkManager (nmcli) not available on this system"}
+        
+        # Validate inputs
+        if not ssid or not isinstance(ssid, str):
+            return {"success": False, "error": "Invalid network name provided"}
+            
+        if password is not None and not isinstance(password, str):
+            return {"success": False, "error": "Invalid password provided"}
+        
         # First, check if we're already connected to this network
         current_result = subprocess.run(['nmcli', '-t', '-f', 'NAME', 'connection', 'show', '--active'], 
                                       capture_output=True, text=True, timeout=10)
@@ -69,7 +94,7 @@ def connect_to_network(ssid, password=None):
         
         # Try to connect to the network
         cmd = ['nmcli', 'dev', 'wifi', 'connect', ssid]
-        if password:
+        if password and password.strip():
             cmd.extend(['password', password])
         
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
@@ -82,12 +107,18 @@ def connect_to_network(ssid, password=None):
             
     except subprocess.TimeoutExpired:
         return {"success": False, "error": "Connection timeout"}
+    except FileNotFoundError:
+        return {"success": False, "error": "NetworkManager (nmcli) command not found"}
     except Exception as e:
         return {"success": False, "error": f"Connection failed: {str(e)}"}
 
 def get_current_connection():
     """Get current WiFi connection info"""
     try:
+        # Check if nmcli is available
+        if not check_nmcli_available():
+            return {"success": False, "error": "NetworkManager (nmcli) not available on this system"}
+        
         result = subprocess.run(['nmcli', '-t', '-f', 'NAME,TYPE,DEVICE', 'connection', 'show', '--active'], 
                               capture_output=True, text=True, timeout=10)
         
@@ -105,6 +136,8 @@ def get_current_connection():
         
         return {"success": True, "current": current_wifi}
         
+    except FileNotFoundError:
+        return {"success": False, "error": "NetworkManager (nmcli) command not found"}
     except Exception as e:
         return {"success": False, "error": f"Failed to get connection info: {str(e)}"}
 
