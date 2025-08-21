@@ -133,11 +133,28 @@ function displayNetworks(networks) {
                 ${signalBars}
             </div>
             <div class="network-actions">
-                <button class="btn btn-primary" onclick="initiateConnection('${escapeHtml(network.ssid)}', ${network.secured})">
+                <button class="btn btn-primary" data-ssid="${escapeHtml(network.ssid)}" data-secured="${network.secured}">
                     Connect
                 </button>
             </div>
         `;
+        
+        // Add event listener to the connect button
+        const connectButton = networkItem.querySelector('.btn-primary');
+        connectButton.addEventListener('click', function() {
+            const ssid = this.getAttribute('data-ssid');
+            const secured = this.getAttribute('data-secured') === 'true';
+            console.log(`[DEBUG] Button clicked - SSID: '${ssid}' (type: ${typeof ssid}), secured: ${secured}`);
+            
+            // Double-check the SSID is valid
+            if (!ssid || ssid === 'null' || ssid === 'undefined') {
+                console.error('[DEBUG] Invalid SSID from data attribute:', ssid);
+                showStatusMessage('Error: Invalid network name', 'error');
+                return;
+            }
+            
+            initiateConnection(ssid, secured);
+        });
         
         networksList.appendChild(networkItem);
     });
@@ -162,6 +179,8 @@ function createSignalBars(signal) {
  * Initiate connection to a network
  */
 function initiateConnection(ssid, secured) {
+    console.log(`[DEBUG] initiateConnection called with ssid: '${ssid}' (type: ${typeof ssid}), secured: ${secured}`);
+    
     selectedNetwork = ssid;
     
     if (secured) {
@@ -235,18 +254,31 @@ function connectToNetwork() {
  * Connect to network with credentials
  */
 async function connectWithCredentials(ssid, password) {
+    console.log(`[DEBUG] connectWithCredentials called with ssid: '${ssid}' (type: ${typeof ssid}), password: '${password}' (type: ${typeof password})`);
+    
+    // Validate inputs on frontend
+    if (!ssid || typeof ssid !== 'string' || ssid.trim() === '') {
+        showStatusMessage('Invalid network name', 'error');
+        console.error('[DEBUG] Invalid SSID:', ssid);
+        return;
+    }
+    
     showStatusMessage(`Connecting to ${ssid}...`, 'info');
     
     try {
+        const payload = {
+            ssid: ssid,
+            password: password
+        };
+        
+        console.log('[DEBUG] Sending payload:', payload);
+        
         const response = await fetch('/api/wifi/connect', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({
-                ssid: ssid,
-                password: password
-            })
+            body: JSON.stringify(payload)
         });
         
         const data = await response.json();
