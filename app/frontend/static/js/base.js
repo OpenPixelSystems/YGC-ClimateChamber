@@ -42,6 +42,13 @@ async function restartService() {
 }
 
 /**
+ * Navigate to WiFi settings page
+ */
+function navigateToWifi() {
+    window.location.href = '/wifi-networks';
+}
+
+/**
  * Navigate to settings page
  */
 function navigateToSettings() {
