@@ -25,14 +25,55 @@ async function loadCurrentConnection() {
         
         if (data.success) {
             if (data.current) {
-                currentConnectionDiv.innerHTML = `
-                    <span class="network-name">${data.current}</span>
-                    <span class="connection-status connected">Connected</span>
+                let connectionInfo = `
+                    <div class="connection-details">
+                        <div class="wifi-connection">
+                            <span class="network-name">${escapeHtml(data.current)}</span>
+                            <span class="connection-status connected">Connected</span>
+                        </div>
                 `;
+                
+                if (data.wifi_ip) {
+                    connectionInfo += `
+                        <div class="ip-info">
+                            <span class="ip-label">WiFi IP:</span>
+                            <span class="ip-address">${escapeHtml(data.wifi_ip)}</span>
+                        </div>
+                    `;
+                }
+                
+                if (data.ethernet_ip) {
+                    connectionInfo += `
+                        <div class="ip-info">
+                            <span class="ip-label">Ethernet IP:</span>
+                            <span class="ip-address">${escapeHtml(data.ethernet_ip)}</span>
+                        </div>
+                    `;
+                }
+                
+                connectionInfo += '</div>';
+                currentConnectionDiv.innerHTML = connectionInfo;
             } else {
-                currentConnectionDiv.innerHTML = `
-                    <span class="connection-status disconnected">Not connected</span>
-                `;
+                let connectionInfo = '<div class="connection-details">';
+                
+                if (data.ethernet_ip) {
+                    connectionInfo += `
+                        <div class="ethernet-only">
+                            <span class="connection-status disconnected">WiFi: Not connected</span>
+                        </div>
+                        <div class="ip-info">
+                            <span class="ip-label">Ethernet IP:</span>
+                            <span class="ip-address">${escapeHtml(data.ethernet_ip)}</span>
+                        </div>
+                    `;
+                } else {
+                    connectionInfo += `
+                        <span class="connection-status disconnected">Not connected</span>
+                    `;
+                }
+                
+                connectionInfo += '</div>';
+                currentConnectionDiv.innerHTML = connectionInfo;
             }
         } else {
             currentConnectionDiv.innerHTML = `

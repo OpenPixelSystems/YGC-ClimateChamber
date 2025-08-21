@@ -113,12 +113,13 @@ def connect_to_network(ssid, password=None):
         return {"success": False, "error": f"Connection failed: {str(e)}"}
 
 def get_current_connection():
-    """Get current WiFi connection info"""
+    """Get current WiFi connection info including IP addresses"""
     try:
         # Check if nmcli is available
         if not check_nmcli_available():
             return {"success": False, "error": "NetworkManager (nmcli) not available on this system"}
         
+        # Get active connections
         result = subprocess.run(['nmcli', '-t', '-f', 'NAME,TYPE,DEVICE', 'connection', 'show', '--active'], 
                               capture_output=True, text=True, timeout=10)
         
@@ -126,15 +127,58 @@ def get_current_connection():
             return {"success": False, "error": "Failed to get connection info"}
         
         current_wifi = None
+        wifi_device = None
+        ethernet_device = None
+        
         for line in result.stdout.strip().split('\n'):
             if not line:
                 continue
             parts = line.split(':')
-            if len(parts) >= 3 and parts[1] == '802-11-wireless':
-                current_wifi = parts[0]
-                break
+            if len(parts) >= 3:
+                if parts[1] == '802-11-wireless':
+                    current_wifi = parts[0]
+                    wifi_device = parts[2]
+                elif parts[1] == '802-3-ethernet':
+                    ethernet_device = parts[2]
         
-        return {"success": True, "current": current_wifi}
+        # Get IP addresses for active interfaces
+        wifi_ip = None
+        ethernet_ip = None
+        
+        if wifi_device:
+            try:
+                ip_result = subprocess.run(['ip', 'addr', 'show', wifi_device], 
+                                         capture_output=True, text=True, timeout=5)
+                if ip_result.returncode == 0:
+                    # Extract IPv4 address
+                    for line in ip_result.stdout.split('\n'):
+                        if 'inet ' in line and 'scope global' in line:
+                            wifi_ip = line.strip().split()[1].split('/')[0]
+                            break
+            except Exception:
+                pass
+        
+        if ethernet_device:
+            try:
+                ip_result = subprocess.run(['ip', 'addr', 'show', ethernet_device], 
+                                         capture_output=True, text=True, timeout=5)
+                if ip_result.returncode == 0:
+                    # Extract IPv4 address
+                    for line in ip_result.stdout.split('\n'):
+                        if 'inet ' in line and 'scope global' in line:
+                            ethernet_ip = line.strip().split()[1].split('/')[0]
+                            break
+            except Exception:
+                pass
+        
+        return {
+            "success": True, 
+            "current": current_wifi,
+            "wifi_ip": wifi_ip,
+            "ethernet_ip": ethernet_ip,
+            "wifi_device": wifi_device,
+            "ethernet_device": ethernet_device
+        }
         
     except FileNotFoundError:
         return {"success": False, "error": "NetworkManager (nmcli) command not found"}

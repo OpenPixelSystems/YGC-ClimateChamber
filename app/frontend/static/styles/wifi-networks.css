@@ -69,6 +69,45 @@
     gap: 10px;
 }
 
+.connection-details {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.wifi-connection {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.ethernet-only {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.ip-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.9em;
+}
+
+.ip-label {
+    color: var(--text-secondary);
+    font-weight: 500;
+    min-width: 80px;
+}
+
+.ip-address {
+    color: var(--text-color);
+    font-family: monospace;
+    background: var(--hover-color);
+    padding: 2px 6px;
+    border-radius: 3px;
+}
+
 .connection-status {
     padding: 5px 12px;
     border-radius: 15px;
