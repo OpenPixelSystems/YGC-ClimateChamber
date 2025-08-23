@@ -126,7 +126,9 @@ class ClimateChamberController(IClimateChamberController, LoggingMixin):
                     self.calculation_service.manual_pid_control(self.current_power)
                     data['calculation_data'] = {'Peltier power':self.current_power}
                     # In manual mode, still pass temperature data if available for logging
-                    current_temp = data.get(self.viable_sensor, {}).get('sensor_value') if self.viable_sensor in data else None
+                    current_temp = None
+                    if available_sensor_values:
+                        current_temp = sum(available_sensor_values) / len(available_sensor_values)
 
                     # Check if manual power is being overridden by guarding
                     if self.guarding_service.get_guarding_state():
