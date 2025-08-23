@@ -49,6 +49,8 @@ class SensorGraph {
       }
       
       this.eventManager.setupEventListeners();
+      // Always add navigation listeners for display-graph to handle graph cleanup
+      this.eventManager.addNavigationEventListeners();
     } catch (error) {
       console.error('Initialization failed:', error);
     }
@@ -82,7 +84,6 @@ class SensorGraph {
       this.startTime = new Date(activeCycleData.cycle_start_time).getTime();
       this.chartManager.updateChartTimeAxis(this.startTime);
       this.sensorManager.createEventSource(this.startTime);
-      this.eventManager.addNavigationEventListeners();
       
       console.log(`Loaded active cycle: ${activeCycleData.cycle_name}`);
     } catch (error) {
@@ -128,12 +129,15 @@ class SensorGraph {
   }
 
   /**
-   * Initializes the sensor data stream
+   * Initializes the sensor data stream for new cycles
    */
   initializeStream() {
     this.sensorManager.closeEventSource();
 
-    this.startTime = Date.now();
+    // Only reset start time for new cycles (not when reconnecting to active cycle)
+    if (!this.startTime) {
+      this.startTime = Date.now();
+    }
     this.chartManager.resetMaxElapsedTime();
     this.chartManager.updateChartTimeAxis(this.startTime);
 
@@ -156,7 +160,7 @@ class SensorGraph {
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ cycleName: cycleName })
+      body: JSON.stringify({ cycleName: cycleName, originPage: 'display-graph' })
     });
 
     if (!response.ok) {
@@ -169,7 +173,6 @@ class SensorGraph {
     this.isCycleRunning = true;
     cycleButton.textContent = 'Stop Cycle';
     this.initializeStream();
-    this.eventManager.addNavigationEventListeners();
   } catch (error) {
     console.error("Error starting sensor stream:", error);
     this.isCycleRunning = false;
@@ -189,7 +192,6 @@ class SensorGraph {
         this.chartManager.clearChartData();
         this.isCycleRunning = false;
         cycleButton.textContent = 'Start Cycle';
-        this.eventManager.removeNavigationEventListeners();
       } catch (error) {
         console.error("Error stopping cycle:", error);
       }

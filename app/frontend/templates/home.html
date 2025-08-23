@@ -20,14 +20,24 @@
             <form action="{{ url_for('home.submit_temperature') }}" method="post" class="vertical-form">
                 <input type="number" name="temperature" 
                        placeholder="Enter temperature (°C)"
-                       step="0.1" required class="full-width">
-                <button type="submit" class="full-width">Set Constant Temperature</button>
+                       step="0.1" required class="full-width"
+                       {% if active_cycle %}disabled{% endif %}>
+                <button type="submit" class="full-width" 
+                        {% if active_cycle %}disabled style="opacity: 0.5; cursor: not-allowed;"{% endif %}>
+                    Set Constant Temperature
+                </button>
             </form>
         </div>
         <div class="additional-controls">
-        <a href="{{ url_for('home.manual_control') }}">
-            <button type="submit" class="full-width">Start manual control</button>
-        </a>
+        {% if active_cycle %}
+            <button type="button" class="full-width" disabled style="opacity: 0.5; cursor: not-allowed;">
+                Start manual control
+            </button>
+        {% else %}
+            <a href="{{ url_for('home.manual_control') }}">
+                <button type="submit" class="full-width">Start manual control</button>
+            </a>
+        {% endif %}
     </div>
     </div>
 </div>

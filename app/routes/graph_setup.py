@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, jsonify, redirect, url_for, request
+from flask import Blueprint, render_template, jsonify, redirect, url_for, request, flash
 
 from app.backend.app_state import get_app_state
 
@@ -7,6 +7,11 @@ graph_bp = Blueprint('graph', __name__)
 @graph_bp.route('/graph-setup')
 def setup_graph():
     """Display the graph setup page"""
+    # Check if a cycle is already active
+    app_state = get_app_state()
+    if app_state.database.logging_active:
+        flash('Cannot edit graph while a cycle is running. Stop the current cycle first.', 'error')
+        return redirect(url_for('home.index'))
     return render_template('setupGraph.html')
 
 @graph_bp.route('/store-graph-data', methods=['POST'])

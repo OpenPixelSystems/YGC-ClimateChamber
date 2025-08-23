@@ -119,6 +119,35 @@ async function updateStorageInfo() {
 }
 
 /**
+ * Check for active cycle and update navigation
+ */
+async function checkActiveCycle() {
+    try {
+        const response = await fetch('/get-active-cycle-data');
+        if (response.ok) {
+            const data = await response.json();
+            const activeCycleLink = document.getElementById('activeCycleLink');
+            
+            if (data.active_cycle && activeCycleLink) {
+                activeCycleLink.style.display = 'inline';
+                activeCycleLink.textContent = `Active Cycle: ${data.cycle_name}`;
+                
+                // Set up click handler to redirect to origin page
+                activeCycleLink.onclick = (e) => {
+                    e.preventDefault();
+                    const targetPage = data.origin_page === 'manual-control' ? '/manual-control' : '/display-graph';
+                    window.location.href = targetPage;
+                };
+            } else if (activeCycleLink) {
+                activeCycleLink.style.display = 'none';
+            }
+        }
+    } catch (error) {
+        console.error('Error checking active cycle:', error);
+    }
+}
+
+/**
  * Initialize base template functionality
  */
 document.addEventListener('DOMContentLoaded', () => {
@@ -127,8 +156,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // Update storage info immediately
     updateStorageInfo();
     
+    // Check for active cycle
+    checkActiveCycle();
+    
     // Update storage info every 30 seconds
     setInterval(updateStorageInfo, 30000);
+    
+    // Check for active cycle every 10 seconds
+    setInterval(checkActiveCycle, 10000);
 });
 
 window.addEventListener('DOMContentLoaded', () => {

@@ -29,6 +29,18 @@ export default class EventManager {
       const message = 'Cycle will continue running in the background. You can return to view data anytime.';
       e.returnValue = message;
       return message;
+    } else {
+      // If cycle is stopped and we're leaving the page, clear the graph
+      // Use fetch with keepalive for navigation scenarios
+      fetch('/clear-graph-if-needed', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+        keepalive: true
+      }).catch(() => {
+        // Fallback to sendBeacon if fetch fails
+        navigator.sendBeacon('/clear-graph-if-needed', JSON.stringify({}));
+      });
     }
   }
 
@@ -40,6 +52,10 @@ export default class EventManager {
     if (this.sensorGraph.isCycleRunning) {
       // Only close the EventSource, don't stop the cycle
       this.sensorGraph.sensorManager.closeEventSource();
+    } else {
+      // If cycle is not running and page is closing, clear the desired graph
+      // This handles the case where cycle was stopped but page remained loaded
+      navigator.sendBeacon('/clear-graph-if-needed', JSON.stringify({}));
     }
   }
 
@@ -49,6 +65,7 @@ export default class EventManager {
   addNavigationEventListeners() {
     window.addEventListener('beforeunload', this.handleBeforeUnload);
     window.addEventListener('unload', this.cleanupOnUnload);
+    window.addEventListener('pagehide', this.cleanupOnUnload);
   }
 
   /**
@@ -57,6 +74,7 @@ export default class EventManager {
   removeNavigationEventListeners() {
     window.removeEventListener('beforeunload', this.handleBeforeUnload);
     window.removeEventListener('unload', this.cleanupOnUnload);
+    window.removeEventListener('pagehide', this.cleanupOnUnload);
   }
 
   /**

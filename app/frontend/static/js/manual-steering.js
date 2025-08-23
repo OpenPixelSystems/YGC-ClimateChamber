@@ -178,12 +178,15 @@ class SensorGraph {
   }
 
   /**
-   * Initializes the sensor data stream
+   * Initializes the sensor data stream for new cycles
    */
   initializeStream() {
     this.sensorManager.closeEventSource();
 
-    this.startTime = Date.now();
+    // Only reset start time for new cycles (not when reconnecting to active cycle)
+    if (!this.startTime) {
+      this.startTime = Date.now();
+    }
     this.chartManager.resetMaxElapsedTime();
     this.chartManager.updateChartTimeAxis(this.startTime);
 
@@ -198,7 +201,13 @@ class SensorGraph {
 
     if (!this.isCycleRunning) {
       try {
-        const response = await fetch('/start-cycle', { method: 'POST' });
+        const response = await fetch('/start-cycle', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ originPage: 'manual-control' })
+        });
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
