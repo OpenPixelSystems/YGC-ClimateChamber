@@ -116,8 +116,11 @@ class DatabaseViewer {
 
         // Process calculation data
         if (data.calculation_data && Array.isArray(data.calculation_data)) {
-            data.calculation_data.forEach(([calculation_name, timestamp, pid_output, current_temp, target_temp, error]) => {
+            data.calculation_data.forEach((calcEntry) => {
                 if (displayType !== 'all' && displayType !== 'calculations') return;
+
+                // Handle both old format (6 fields) and new format (7 fields with control_status)
+                const [calculation_name, timestamp, pid_output, current_temp, target_temp, error, control_status] = calcEntry;
 
                 const metrics = {
                     [`${calculation_name}_PID_Output`]: pid_output,
@@ -430,14 +433,18 @@ class DatabaseViewer {
 
         // Process calculation data
         if (rawData.calculation_data && Array.isArray(rawData.calculation_data)) {
-            rawData.calculation_data.forEach(([calculation_name, timestamp, pid_output, current_temp, target_temp, error]) => {
+            rawData.calculation_data.forEach((calcEntry) => {
+                // Handle both old format (6 fields) and new format (7 fields with control_status)
+                const [calculation_name, timestamp, pid_output, current_temp, target_temp, error, control_status] = calcEntry;
+                
                 exportData.calculationData.push({
                     calculationName: calculation_name,
                     timestamp: new Date(timestamp).toISOString(),
                     pidOutput: pid_output,
                     currentTemp: current_temp,
                     targetTemp: target_temp,
-                    error: error
+                    error: error,
+                    controlStatus: control_status || 'UNKNOWN'
                 });
             });
         }
@@ -471,9 +478,9 @@ class DatabaseViewer {
         // Calculation data section
         if (data.calculationData.length > 0) {
             csv += 'CALCULATION DATA\n';
-            csv += 'Calculation Name,Timestamp,PID Output,Current Temperature,Target Temperature,Error\n';
+            csv += 'Calculation Name,Timestamp,PID Output,Current Temperature,Target Temperature,Error,Control Status\n';
             data.calculationData.forEach(row => {
-                csv += `"${row.calculationName}","${row.timestamp}",${row.pidOutput},${row.currentTemp},${row.targetTemp},${row.error}\n`;
+                csv += `"${row.calculationName}","${row.timestamp}",${row.pidOutput},${row.currentTemp},${row.targetTemp},${row.error},"${row.controlStatus}"\n`;
             });
         }
 
@@ -516,7 +523,7 @@ class DatabaseViewer {
             txt += `CALCULATION DATA\n`;
             txt += `----------------\n`;
             data.calculationData.forEach(row => {
-                txt += `${row.timestamp} | ${row.calculationName} | PID: ${row.pidOutput} | Current: ${row.currentTemp}°C | Target: ${row.targetTemp}°C | Error: ${row.error}\n`;
+                txt += `${row.timestamp} | ${row.calculationName} | PID: ${row.pidOutput} | Current: ${row.currentTemp}°C | Target: ${row.targetTemp}°C | Error: ${row.error} | Status: ${row.controlStatus}\n`;
             });
         }
 
@@ -540,10 +547,10 @@ class DatabaseViewer {
 
         // Calculation data worksheet
         if (data.calculationData.length > 0) {
-            excel += 'CALCULATION DATA\t\t\t\t\t\n';
-            excel += 'Calculation Name\tTimestamp\tPID Output\tCurrent Temperature\tTarget Temperature\tError\n';
+            excel += 'CALCULATION DATA\t\t\t\t\t\t\n';
+            excel += 'Calculation Name\tTimestamp\tPID Output\tCurrent Temperature\tTarget Temperature\tError\tControl Status\n';
             data.calculationData.forEach(row => {
-                excel += `${row.calculationName}\t${row.timestamp}\t${row.pidOutput}\t${row.currentTemp}\t${row.targetTemp}\t${row.error}\n`;
+                excel += `${row.calculationName}\t${row.timestamp}\t${row.pidOutput}\t${row.currentTemp}\t${row.targetTemp}\t${row.error}\t${row.controlStatus}\n`;
             });
         }
 
@@ -846,8 +853,12 @@ class DatabaseViewer {
                 }
                 result.sensor_data[sensorType][0].push([sensorId, timestamp, parseFloat(value)]);
             } else if (currentSection === 'calculation') {
-                const [calcName, timestamp, pidOutput, currentTemp, targetTemp, error] = this.parseCSVLine(line);
-                result.calculation_data.push([calcName, timestamp, parseFloat(pidOutput), parseFloat(currentTemp), parseFloat(targetTemp), parseFloat(error)]);
+                const parts = this.parseCSVLine(line);
+                if (parts.length >= 6) {
+                    const [calcName, timestamp, pidOutput, currentTemp, targetTemp, error] = parts.slice(0, 6);
+                    const controlStatus = parts[6] || 'UNKNOWN';
+                    result.calculation_data.push([calcName, timestamp, parseFloat(pidOutput), parseFloat(currentTemp), parseFloat(targetTemp), parseFloat(error), controlStatus]);
+                }
             }
         }
         

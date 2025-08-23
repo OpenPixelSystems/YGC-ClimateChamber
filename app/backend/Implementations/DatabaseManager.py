@@ -67,9 +67,16 @@ class DatabaseManager(LoggingMixin):
                 current_temp REAL,
                 target_temp REAL,
                 error REAL,
+                control_status TEXT,
                 FOREIGN KEY (cycle_id) REFERENCES cycles (cycle_id)
             )
             ''')
+            
+            # Add control_status column to existing tables if it doesn't exist
+            try:
+                cursor.execute('ALTER TABLE calculation_data ADD COLUMN control_status TEXT')
+            except:
+                pass  # Column already exists
             conn.commit()
 
     def start_logging_cycle(self, cycle_name: str) -> bool:
@@ -167,15 +174,21 @@ class DatabaseManager(LoggingMixin):
                 cursor = conn.cursor()
                 timestamp = datetime.now().isoformat()
 
-                # Extract calculation data
+                # Extract calculation data, handling None values properly
                 pid_output = calculation_readings.get("pid_output", 0.0)
-                current_temp = calculation_readings.get("current_temp", 0.0)
-                target_temp = calculation_readings.get("target_temp", 0.0)
-                error = calculation_readings.get("error", 0.0)
+                current_temp = calculation_readings.get("current_temp")
+                target_temp = calculation_readings.get("target_temp")
+                error = calculation_readings.get("error")
+                control_status = calculation_readings.get("status", calculation_readings.get("control_status", "UNKNOWN"))
+                
+                # Convert None to 0.0 for database storage to avoid NULL issues
+                current_temp = current_temp if current_temp is not None else 0.0
+                target_temp = target_temp if target_temp is not None else 0.0
+                error = error if error is not None else 0.0
 
                 cursor.execute(
-                    "INSERT INTO calculation_data (cycle_id, calculation_name, timestamp, pid_output, current_temp, target_temp, error) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                    (self.current_cycle_id, "PID_Control", timestamp, pid_output, current_temp, target_temp, error)
+                    "INSERT INTO calculation_data (cycle_id, calculation_name, timestamp, pid_output, current_temp, target_temp, error, control_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                    (self.current_cycle_id, "PID_Control", timestamp, pid_output, current_temp, target_temp, error, control_status)
                 )
 
                 self.print(
@@ -332,7 +345,7 @@ class DatabaseManager(LoggingMixin):
 
             # Get calculation data
             cursor.execute(
-                "SELECT calculation_name, timestamp, pid_output FROM calculation_data WHERE cycle_id = ?",
+                "SELECT calculation_name, timestamp, pid_output, current_temp, target_temp, error, control_status FROM calculation_data WHERE cycle_id = ?",
                 (cycle_id,)
             )
             calculation_data = cursor.fetchall()
