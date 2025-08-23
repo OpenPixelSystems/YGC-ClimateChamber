@@ -82,3 +82,33 @@ def enable_peltier():
         status_message = 'Peltier elements disabled'
 
     return jsonify({'status': status_message, 'enabled': enabled})
+
+@climate_bp.route('/get-active-cycle-data', methods=['GET'])
+def get_active_cycle_data():
+    """Get data from the currently active cycle if one exists"""
+    app_state = get_app_state()
+    
+    if not app_state.database.logging_active or not app_state.database.current_cycle_id:
+        return jsonify({'active_cycle': False, 'data': None})
+    
+    # Get the current cycle name and start time
+    with app_state.database.get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT name, start_time FROM cycles WHERE cycle_id = ?", (app_state.database.current_cycle_id,))
+        cycle_row = cursor.fetchone()
+        cycle_name = cycle_row[0] if cycle_row else None
+        cycle_start_time = cycle_row[1] if cycle_row else None
+    
+    if not cycle_name:
+        return jsonify({'active_cycle': False, 'data': None})
+    
+    # Get the cycle data
+    cycle_data = app_state.database.read_cycle_data(cycle_name)
+    
+    return jsonify({
+        'active_cycle': True,
+        'cycle_name': cycle_name,
+        'cycle_id': app_state.database.current_cycle_id,
+        'cycle_start_time': cycle_start_time,
+        'data': cycle_data
+    })

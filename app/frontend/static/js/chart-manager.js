@@ -124,4 +124,13 @@ export default class ChartManager {
   set maxElapsedSeconds(value) {
     this.universalManager.maxElapsedSeconds = value;
   }
+
+  /**
+   * Load existing cycle data into the chart
+   * @param {Object} cycleData - The cycle data with sensor_data and calculation_data
+   * @param {string} cycleStartTime - ISO timestamp of when the cycle started
+   */
+  loadExistingCycleData(cycleData, cycleStartTime) {
+    this.universalManager.loadHistoricalData(cycleData, cycleStartTime);
+  }
 }

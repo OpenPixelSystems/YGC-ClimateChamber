@@ -20,30 +20,25 @@ export default class EventManager {
   }
 
   /**
-   * Handler for beforeunload event to warn users before leaving the page
+   * Handler for beforeunload event to inform users the cycle will continue
    * @param {Event} e - The beforeunload event
-   * @returns {string} Message to display in the confirmation dialog
    */
   handleBeforeUnload(e) {
     if (this.sensorGraph.isCycleRunning) {
-      // Standard way to show a confirmation dialog when leaving page
-      const message = 'Cycle is still running! Leaving this page will stop data collection. Are you sure you want to leave?';
-      e.returnValue = message; // Standard for most browsers
-      return message; // For older browsers
+      // Inform user that cycle will continue running in background
+      const message = 'Cycle will continue running in the background. You can return to view data anytime.';
+      e.returnValue = message;
+      return message;
     }
   }
 
   /**
    * Cleanup function to be called when page is actually unloading
-   * This sends a final request to stop Sensors
+   * Only closes the event source but keeps the cycle running
    */
   cleanupOnUnload() {
     if (this.sensorGraph.isCycleRunning) {
-      // Use sendBeacon which is designed specifically for analytics
-      // data on page unload. It's more reliable than fetch/XHR in unload events.
-      navigator.sendBeacon('/stop-cycle', JSON.stringify({}));
-
-      // Close the EventSource if it exists
+      // Only close the EventSource, don't stop the cycle
       this.sensorGraph.sensorManager.closeEventSource();
     }
   }

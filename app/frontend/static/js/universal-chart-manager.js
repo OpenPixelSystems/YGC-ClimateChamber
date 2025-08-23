@@ -941,6 +941,83 @@ export default class UniversalChartManager {
     }
 
     /**
+     * Load historical cycle data into the chart
+     * @param {Object} cycleData - Historical cycle data with sensor_data and calculation_data
+     * @param {string} cycleStartTime - ISO timestamp of when the cycle started
+     */
+    loadHistoricalData(cycleData, cycleStartTime) {
+        if (!this.chartInstance || this.config.type !== 'realtime') return;
+
+        const { sensor_data, calculation_data } = cycleData;
+        const cycleStart = new Date(cycleStartTime).getTime();
+        
+        // Process temperature sensor data
+        if (sensor_data && sensor_data.temperature && sensor_data.temperature[0]) {
+            sensor_data.temperature[0].forEach(([sensorId, timestamp, value]) => {
+                if (typeof value === 'number') {
+                    let dataset = this.chartInstance.data.datasets.find(ds => ds.label === sensorId);
+                    
+                    if (!dataset) {
+                        dataset = {
+                            label: sensorId,
+                            data: [],
+                            borderColor: getRandomColor(),
+                            fill: false,
+                            pointRadius: 1
+                        };
+                        this.chartInstance.data.datasets.push(dataset);
+                    }
+                    
+                    // Convert timestamp to elapsed seconds from cycle start
+                    const dataTime = new Date(timestamp).getTime();
+                    const elapsedSeconds = Math.floor((dataTime - cycleStart) / 1000);
+                    
+                    dataset.data.push({ x: elapsedSeconds, y: value });
+                }
+            });
+        }
+        
+        // Process current sensor data
+        if (sensor_data && sensor_data.current && sensor_data.current[0]) {
+            sensor_data.current[0].forEach(([sensorId, timestamp, value]) => {
+                if (typeof value === 'number') {
+                    let dataset = this.chartInstance.data.datasets.find(ds => ds.label === sensorId);
+                    
+                    if (!dataset) {
+                        dataset = {
+                            label: sensorId,
+                            data: [],
+                            borderColor: getRandomColor(),
+                            fill: false,
+                            pointRadius: 1
+                        };
+                        this.chartInstance.data.datasets.push(dataset);
+                    }
+                    
+                    const dataTime = new Date(timestamp).getTime();
+                    const elapsedSeconds = Math.floor((dataTime - cycleStart) / 1000);
+                    
+                    dataset.data.push({ x: elapsedSeconds, y: value });
+                }
+            });
+        }
+        
+        // Update max elapsed time based on loaded data
+        this.chartInstance.data.datasets.forEach(dataset => {
+            if (dataset.data && dataset.data.length > 0) {
+                const maxX = Math.max(...dataset.data.map(point => point.x));
+                if (maxX > this.maxElapsedSeconds) {
+                    this.maxElapsedSeconds = maxX;
+                }
+            }
+        });
+        
+        // Update time axis to accommodate the data
+        this.updateTimeAxis(this.maxElapsedSeconds);
+        this.chartInstance.update();
+    }
+
+    /**
      * Destroy chart
      */
     destroy() {

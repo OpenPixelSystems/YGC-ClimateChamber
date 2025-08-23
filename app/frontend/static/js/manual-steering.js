@@ -25,23 +25,65 @@ class SensorGraph {
    */
   async initialize() {
     try {
-      const response = await fetch('/get-stored-graph-data');
-      const data = await response.json();
-
-      this.startTime = Date.now();
-      this.chartManager.renderGraph(data);
+      // First check if there's an active cycle with data
+      const activeCycleResponse = await fetch('/get-active-cycle-data');
+      const activeCycleData = await activeCycleResponse.json();
+      
+      if (activeCycleData.active_cycle) {
+        // Load existing cycle data and continue streaming
+        await this.loadActiveCycleData(activeCycleData);
+      } else {
+        // Load stored graph configuration only
+        const response = await fetch('/get-stored-graph-data');
+        const data = await response.json();
+        this.startTime = Date.now();
+        this.chartManager.renderGraph(data);
+        
+        // Automatically start sensor stream for manual control
+        this.toggleSensorStream();
+      }
+      
       this.eventManager.setupEventListeners();
-
-      // Setup sliders
       this.setupSliders();
-
-      // Setup Peltier checkbox
       this.setupPeltierCheckbox();
-
-      // Automatically start sensor stream
-      this.toggleSensorStream();
     } catch (error) {
       console.error('Initialization failed:', error);
+    }
+  }
+
+  /**
+   * Load data from an active cycle and set up for continued streaming
+   */
+  async loadActiveCycleData(activeCycleData) {
+    try {
+      // Get the stored graph configuration
+      const graphResponse = await fetch('/get-stored-graph-data');
+      const graphData = await graphResponse.json();
+      
+      // Set cycle as running and update UI
+      this.isCycleRunning = true;
+      const cycleButton = document.getElementById('StartCycle');
+      if (cycleButton) {
+        cycleButton.textContent = 'Stop Cycle';
+      }
+      
+      // Render the graph with the configuration
+      this.chartManager.renderGraph(graphData);
+      
+      // Load and display the existing cycle data
+      if (activeCycleData.data) {
+        this.chartManager.loadExistingCycleData(activeCycleData.data, activeCycleData.cycle_start_time);
+      }
+      
+      // Set up streaming to continue from where we left off
+      this.startTime = new Date(activeCycleData.cycle_start_time).getTime();
+      this.chartManager.updateChartTimeAxis(this.startTime);
+      this.sensorManager.createEventSource(this.startTime);
+      this.eventManager.addNavigationEventListeners();
+      
+      console.log(`Loaded active cycle: ${activeCycleData.cycle_name}`);
+    } catch (error) {
+      console.error('Error loading active cycle data:', error);
     }
   }
 
