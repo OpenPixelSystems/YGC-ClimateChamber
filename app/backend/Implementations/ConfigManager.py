@@ -1,7 +1,7 @@
 import json
 
 from app.backend.Dataclasses.Config import ControlConfig, GraphConfig, McuConfig, PeltierConfig, \
-    MPL3115A2Config, ADS1115Config, DS18B20Config, FanConfig
+    MPL3115A2Config, ADS1115Config, NTCConfig, DS18B20Config, FanConfig
 from app.backend.Interfaces.IConfigManager import IConfigManager
 from app.backend.Technical.Logging import LoggingMixin
 
@@ -91,7 +91,7 @@ class ConfigManager(IConfigManager, LoggingMixin):
                     sensors.append(DS18B20Config(
                         name=value["name"],
                         type=value["type"],
-                        group_name=value["editable"]["sensor_group"],
+                        sensor_location=value["editable"].get("sensor_location", "default"),
                         rom_address=value["editable"]["rom_address"],
                         gpio_pin=value["editable"]["gpio_pin"],
                         max_value=value["editable"]["max_value"],
@@ -110,7 +110,27 @@ class ConfigManager(IConfigManager, LoggingMixin):
                         min_value=value["editable"]["min_value"],
                         critical=value["editable"]["safety_critical"]==1,
                         unit=value["unit"],
-                        voltage_offset=value["editable"]["voltage_offset"]
+                        voltage_offset=value["editable"]["voltage_offset"],
+                        calibrated_sensitivity=value["editable"].get("calibrated_sensitivity"),
+                        calibrated_offset=value["editable"].get("calibrated_offset"),
+                        i2c_address=int(value["editable"].get("i2c_address"), 16)
+                    ))
+                elif value["type"] == "NTC":
+                    sensors.append(NTCConfig(
+                        name=value["name"],
+                        type=value["type"],
+                        SDA=value["editable"]["SDA"],
+                        SCL=value["editable"]["SCL"],
+                        sensor_location=value["editable"].get("sensor_location", "default"),
+                        read_pin=value["editable"]["read_pin"],
+                        max_value=value["editable"]["max_value"],
+                        min_value=value["editable"]["min_value"],
+                        critical=value["editable"]["safety_critical"]==1,
+                        unit=value["unit"],
+                        i2c_address=int(value["editable"].get("i2c_address"), 16),
+                        beta_coefficient=value["editable"].get("beta_coefficient", 3600.0),
+                        reference_resistance=value["editable"].get("reference_resistance", 10000.0),
+                        reference_voltage=value["editable"].get("reference_voltage", 3.3)
                     ))
                 elif value["type"] == "MPL3115A2":
                     sensors.append(MPL3115A2Config(

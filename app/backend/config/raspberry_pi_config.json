@@ -6,7 +6,7 @@
         "editable": {
             "gpio_pin": 4,
             "rom_address": 1234,
-            "sensor_group": "Environment",
+            "sensor_location": "Inside",
             "max_value": 21,
             "min_value": -40,
             "safety_critical": 0
@@ -19,7 +19,7 @@
         "type": "DS18B20",
         "editable": {
             "gpio_pin": 4,
-            "sensor_group": "Inside",
+            "sensor_location": "Inside",
             "rom_address": "00000054e526",
             "max_value": 120,
             "min_value": -40,
@@ -33,11 +33,11 @@
         "type": "DS18B20",
         "editable": {
             "gpio_pin": 4,
-            "sensor_group": "Peltier",
+            "sensor_location": "Peltier",
             "rom_address": "00000055267f",
             "max_value": 120,
             "min_value": -40,
-            "safety_critical": 1
+            "safety_critical": 0
         },
         "unit": "degrees",
         "_comment": "Temperature sensor outside peltier device"
@@ -47,7 +47,7 @@
         "type": "DS18B20",
         "editable": {
             "gpio_pin": 4,
-            "sensor_group": "Peltier",
+            "sensor_location": "Peltier",
             "rom_address": "00000050dab2",
             "max_value": 120,
             "min_value": -40,
@@ -56,73 +56,77 @@
         "unit": "degrees",
         "_comment": "Temperature sensor inside peltier device"
     },
-    "R_IS_1_Current_sensor": {
-        "name": "R_IS_1_Current_sensor",
-        "type": "ADS1115",
-        "editable": {
+    "NTC_peltier_1_temperature": {
+      "name": "NTC_peltier_1_temperature",
+      "type": "NTC",
+      "editable": {
             "SDA": 2,
             "SCL": 3,
+            "sensor_location": "Inside",
             "read_pin": 0,
-            "max_value": 4,
-            "min_value": -4,
-            "safety_critical": 1,
-            "voltage_offset": -0.048,
-            "calibrated_sensitivity": 0.829,
-            "calibrated_offset": 1.661
-        },
-        "unit": "Amps",
-        "_comment": "Current sensor attached to motor driver - Calibrated 2025-08-02"
+            "max_value": 120,
+            "min_value": -10,
+            "safety_critical": 0,
+            "i2c_address": "0x4B",
+            "beta_coefficient": 3600.0,
+            "reference_resistance": 10000.0,
+            "reference_voltage": 3.3
+      },
+      "unit": "degrees"
     },
-    "L_IS_1_Current_sensor": {
-        "name": "L_IS_1_Current_sensor",
-        "type": "ADS1115",
-        "editable": {
+    "NTC_peltier_2_temperature": {
+      "name": "NTC_peltier_2_temperature",
+      "type": "NTC",
+      "editable": {
             "SDA": 2,
             "SCL": 3,
+            "sensor_location": "Inside",
             "read_pin": 1,
-            "max_value": 4,
-            "min_value": -4,
-            "safety_critical": 1,
-            "voltage_offset": 0.014,
-            "calibrated_sensitivity": 0.829,
-            "calibrated_offset": 1.642
-        },
-        "unit": "Amps",
-        "_comment": "Current sensor attached to motor driver - Calibrated 2025-08-02"
+            "max_value": 120,
+            "min_value": -10,
+            "safety_critical": 0,
+            "i2c_address": "0x4B",
+            "beta_coefficient": 3600.0,
+            "reference_resistance": 10000.0,
+            "reference_voltage": 3.3
+      },
+      "unit": "degrees"
     },
-    "R_IS_2_Current_sensor": {
-        "name": "R_IS_2_Current_sensor",
-        "type": "ADS1115",
-        "editable": {
+    "NTC_peltier_3_temperature": {
+      "name": "NTC_peltier_3_temperature",
+      "type": "NTC",
+      "editable": {
             "SDA": 2,
             "SCL": 3,
+            "sensor_location": "Inside",
             "read_pin": 2,
-            "max_value": 4,
-            "min_value": -4,
-            "safety_critical": 1,
-            "voltage_offset": 0.068,
-            "calibrated_sensitivity": 0.005,
-            "calibrated_offset": 1.661
-        },
-        "unit": "Amps",
-        "_comment": "Current sensor attached to motor driver - Calibrated 2025-08-02"
+            "max_value": 120,
+            "min_value": -10,
+            "safety_critical": 0,
+            "i2c_address": "0x4B",
+            "beta_coefficient": 3600.0,
+            "reference_resistance": 10000.0,
+            "reference_voltage": 3.3
+      },
+      "unit": "degrees"
     },
-    "L_IS_2_Current_sensor": {
-        "name": "L_IS_2_Current_sensor",
-        "type": "ADS1115",
-        "editable": {
+    "NTC_peltier_4_temperature": {
+      "name": "NTC_peltier_4_temperature",
+      "type": "NTC",
+      "editable": {
             "SDA": 2,
             "SCL": 3,
+            "sensor_location": "Inside",
             "read_pin": 3,
-            "max_value": 4,
-            "min_value": -4,
-            "safety_critical": 1,
-            "voltage_offset": 0.449,
-            "calibrated_sensitivity": 0.04,
-            "calibrated_offset": 1.668
-        },
-        "unit": "Amps",
-        "_comment": "Current sensor attached to motor driver - Calibrated 2025-08-02"
+            "max_value": 120,
+            "min_value": -10,
+            "safety_critical": 0,
+            "i2c_address": "0x4B",
+            "beta_coefficient": 3600.0,
+            "reference_resistance": 10000.0,
+            "reference_voltage": 3.3
+      },
+      "unit": "degrees"
     },
     "Peltier_240W": {
         "name": "Peltier_240W",

@@ -13,9 +13,17 @@ class GraphSetup {
         });
 
         this.unsavedChanges = false;
+        this.startingTemperature = null;
+        
+        // Set reference start time to current time
+        this.chartManager.setReferenceStartTime(new Date());
+        
         this.initChart();
         this.bindEvents();
         this.updateUndoButton();
+        
+        // Load starting temperature on page load
+        this.fetchStartingTemperature();
     }
 
     initChart() {
@@ -39,6 +47,7 @@ class GraphSetup {
         document.getElementById('undoButton').addEventListener('click', () => this.undoLastPoint());
         document.getElementById('clearPoints').addEventListener('click', () => this.clearAllPoints());
         document.getElementById('sendPointsToServer').addEventListener('click', () => this.saveToServer());
+        document.getElementById('refreshStartingTemp').addEventListener('click', () => this.fetchStartingTemperature());
         
         // Interpolation change
         document.getElementById('interpolationMethod').addEventListener('change', () => this.updateInterpolation());
@@ -53,19 +62,49 @@ class GraphSetup {
     }
 
     addPointFromInput() {
-        const input = document.getElementById('pointInput').value.trim();
-        if (!input) return;
-
-        const [x, y] = input.split(',').map(Number);
-        if (isNaN(x) || isNaN(y)) {
-            alert('Please enter valid numbers in format: time,temperature');
+        const temperature = parseFloat(document.getElementById('temperatureInput').value);
+        const timeOffsetStr = document.getElementById('timeOffsetInput').value.trim();
+        
+        if (isNaN(temperature)) {
+            alert('Please enter a valid temperature value');
             return;
         }
-
-        this.chartManager.addPoint(x, y);
+        
+        if (!timeOffsetStr) {
+            alert('Please enter a time offset (e.g., 2h, 30m, 90s)');
+            return;
+        }
+        
+        if (this.startingTemperature === null) {
+            alert('Starting temperature not available. Please wait for sensors to load.');
+            return;
+        }
+        
+        // Parse time offset to seconds
+        const timeOffsetSeconds = this.parseTimeOffset(timeOffsetStr);
+        if (timeOffsetSeconds === null) {
+            alert('Invalid time format. Use format like: 2h, 30m, 90s, or combinations like 1h30m');
+            return;
+        }
+        
+        // Find the last (highest) time point to add offset to
+        let targetTime = timeOffsetSeconds; // Default to offset from start (0)
+        
+        if (this.chartManager.points.length > 0) {
+            // Sort points by time to find the latest one
+            const sortedPoints = [...this.chartManager.points].sort((a, b) => a.x - b.x);
+            const lastPoint = sortedPoints[sortedPoints.length - 1];
+            targetTime = lastPoint.x + timeOffsetSeconds; // Add offset to last point's time
+        }
+        
+        // Add point at cumulative time
+        this.chartManager.addPoint(targetTime, temperature);
         this.unsavedChanges = this.chartManager.unsavedChanges;
         this.updateUndoButton();
-        document.getElementById('pointInput').value = '';
+        
+        // Clear inputs
+        document.getElementById('temperatureInput').value = '';
+        document.getElementById('timeOffsetInput').value = '';
     }
 
     undoLastPoint() {
@@ -81,6 +120,8 @@ class GraphSetup {
         if (this.chartManager.points.length === 0) {
             this.unsavedChanges = false;
             this.chartManager.unsavedChanges = false;
+            // Refresh starting point when all points are cleared
+            this.fetchStartingTemperature();
         } else {
             this.unsavedChanges = true;
             this.chartManager.unsavedChanges = true;
@@ -94,6 +135,8 @@ class GraphSetup {
             this.chartManager.clearData();
             this.unsavedChanges = false;
             this.updateUndoButton();
+            // Refresh starting point when all points are cleared
+            this.fetchStartingTemperature();
         }
     }
 
@@ -123,6 +166,91 @@ class GraphSetup {
         button.textContent = pointCount === 0 ? 'Undo Last' : `Undo Last (${pointCount})`;
     }
 
+    async fetchStartingTemperature() {
+        try {
+            const response = await fetch('/get_starting_temperature');
+            const data = await response.json();
+            
+            const valueElement = document.getElementById('startingTempValue');
+            
+            if (data.success && data.starting_temperature !== null) {
+                this.startingTemperature = data.starting_temperature;
+                valueElement.textContent = data.starting_temperature.toFixed(1);
+                valueElement.style.color = '#4CAF50'; // Green for success
+                
+                // Add/update starting temperature as first setpoint
+                this.updateFirstSetpoint(this.startingTemperature);
+            } else {
+                this.startingTemperature = null;
+                valueElement.textContent = 'N/A';
+                valueElement.style.color = '#f44336'; // Red for error
+                console.warn('Starting temperature unavailable:', data.message);
+            }
+        } catch (error) {
+            this.startingTemperature = null;
+            document.getElementById('startingTempValue').textContent = 'Error';
+            document.getElementById('startingTempValue').style.color = '#f44336';
+            console.error('Error fetching starting temperature:', error);
+        }
+    }
+
+    updateFirstSetpoint(temperature) {
+        // Check if there are existing points
+        if (this.chartManager.points.length > 0) {
+            // Sort points by offset to find the earliest
+            const sortedPoints = [...this.chartManager.points].sort((a, b) => a.x - b.x);
+            const firstPoint = sortedPoints[0];
+            
+            // If the first point is at time 0 (or within 5 minutes), replace it
+            if (firstPoint.x <= 300) { // 5 minutes in seconds
+                const index = this.chartManager.points.findIndex(p => p === firstPoint);
+                this.chartManager.points[index] = {x: 0, y: temperature};
+            } else {
+                // Insert new starting point at time 0
+                this.chartManager.points.unshift({x: 0, y: temperature});
+            }
+        } else {
+            // Add the starting point as the first point at time 0
+            this.chartManager.addPoint(0, temperature);
+        }
+        
+        // Update the chart to show the new starting point
+        this.chartManager.updateSetupChart();
+        this.chartManager.updateDynamicScaling();
+        this.updateUndoButton();
+    }
+
+    parseTimeOffset(timeStr) {
+        // Parse time formats like: 2h, 30m, 90s, 1h30m, 2h15m30s
+        const timeStr_lower = timeStr.toLowerCase().trim();
+        let totalSeconds = 0;
+        
+        // Extract hours
+        const hoursMatch = timeStr_lower.match(/(\d+(?:\.\d+)?)h/);
+        if (hoursMatch) {
+            totalSeconds += parseFloat(hoursMatch[1]) * 3600;
+        }
+        
+        // Extract minutes
+        const minutesMatch = timeStr_lower.match(/(\d+(?:\.\d+)?)m/);
+        if (minutesMatch) {
+            totalSeconds += parseFloat(minutesMatch[1]) * 60;
+        }
+        
+        // Extract seconds
+        const secondsMatch = timeStr_lower.match(/(\d+(?:\.\d+)?)s/);
+        if (secondsMatch) {
+            totalSeconds += parseFloat(secondsMatch[1]);
+        }
+        
+        // If no valid time units found, return null
+        if (totalSeconds === 0 && !hoursMatch && !minutesMatch && !secondsMatch) {
+            return null;
+        }
+        
+        return totalSeconds;
+    }
+
     async saveToServer() {
         if (this.chartManager.points.length === 0) {
             alert('No points to save');
@@ -130,12 +258,36 @@ class GraphSetup {
         }
 
         try {
+            // Points are already stored as offset seconds, just sort them
+            const sortedPoints = [...this.chartManager.points].sort((a, b) => a.x - b.x);
+
+            // Calculate dynamic scaling values based on graph data
+            const xValues = sortedPoints.map(point => point.x);
+            const yValues = sortedPoints.map(point => point.y);
+            
+            const xMax = Math.max(...xValues);
+            const yMax = Math.max(...yValues);
+            const yMin = Math.min(...yValues);
+            
+            // Add padding for better visualization
+            const xPadding = Math.max(300, xMax * 0.1); // At least 5 minutes or 10% of max time
+            const yPadding = Math.max(5, (yMax - yMin) * 0.1); // At least 5°C or 10% of range
+            
+            const dynamicXMax = xMax + xPadding;
+            const dynamicYMax = yMax + yPadding;
+            const dynamicYMin = yMin - yPadding;
+
             const response = await fetch('/store-graph-data', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify([{
                     label: 'Temperature Profile',
-                    data: this.chartManager.points
+                    data: sortedPoints,
+                    scaling: {
+                        xMax: dynamicXMax,
+                        yMax: dynamicYMax,
+                        yMin: dynamicYMin
+                    }
                 }])
             });
 
@@ -153,6 +305,7 @@ class GraphSetup {
             alert(`Error saving graph: ${error.message}`);
         }
     }
+
 }
 
 // Initialize when page loads

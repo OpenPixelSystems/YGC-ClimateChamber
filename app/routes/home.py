@@ -1,4 +1,5 @@
 from flask import Blueprint, render_template, redirect, url_for, request, flash
+import socket
 
 from app import get_app_state
 from app.routes.Helper.graph import Graph
@@ -7,7 +8,11 @@ home_bp = Blueprint('home', __name__, template_folder='templates', static_folder
 
 @home_bp.route('/')
 def index():
-    return render_template('home.html')
+    try:
+        ip_address = socket.gethostbyname(socket.gethostname())
+    except:
+        ip_address = "Unable to determine IP"
+    return render_template('home.html', ip_address=ip_address)
 
 @home_bp.route('/status')
 def status():

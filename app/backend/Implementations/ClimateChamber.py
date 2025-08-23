@@ -8,7 +8,6 @@ from app.backend.Interfaces.ISensorReader import ISensorReader
 from app.backend.Modules.PeltierModule import PeltierModule
 from app.backend.Technical.Logging import LoggingMixin
 
-
 # Real implementation
 class ClimateChamber(IClimateChamber, LoggingMixin):
     def __init__(self, sensor_reader: ISensorReader,

@@ -5,6 +5,11 @@
 <div class="container">
     <div class="input-section">
         <h1 class="text-center">Climate Chamber Control</h1>
+        
+        <div class="ip-notification" style="background-color: var(--nav-hover); border: 1px solid var(--border-color); border-radius: 4px; padding: 8px; margin-bottom: 15px; font-size: 0.9em; text-align: center; color: var(--text-color);">
+            <strong>Pi IP Address:</strong> {{ ip_address }}
+        </div>
+        
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 <div class="flash-messages">

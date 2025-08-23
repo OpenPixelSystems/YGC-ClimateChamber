@@ -12,7 +12,7 @@ from app.backend.Sensors.DS18B20 import DS18B20
 class DS18B20Cluster(ISensor):
     def __init__(self, sensor_config: DS18B20Config):
         self.type = "DS18B20Cluster"
-        self.group_name = sensor_config.group_name
+        self.sensor_location = sensor_config.sensor_location
         self._pin = sensor_config.gpio_pin
         self.sensors: Optional[List[ISensor]] = []
         self._is_testing = self._detect_testing_environment()
@@ -26,7 +26,7 @@ class DS18B20Cluster(ISensor):
         """Initialize the sensor hardware."""
         gpio.setmode(gpio.BCM)
         gpio.setup(self._pin, gpio.IN)
-        print(f"[DS18B20Cluster] [{self.group_name}] Initialized sensor on pin {self._pin}, testing mode: {self._is_testing}")
+        print(f"[DS18B20Cluster] [{self.sensor_location}] Initialized sensor on pin {self._pin}, testing mode: {self._is_testing}")
 
     def read(self) -> Dict[str, Optional[float]]:
         sensor_readings = {}
