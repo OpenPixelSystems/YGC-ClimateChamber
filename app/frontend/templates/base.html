@@ -14,6 +14,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/fontawesome-local.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='styles/main.css') }}">
     <script src="{{ url_for('static', filename='js/base.js') }}"></script>
     {% endblock %}
@@ -25,6 +26,7 @@
             <a href="{{ url_for('graph.setup_graph') }}" class="nav-link">Graph Setup</a>
             <a href="{{ url_for('viewer.view_database') }}" class="nav-link">Database viewer</a>
             <a href="{{ url_for('logs.logs_viewer') }}" class="nav-link">Logs</a>
+            <a href="#" id="activeCycleLink" class="nav-link" style="display: none;">Active Cycle</a>
         </div>
         <div class="nav-controls">
             <div class="storage-indicator" id="storageIndicator" title="Storage Usage">
@@ -34,14 +36,17 @@
                 </div>
                 <div class="storage-text" id="storageText">--</div>
             </div>
+            <button onclick="navigateToWifi()" class="icon-button" title="WiFi Networks">
+                <i class="fas fa-wifi"></i>
+            </button>
             <button onclick="navigateToSettings()" class="icon-button" title="System Configuration">
-                ⚙️
+                <i class="fas fa-cog"></i>
             </button>
             <button onclick="restartService()" class="icon-button restart-button" title="Restart Climate Chamber Service">
-                ↻
+                <i class="fas fa-redo"></i>
             </button>
             <button onclick="toggleDarkMode()" class="icon-button" title="Toggle Dark Mode">
-                🌓
+                <i class="fas fa-adjust"></i>
             </button>
         </div>
     </nav>

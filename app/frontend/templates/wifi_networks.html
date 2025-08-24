@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block title %}WiFi Networks - Climate Chamber{% endblock %}
+
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='styles/wifi-networks.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="wifi-container">
+    <div class="page-header">
+        <h1>WiFi Networks</h1>
+        <button id="refreshBtn" class="btn btn-secondary" onclick="scanNetworks()">
+            <span class="refresh-icon">↻</span> Refresh
+        </button>
+    </div>
+    
+    <div class="current-connection">
+        <h3>Current Connection</h3>
+        <div id="currentConnection" class="connection-info">
+            <span class="loading">Loading...</span>
+        </div>
+    </div>
+    
+    <div class="networks-section">
+        <h3>Available Networks</h3>
+        <div id="networksList" class="networks-list">
+            <div class="loading-indicator">
+                <span class="loading">Scanning for networks...</span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Password Modal -->
+    <div id="passwordModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4>Connect to Network</h4>
+                <span class="close" onclick="closePasswordModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <p>Enter password for: <strong id="modalNetworkName"></strong></p>
+                <div class="form-group">
+                    <label for="networkPassword">Password:</label>
+                    <input type="password" id="networkPassword" class="form-input" placeholder="Enter network password">
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="showPassword" onchange="togglePasswordVisibility()">
+                        Show password
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closePasswordModal()">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="connectToNetwork()">Connect</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Status Messages -->
+    <div id="statusMessages"></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/wifi-networks.js') }}"></script>
+{% endblock %}

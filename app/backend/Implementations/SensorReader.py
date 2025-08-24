@@ -169,6 +169,10 @@ class SensorReader(ISensorReader, Subscriptable):
                     self._cached_sensor_data = fresh_data
                     self._last_reading_time = datetime.now()
                 
+                # Apply peltier state correction and notify subscribers
+                corrected_data = self._apply_peltier_state_correction(fresh_data)
+                self.notify(corrected_data)
+                
                 print(f"[SensorReader] Background read complete at {self._last_reading_time}")
                 
             except Exception as e:

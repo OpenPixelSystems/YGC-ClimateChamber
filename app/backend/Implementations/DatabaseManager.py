@@ -43,7 +43,8 @@ class DatabaseManager(LoggingMixin):
                 cycle_id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT UNIQUE,
                 start_time TEXT,
-                end_time TEXT
+                end_time TEXT,
+                origin_page TEXT
             )
             ''')
             cursor.execute('''
@@ -77,13 +78,21 @@ class DatabaseManager(LoggingMixin):
                 cursor.execute('ALTER TABLE calculation_data ADD COLUMN control_status TEXT')
             except:
                 pass  # Column already exists
+                
+            # Add origin_page column to cycles table if it doesn't exist
+            try:
+                cursor.execute('ALTER TABLE cycles ADD COLUMN origin_page TEXT')
+            except:
+                pass  # Column already exists
+                
             conn.commit()
 
-    def start_logging_cycle(self, cycle_name: str) -> bool:
+    def start_logging_cycle(self, cycle_name: str, origin_page: str = None) -> bool:
         """Start a new logging cycle.
         
         Args:
             cycle_name: Name of the logging cycle
+            origin_page: Page where the cycle was started ('display-graph' or 'manual-control')
             
         Returns:
             bool: True if cycle started successfully, False otherwise
@@ -96,13 +105,13 @@ class DatabaseManager(LoggingMixin):
             with self.get_connection() as conn:
                 cursor = conn.cursor()
                 cursor.execute(
-                    "INSERT INTO cycles (name, start_time) VALUES (?, ?)",
-                    (cycle_name, datetime.now().isoformat())
+                    "INSERT INTO cycles (name, start_time, origin_page) VALUES (?, ?, ?)",
+                    (cycle_name, datetime.now().isoformat(), origin_page)
                 )
                 self.current_cycle_id = cursor.lastrowid
                 conn.commit()
                 self.logging_active = True
-                self.print(f"Started logging cycle: {cycle_name}")
+                self.print(f"Started logging cycle: {cycle_name} from {origin_page}")
                 return True
         except Exception as e:
             self.print_error(f"Error starting logging cycle: {str(e)}")

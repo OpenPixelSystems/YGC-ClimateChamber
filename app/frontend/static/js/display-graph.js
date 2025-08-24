@@ -33,14 +33,61 @@ class SensorGraph {
    */
   async initialize() {
     try {
-      const response = await fetch('/get-stored-graph-data');
-      const data = await response.json();
-
-      this.startTime = Date.now();
-      this.chartManager.renderGraph(data);
+      // First check if there's an active cycle with data
+      const activeCycleResponse = await fetch('/get-active-cycle-data');
+      const activeCycleData = await activeCycleResponse.json();
+      
+      if (activeCycleData.active_cycle) {
+        // Load existing cycle data and continue streaming
+        await this.loadActiveCycleData(activeCycleData);
+      } else {
+        // Load stored graph configuration only
+        const response = await fetch('/get-stored-graph-data');
+        const data = await response.json();
+        this.startTime = Date.now();
+        this.chartManager.renderGraph(data);
+      }
+      
       this.eventManager.setupEventListeners();
+      // Always add navigation listeners for display-graph to handle graph cleanup
+      this.eventManager.addNavigationEventListeners();
     } catch (error) {
       console.error('Initialization failed:', error);
+    }
+  }
+
+  /**
+   * Load data from an active cycle and set up for continued streaming
+   */
+  async loadActiveCycleData(activeCycleData) {
+    try {
+      // Get the stored graph configuration
+      const graphResponse = await fetch('/get-stored-graph-data');
+      const graphData = await graphResponse.json();
+      
+      // Set cycle as running and update UI
+      this.isCycleRunning = true;
+      const cycleButton = document.getElementById('StartCycle');
+      if (cycleButton) {
+        cycleButton.textContent = 'Stop Cycle';
+      }
+      
+      // Render the graph with the configuration
+      this.chartManager.renderGraph(graphData);
+      
+      // Load and display the existing cycle data
+      if (activeCycleData.data) {
+        this.chartManager.loadExistingCycleData(activeCycleData.data, activeCycleData.cycle_start_time);
+      }
+      
+      // Set up streaming to continue from where we left off
+      this.startTime = new Date(activeCycleData.cycle_start_time).getTime();
+      this.chartManager.updateChartTimeAxis(this.startTime);
+      this.sensorManager.createEventSource(this.startTime);
+      
+      console.log(`Loaded active cycle: ${activeCycleData.cycle_name}`);
+    } catch (error) {
+      console.error('Error loading active cycle data:', error);
     }
   }
 
@@ -82,12 +129,15 @@ class SensorGraph {
   }
 
   /**
-   * Initializes the sensor data stream
+   * Initializes the sensor data stream for new cycles
    */
   initializeStream() {
     this.sensorManager.closeEventSource();
 
-    this.startTime = Date.now();
+    // Only reset start time for new cycles (not when reconnecting to active cycle)
+    if (!this.startTime) {
+      this.startTime = Date.now();
+    }
     this.chartManager.resetMaxElapsedTime();
     this.chartManager.updateChartTimeAxis(this.startTime);
 
@@ -110,7 +160,7 @@ class SensorGraph {
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ cycleName: cycleName })
+      body: JSON.stringify({ cycleName: cycleName, originPage: 'display-graph' })
     });
 
     if (!response.ok) {
@@ -123,7 +173,6 @@ class SensorGraph {
     this.isCycleRunning = true;
     cycleButton.textContent = 'Stop Cycle';
     this.initializeStream();
-    this.eventManager.addNavigationEventListeners();
   } catch (error) {
     console.error("Error starting sensor stream:", error);
     this.isCycleRunning = false;
@@ -143,7 +192,6 @@ class SensorGraph {
         this.chartManager.clearChartData();
         this.isCycleRunning = false;
         cycleButton.textContent = 'Start Cycle';
-        this.eventManager.removeNavigationEventListeners();
       } catch (error) {
         console.error("Error stopping cycle:", error);
       }

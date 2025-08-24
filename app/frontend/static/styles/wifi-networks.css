@@ -1,0 +1,430 @@
+/* WiFi Networks Page Styles */
+
+/* Additional CSS variables for WiFi page */
+:root {
+    --text-secondary: #666;
+    --hover-color: #f5f5f5;
+    --input-background: #fff;
+    --error-color: #e74c3c;
+}
+
+.dark-mode {
+    --text-secondary: #aaa;
+    --hover-color: #3d3d3d;
+    --input-background: #2d2d2d;
+    --error-color: #ff6b6b;
+}
+
+.wifi-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+    min-height: calc(100vh - 120px);
+}
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid var(--border-color);
+}
+
+.page-header h1 {
+    margin: 0;
+    color: var(--text-color);
+}
+
+.refresh-icon {
+    display: inline-block;
+    transition: transform 0.3s ease;
+}
+
+.refreshing .refresh-icon {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.current-connection {
+    background: var(--card-background);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 30px;
+}
+
+.current-connection h3 {
+    margin: 0 0 15px 0;
+    color: var(--text-color);
+}
+
+.connection-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.connection-details {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.wifi-connection {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.ethernet-only {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.ip-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.9em;
+}
+
+.ip-label {
+    color: var(--text-secondary);
+    font-weight: 500;
+    min-width: 80px;
+}
+
+.ip-address {
+    color: var(--text-color);
+    font-family: monospace;
+    background: var(--hover-color);
+    padding: 2px 6px;
+    border-radius: 3px;
+}
+
+.connection-status {
+    padding: 5px 12px;
+    border-radius: 15px;
+    font-size: 0.9em;
+    font-weight: 500;
+}
+
+.connection-status.connected {
+    background: var(--success-color);
+    color: white;
+}
+
+.connection-status.disconnected {
+    background: var(--error-color);
+    color: white;
+}
+
+.networks-section {
+    background: var(--card-background);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 20px;
+}
+
+.networks-section h3 {
+    margin: 0 0 20px 0;
+    color: var(--text-color);
+}
+
+.networks-list {
+    min-height: 200px;
+}
+
+.network-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 15px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    margin-bottom: 10px;
+    background: var(--input-background);
+    transition: background-color 0.2s ease;
+}
+
+.network-item:hover {
+    background: var(--hover-color);
+}
+
+.network-item.current {
+    border-color: var(--success-color);
+    background: rgba(76, 175, 80, 0.1);
+}
+
+.network-info {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    flex: 1;
+}
+
+.network-name {
+    font-weight: 500;
+    color: var(--text-color);
+}
+
+.network-security {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.9em;
+    color: var(--text-secondary);
+}
+
+.security-icon {
+    font-size: 1.1em;
+}
+
+.signal-strength {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-secondary);
+}
+
+.signal-bars {
+    display: flex;
+    gap: 2px;
+    align-items: flex-end;
+}
+
+.signal-bar {
+    width: 3px;
+    background: var(--border-color);
+    border-radius: 1px;
+}
+
+.signal-bar:nth-child(1) { height: 4px; }
+.signal-bar:nth-child(2) { height: 8px; }
+.signal-bar:nth-child(3) { height: 12px; }
+.signal-bar:nth-child(4) { height: 16px; }
+
+.signal-bar.active {
+    background: var(--primary-color);
+}
+
+.network-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.loading-indicator {
+    text-align: center;
+    padding: 40px;
+    color: var(--text-secondary);
+}
+
+.loading {
+    display: inline-block;
+    position: relative;
+}
+
+.loading::after {
+    content: '';
+    display: inline-block;
+    width: 0;
+    overflow: hidden;
+    animation: dots 1.5s steps(4, end) infinite;
+}
+
+@keyframes dots {
+    0%, 20% { content: ''; }
+    40% { content: '.'; }
+    60% { content: '..'; }
+    80%, 100% { content: '...'; }
+}
+
+/* Modal Styles */
+.modal {
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-content {
+    background: var(--card-background);
+    border-radius: 8px;
+    width: 90%;
+    max-width: 400px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 20px 0 20px;
+}
+
+.modal-header h4 {
+    margin: 0;
+    color: var(--text-color);
+}
+
+.close {
+    font-size: 24px;
+    font-weight: bold;
+    cursor: pointer;
+    color: var(--text-secondary);
+    line-height: 1;
+}
+
+.close:hover {
+    color: var(--text-color);
+}
+
+.modal-body {
+    padding: 20px;
+}
+
+.modal-body p {
+    margin: 0 0 20px 0;
+    color: var(--text-color);
+}
+
+.modal-footer {
+    padding: 0 20px 20px 20px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+/* Button styles specific to WiFi page */
+.btn {
+    padding: 10px 15px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    outline: none;
+    transition: all 0.3s ease;
+    margin: 0;
+}
+
+.btn-primary {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: #2980b9;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px var(--shadow-color);
+}
+
+.btn-secondary {
+    background-color: #6c757d;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background-color: #5a6268;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px var(--shadow-color);
+}
+
+/* Form styles specific to WiFi page */
+.form-input {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background: var(--input-background);
+    color: var(--text-color);
+    font-size: 14px;
+    outline: none;
+    transition: all 0.2s ease;
+    box-sizing: border-box;
+}
+
+.form-input:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 500;
+    color: var(--text-color);
+    font-size: 14px;
+}
+
+/* Status Messages */
+#statusMessages {
+    position: fixed;
+    top: 80px;
+    right: 20px;
+    z-index: 1001;
+    max-width: 400px;
+}
+
+.status-message {
+    padding: 12px 16px;
+    margin-bottom: 10px;
+    border-radius: 6px;
+    background: var(--card-background);
+    border: 1px solid var(--border-color);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    animation: slideIn 0.3s ease;
+}
+
+.status-message.success {
+    border-color: var(--success-color);
+    background: rgba(76, 175, 80, 0.1);
+    color: var(--success-color);
+}
+
+.status-message.error {
+    border-color: var(--error-color);
+    background: rgba(244, 67, 54, 0.1);
+    color: var(--error-color);
+}
+
+.status-message.info {
+    border-color: var(--primary-color);
+    background: rgba(33, 150, 243, 0.1);
+    color: var(--primary-color);
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* Dark mode adjustments */
+:root.dark-mode .modal {
+    background: rgba(0, 0, 0, 0.7);
+}

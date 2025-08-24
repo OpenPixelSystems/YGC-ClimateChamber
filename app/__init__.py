@@ -21,6 +21,7 @@ def create_app():
     from app.routes.data_viewer import viewer_bp
     from app.routes.system_config import config_bp
     from app.routes.logs_viewer import logs_bp
+    from app.routes.wifi_manager import wifi_bp
 
     app.register_blueprint(home_bp)
     app.register_blueprint(graph_bp)
@@ -28,5 +29,6 @@ def create_app():
     app.register_blueprint(viewer_bp)
     app.register_blueprint(config_bp)
     app.register_blueprint(logs_bp)
+    app.register_blueprint(wifi_bp)
 
     return app

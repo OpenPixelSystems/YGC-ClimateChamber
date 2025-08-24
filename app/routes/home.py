@@ -8,6 +8,9 @@ home_bp = Blueprint('home', __name__, template_folder='templates', static_folder
 
 @home_bp.route('/')
 def index():
+    # Check if there's an active cycle to determine button states
+    app_state = get_app_state()
+    active_cycle = app_state.database.logging_active
     try:
         ip_address = socket.gethostbyname(socket.gethostname())
     except:
@@ -20,6 +23,12 @@ def status():
 
 @home_bp.route('/submit-temperature', methods=['POST'])
 def submit_temperature():
+    # Check if a cycle is already active
+    app_state = get_app_state()
+    if app_state.database.logging_active:
+        flash('A cycle is already running. Stop the current cycle first.', 'error')
+        return redirect(url_for('home.index'))
+
     try:
         temperature_str = request.form['temperature']
 
@@ -40,6 +49,20 @@ def submit_temperature():
 
 @home_bp.route('/manual-control')
 def manual_control():
+    # Check if a cycle is already active from a different page
+    app_state = get_app_state()
+    if app_state.database.logging_active:
+        with app_state.database.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT origin_page FROM cycles WHERE cycle_id = ?", (app_state.database.current_cycle_id,))
+            cycle_row = cursor.fetchone()
+            origin_page = cycle_row[0] if cycle_row else None
+
+            # Only block if cycle was started from a different page
+            if origin_page and origin_page != 'manual-control':
+                flash('A cycle is already running from a different page. Use the Active Cycle button to access it.', 'error')
+                return redirect(url_for('home.index'))
+
     return render_template('manualControl.html')
 
 def try_convert(value):
