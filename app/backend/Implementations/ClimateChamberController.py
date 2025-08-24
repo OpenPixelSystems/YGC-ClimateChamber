@@ -47,11 +47,15 @@ class ClimateChamberController(IClimateChamberController, LoggingMixin):
         self.latest_sensor_data = data.copy()
 
         try:
-            # Apply steering logic if we have a desired temperature profile
-            if (self.desired_graph and
-                    self.viable_sensor in data and
-                    data[self.viable_sensor]['sensor_value'] is not None):
-                current_temp = data[self.viable_sensor]['sensor_value']
+            # Collect all available viable sensor values
+            available_sensor_values = []
+            for sensor_name in self.viable_sensors:
+                if sensor_name in data and data[sensor_name]['sensor_value'] is not None:
+                    available_sensor_values.append(data[sensor_name]['sensor_value'])
+
+            # Apply steering logic if we have a desired temperature profile and viable sensors
+            if self.desired_graph and available_sensor_values:
+                current_temp = sum(available_sensor_values) / len(available_sensor_values)
                 target_temp = self.desired_graph.get_temperature_at_time()
                 current_time_offset = round((datetime.now() - self.desired_graph.start_time).total_seconds())
 
@@ -72,12 +76,11 @@ class ClimateChamberController(IClimateChamberController, LoggingMixin):
                     'control_error': target_temp - current_temp,
                     'control_status': control_status
                 }
-            elif(self.viable_sensor not in data or
-                    data[self.viable_sensor]['sensor_value'] is None):
-                self.print(f"[ClimateChamberController] [on_sensor_data] No steering possible due to absent sensor data. {self.viable_sensor}")
+            elif not available_sensor_values:
+                self.print(f"[ClimateChamberController] [on_sensor_data] No steering possible due to absent viable sensor data. Available sensors: {list(data.keys())}")
             else:
                 # Manual mode handling
-                current_temp = data.get(self.viable_sensor, {}).get('sensor_value') if self.viable_sensor in data else None
+                current_temp = sum(available_sensor_values) / len(available_sensor_values) if available_sensor_values else None
 
                 if self.guarding_service.get_guarding_state():
                     manual_status = "MANUAL_GUARDED"
