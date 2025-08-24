@@ -13,7 +13,7 @@ class ADS1115(ISensor):
     def __init__(self, config: ADS1115Config):
         """Initialize the ADS1115 current sensor."""
 
-        self._type = 'ADS1115'
+        self.type = 'ADS1115'
         self._name = config.name
         self._sda_pin = config.SDA
         self._scl_pin = config.SCL
@@ -27,7 +27,7 @@ class ADS1115(ISensor):
         self._ads = None
 
         # ADS1115 configuration
-        self._i2c_address = 0x48  # Default I2C address
+        self._i2c_address = config.i2c_address if config.i2c_address is not None else 0x48  # Use config address or default
         self._gain = 1  # Programmable gain (±4.096V range)
         self._data_rate = 128  # 128 SPS (samples per second)
 

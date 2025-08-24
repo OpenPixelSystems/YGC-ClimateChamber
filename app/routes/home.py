@@ -1,4 +1,5 @@
-from flask import Blueprint, render_template, redirect, url_for, request, flash, jsonify
+from flask import Blueprint, render_template, redirect, url_for, request, flash
+import socket
 
 from app import get_app_state
 from app.routes.Helper.graph import Graph
@@ -10,7 +11,11 @@ def index():
     # Check if there's an active cycle to determine button states
     app_state = get_app_state()
     active_cycle = app_state.database.logging_active
-    return render_template('home.html', active_cycle=active_cycle)
+    try:
+        ip_address = socket.gethostbyname(socket.gethostname())
+    except:
+        ip_address = "Unable to determine IP"
+    return render_template('home.html', ip_address=ip_address)
 
 @home_bp.route('/status')
 def status():
@@ -23,7 +28,7 @@ def submit_temperature():
     if app_state.database.logging_active:
         flash('A cycle is already running. Stop the current cycle first.', 'error')
         return redirect(url_for('home.index'))
-        
+
     try:
         temperature_str = request.form['temperature']
 
@@ -52,12 +57,12 @@ def manual_control():
             cursor.execute("SELECT origin_page FROM cycles WHERE cycle_id = ?", (app_state.database.current_cycle_id,))
             cycle_row = cursor.fetchone()
             origin_page = cycle_row[0] if cycle_row else None
-            
+
             # Only block if cycle was started from a different page
             if origin_page and origin_page != 'manual-control':
                 flash('A cycle is already running from a different page. Use the Active Cycle button to access it.', 'error')
                 return redirect(url_for('home.index'))
-    
+
     return render_template('manualControl.html')
 
 def try_convert(value):

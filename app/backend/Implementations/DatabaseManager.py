@@ -146,7 +146,7 @@ class DatabaseManager(LoggingMixin):
                     
                     # Determine sensor type based on known sensor names and their units
                     # You might want to get this from sensor config instead
-                    if any(temp_keyword in sensor_name.lower() for temp_keyword in ['temp', 'peltier', 'outside', 'inside', 'environment']):
+                    if any(temp_keyword in sensor_name.lower() for temp_keyword in ['temp', 'peltier', 'outside', 'inside', 'environment', 'ntc']):
                         sensor_type = 'temperature'
                         unit = '°C'
                     elif 'current' in sensor_name.lower() or sensor_name.startswith(('R_IS_', 'L_IS_')):

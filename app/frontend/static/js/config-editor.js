@@ -19,8 +19,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 for (const subKey in obj[key]) {
                     const fieldId = [...path, key, subKey].join('.');
 
-                    if (subKey === 'sensor_group') {
-                        // Render dropdown for sensor_group
+                    if (subKey === 'sensor_location') {
+                        // Render dropdown for sensor_location
                         html += `<div class="config-field">
                             <label for="${fieldId}">${subKey}</label>
                             <select id="${fieldId}" name="${fieldId}">`;

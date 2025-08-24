@@ -29,7 +29,14 @@ export default class ChartManager {
    * @param {Object} response - Initial graph data
    */
   renderGraph(response) {
-    const { desired_path: desiredPath, data: graphData, config } = response;
+    const { desired_path: desiredPath, data: graphData, config, scaling } = response;
+
+    // Apply dynamic scaling if provided
+    if (scaling && (scaling.xMax !== undefined || scaling.yMax !== undefined || scaling.yMin !== undefined)) {
+      this.universalManager.config.xMax = scaling.xMax;
+      this.universalManager.config.yMax = scaling.yMax;
+      this.universalManager.config.yMin = scaling.yMin;
+    }
 
     // Initialize the chart
     this.universalManager.init();
