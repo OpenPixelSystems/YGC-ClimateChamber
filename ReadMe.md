@@ -1,6 +1,6 @@
 # Climate Chamber FLASK Interface
 ## Raspberry pi setup
-1) Flash Raspberry Pi memory card with Raspberry Pi OS Lite image.
+1) Flash Raspberry Pi memory card with Raspberry Pi OS image.
 2) Log into raspberry pi using SSH
 3) Install git on Raspberry Pi ``sudo apt install git``
 4) Clone project onto Pi ``git clone https://gitlab.com/tmc-climatechamber/climatechamber.git``

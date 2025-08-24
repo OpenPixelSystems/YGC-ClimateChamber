@@ -25,8 +25,8 @@ def scan_wifi_networks():
         if not check_nmcli_available():
             return {"success": False, "error": "NetworkManager (nmcli) not available on this system"}
         
-        # Use nmcli to scan for networks
-        result = subprocess.run(['nmcli', '-t', '-f', 'SSID,SIGNAL,SECURITY', 'dev', 'wifi'], 
+        # Use nmcli to scan for networks (run as raspberry user)
+        result = subprocess.run(['sudo', '-u', 'raspberry', 'nmcli', '-t', '-f', 'SSID,SIGNAL,SECURITY', 'dev', 'wifi'], 
                               capture_output=True, text=True, timeout=30)
         
         if result.returncode != 0:
@@ -84,7 +84,7 @@ def connect_to_network(ssid, password=None):
             return {"success": False, "error": "Invalid password provided"}
         
         # First, check if we're already connected to this network
-        current_result = subprocess.run(['nmcli', '-t', '-f', 'NAME', 'connection', 'show', '--active'], 
+        current_result = subprocess.run(['sudo', '-u', 'raspberry', 'nmcli', '-t', '-f', 'NAME', 'connection', 'show', '--active'], 
                                       capture_output=True, text=True, timeout=10)
         
         if current_result.returncode == 0:
@@ -93,7 +93,7 @@ def connect_to_network(ssid, password=None):
                 return {"success": True, "message": f"Already connected to {ssid}"}
         
         # Try to connect to the network
-        cmd = ['nmcli', 'dev', 'wifi', 'connect', ssid]
+        cmd = ['sudo', '-u', 'raspberry', 'nmcli', 'dev', 'wifi', 'connect', ssid]
         if password and password.strip():
             cmd.extend(['password', password])
         
@@ -120,7 +120,7 @@ def get_current_connection():
             return {"success": False, "error": "NetworkManager (nmcli) not available on this system"}
         
         # Get active connections
-        result = subprocess.run(['nmcli', '-t', '-f', 'NAME,TYPE,DEVICE', 'connection', 'show', '--active'], 
+        result = subprocess.run(['sudo', '-u', 'raspberry', 'nmcli', '-t', '-f', 'NAME,TYPE,DEVICE', 'connection', 'show', '--active'], 
                               capture_output=True, text=True, timeout=10)
         
         if result.returncode != 0:

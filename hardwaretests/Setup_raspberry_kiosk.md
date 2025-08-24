@@ -17,11 +17,10 @@ Update your system and install necessary packages:
 ```bash
 sudo apt update
 sudo apt upgrade -y
-sudo apt install -y chromium-browser unclutter xdotool
+sudo apt install -y unclutter xdotool
 ```
 
 **Package explanations:**
-- `chromium-browser`: The web browser for kiosk mode
 - `unclutter`: Hides mouse cursor when inactive
 - `xdotool`: Allows programmatic control of X11 (useful for scripting)
 
@@ -38,19 +37,14 @@ Navigate to:
 2. Select "Desktop Autologin" (automatically login to desktop as 'pi' user)
 3. Finish and reboot when prompted
 
-Or configure manually:
-```bash
-sudo systemctl set-default graphical.target
-sudo systemctl enable getty@tty1.service
-```
 
 ## Step 3: Create Kiosk Script
 
 Create a script that will launch Chromium in kiosk mode:
 
 ```bash
-mkdir -p /home/pi/kiosk
-nano /home/pi/kiosk/start_kiosk.sh
+mkdir -p /home/raspberry/kiosk
+nano /home/raspberry/kiosk/start_kiosk.sh
 ```
 
 Add the following content:
@@ -117,7 +111,7 @@ chromium-browser \
 
 Make the script executable:
 ```bash
-chmod +x /home/pi/kiosk/start_kiosk.sh
+chmod +x /home/raspberry/kiosk/start_kiosk.sh
 ```
 
 ## Step 4: Configure Autostart
@@ -136,7 +130,7 @@ Add the following content:
 Type=Application
 Name=Kiosk Mode
 Comment=Start Chromium in Kiosk Mode
-Exec=/home/pi/kiosk/start_kiosk.sh
+Exec=/home/raspberry/kiosk/start_kiosk.sh
 Icon=chromium-browser
 Terminal=false
 Categories=Network;WebBrowser;
@@ -167,7 +161,7 @@ Replace the contents with:
 @unclutter -idle 0.5 -root
 
 # Start kiosk mode
-@/home/pi/kiosk/start_kiosk.sh
+@/home/raspberry/kiosk/start_kiosk.sh
 ```
 
 ## Step 6: Configure Boot Settings
@@ -175,7 +169,7 @@ Replace the contents with:
 Edit the boot config to optimize for kiosk mode:
 
 ```bash
-sudo nano /boot/config.txt
+sudo nano /boot/firmware/config.txt
 ```
 
 Add or modify these settings:
@@ -200,7 +194,7 @@ disable_overscan=1
 Create a way to exit kiosk mode if needed:
 
 ```bash
-nano /home/pi/kiosk/exit_kiosk.sh
+nano /home/raspberry/kiosk/exit_kiosk.sh
 ```
 
 Add:
@@ -213,7 +207,7 @@ killall unclutter
 
 Make executable:
 ```bash
-chmod +x /home/pi/kiosk/exit_kiosk.sh
+chmod +x /home/raspberry/kiosk/exit_kiosk.sh
 ```
 
 **To exit kiosk mode:** Press `Ctrl+Alt+T` to open terminal, then run:
@@ -258,7 +252,7 @@ tail -f ~/.xsession-errors
 
 **Test script manually:**
 ```bash
-/home/pi/kiosk/start_kiosk.sh
+/home/raspberry/kiosk/start_kiosk.sh
 ```
 
 ### Screen Goes Black
