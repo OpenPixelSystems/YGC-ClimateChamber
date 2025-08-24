@@ -14,6 +14,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/fontawesome-local.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='styles/main.css') }}">
     <script src="{{ url_for('static', filename='js/base.js') }}"></script>
     {% endblock %}
@@ -36,16 +37,16 @@
                 <div class="storage-text" id="storageText">--</div>
             </div>
             <button onclick="navigateToWifi()" class="icon-button" title="WiFi Networks">
-                📶
+                <i class="fas fa-wifi"></i>
             </button>
             <button onclick="navigateToSettings()" class="icon-button" title="System Configuration">
-                ⚙️
+                <i class="fas fa-cog"></i>
             </button>
             <button onclick="restartService()" class="icon-button restart-button" title="Restart Climate Chamber Service">
-                ↻
+                <i class="fas fa-redo"></i>
             </button>
             <button onclick="toggleDarkMode()" class="icon-button" title="Toggle Dark Mode">
-                🌓
+                <i class="fas fa-adjust"></i>
             </button>
         </div>
     </nav>

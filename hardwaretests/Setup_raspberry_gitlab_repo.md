@@ -44,7 +44,6 @@ Copy the entire output (starts with `ssh-ed25519` and ends with your email).
 
 Verify your SSH connection to GitLab:
 ```bash
-ssh -T git@gitlab.com
 ```
 
 You should see a message like:

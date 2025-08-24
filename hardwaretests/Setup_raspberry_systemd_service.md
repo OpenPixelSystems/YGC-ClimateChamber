@@ -21,11 +21,11 @@ After=network-online.target
 
 [Service]
 Type=simple
-User=raspberry
-Group=raspberry
+User=root
+Group=root
 WorkingDirectory=/home/raspberry/climatechamber
-Environment=PATH=/home/raspberry/climatechamber/venv/bin
-ExecStart=/home/raspberry/climatechamber/venv/bin/python run.py
+Environment=PATH=/home/raspberry/climatechamber/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+ExecStart=/home/raspberry/climatechamber/debug_env.sh
 Restart=always
 RestartSec=10
 StandardOutput=journal
