@@ -98,7 +98,13 @@ class DriverConfig:
     EN: int = None
 
 @dataclass
+class RelayConfig:
+    name: str = ""
+    gpio_pin: int = None
+
+@dataclass
 class McuConfig:
     sensors: Optional[List[ISensorConfig]] = None
     peltierModules: Optional[List[PeltierConfig]] = None
     fanModules: Optional[List[FanConfig]] = None
+    relayModules: Optional[List[RelayConfig]] = None

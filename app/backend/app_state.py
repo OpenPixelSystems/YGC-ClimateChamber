@@ -48,6 +48,8 @@ class AppState(metaclass=SingletonMeta):
         self.database = self._create_database_manager()
         """ Fan controller instance to control fan speeds."""
         self.fan_controller = self._create_fan_controller()
+        """ Relay controller instance to control relay modules."""
+        self.relay_controller = self._create_relay_controller()
         """ Climate chamber controller used to control Peltier elements based on sensor data and desired graph."""
         self.climate_chamber = self._create_climate_chamber()
         self.controller = self._create_controller()
@@ -87,10 +89,14 @@ class AppState(metaclass=SingletonMeta):
         from app.backend.Implementations.FanController import FanController
         return FanController(self.config_manager.mcu_config)
 
+    def _create_relay_controller(self):
+        from app.backend.Implementations.RelayController import RelayController
+        return RelayController(self.config_manager.mcu_config)
+
     def _create_climate_chamber(self):
         """Factory method for creating the climate chamber implementation."""
         from app.backend.Implementations.ClimateChamber import ClimateChamber
-        return ClimateChamber(self.sensor_reader, self.config_manager, self.calculation_service, self.fan_controller)
+        return ClimateChamber(self.sensor_reader, self.config_manager, self.calculation_service, self.fan_controller, self.relay_controller)
 
     def _create_controller(self):
         """Factory method for creating the controller."""
