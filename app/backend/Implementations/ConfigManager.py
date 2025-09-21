@@ -1,7 +1,7 @@
 import json
 
 from app.backend.Dataclasses.Config import ControlConfig, GraphConfig, McuConfig, PeltierConfig, \
-    MPL3115A2Config, ADS1115Config, NTCConfig, DS18B20Config, FanConfig
+    MPL3115A2Config, ADS1115Config, NTCConfig, DS18B20Config, FanConfig, RelayConfig
 from app.backend.Interfaces.IConfigManager import IConfigManager
 from app.backend.Technical.Logging import LoggingMixin
 
@@ -83,6 +83,7 @@ class ConfigManager(IConfigManager, LoggingMixin):
             sensors = []
             peltier_modules = []
             fan_modules = []
+            relay_modules = []
             for key, value in config_data.items():
                 # Ignore keys that start with '_' (comments)
                 if key.startswith("_"):
@@ -160,6 +161,11 @@ class ConfigManager(IConfigManager, LoggingMixin):
                         type=value["type"],
                         EN=value["editable"]["EN"]
                     ))
+                elif value["type"] == "relayModule":
+                    relay_modules.append(RelayConfig(
+                        name=value["editable"]["name"],
+                        gpio_pin=value["editable"]["gpio_pin"]
+                    ))
 
 
             for sensor in sensors:
@@ -176,6 +182,11 @@ class ConfigManager(IConfigManager, LoggingMixin):
                 print("[ConfigManager] [__load_mcu_config] " + str(fan))
             self._mcu_config.fanModules = fan_modules
             self.print(f"[ConfigManager] [__load_mcu_config] Loaded {len(fan_modules)} fan module(s) into MCU config.")
+
+            for relay in relay_modules:
+                print("[ConfigManager] [__load_mcu_config] " + str(relay))
+            self._mcu_config.relayModules = relay_modules
+            self.print(f"[ConfigManager] [__load_mcu_config] Loaded {len(relay_modules)} relay module(s) into MCU config.")
 
         except (FileNotFoundError, KeyError, json.JSONDecodeError, ValueError) as e:
             self.print_error(f"[ConfigManager] [__load_mcu_config] Error loading MCU config: {str(e)}")

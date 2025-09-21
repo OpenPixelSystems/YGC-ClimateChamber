@@ -4,6 +4,7 @@ from app.backend.Interfaces.ICalculationService import ICalculationService
 from app.backend.Interfaces.IClimateChamber import IClimateChamber
 from app.backend.Interfaces.IConfigManager import IConfigManager
 from app.backend.Interfaces.IFanController import IFanController
+from app.backend.Interfaces.IRelayController import IRelayController
 from app.backend.Interfaces.ISensorReader import ISensorReader
 from app.backend.Modules.PeltierModule import PeltierModule
 from app.backend.Technical.Logging import LoggingMixin
@@ -13,7 +14,8 @@ class ClimateChamber(IClimateChamber, LoggingMixin):
     def __init__(self, sensor_reader: ISensorReader,
                  config_manager: IConfigManager,
                  calculation_service: ICalculationService,
-                 fan_controller: IFanController):
+                 fan_controller: IFanController,
+                 relay_controller: IRelayController = None):
         LoggingMixin.__init__(self)
         self.sensor_reader = sensor_reader
         self.config_manager = config_manager
@@ -21,6 +23,7 @@ class ClimateChamber(IClimateChamber, LoggingMixin):
         self.peltierModules: List[PeltierModule]= []
         self.initialize_modules()
         self.fan_controller = fan_controller
+        self.relay_controller = relay_controller
         self.sensor_data = None
         self.stop_steering = False
         calculation_service.subscribe(self.apply_control)
@@ -41,6 +44,11 @@ class ClimateChamber(IClimateChamber, LoggingMixin):
 
         if output > 0:
             # Positive output = need to heat
+            # Deactivate fridge relay when heating
+            if self.relay_controller:
+                self.relay_controller.deactivate_fridge()
+                self.print(f"[ClimateChamber] [apply_control] Fridge relay deactivated for heating")
+                
             duty_cycle = min(abs(output), 100)
             for peltier in self.peltierModules:
                 actual_duty_cycle = peltier.heat(duty_cycle)
@@ -49,12 +57,23 @@ class ClimateChamber(IClimateChamber, LoggingMixin):
         elif output < 0:
             # Negative output = need to cool
             duty_cycle = min(abs(output), 100)
+            
+            # Activate fridge relay for cooling if available
+            if self.relay_controller:
+                self.relay_controller.activate_fridge()
+                self.print(f"[ClimateChamber] [apply_control] Fridge relay activated for cooling")
+            
             for peltier in self.peltierModules:
                 actual_duty_cycle = peltier.cool(duty_cycle)
                 self.print(f"[ClimateChamber] [apply_control] Cooling with duty cycle: {actual_duty_cycle}%")
 
         else:
             # Zero output = stop
+            # Deactivate fridge relay when not cooling
+            if self.relay_controller:
+                self.relay_controller.deactivate_fridge()
+                self.print(f"[ClimateChamber] [apply_control] Fridge relay deactivated")
+                
             for peltier in self.peltierModules:
                 peltier.stop()
             self.print("[ClimateChamber] [apply_control] PID output is 0. Stopping all modules.")
@@ -65,6 +84,12 @@ class ClimateChamber(IClimateChamber, LoggingMixin):
     def stop(self):
         """Stop motor: AIN1=LOW, AIN2=LOW, PWMA=0"""
         self.fan_controller.deactivate()
+        
+        # Deactivate fridge relay when stopping
+        if self.relay_controller:
+            self.relay_controller.deactivate_fridge()
+            self.print(f"[ClimateChamber] [stop] Fridge relay deactivated")
+            
         for peltier in self.peltierModules:
             self.print(f"[ClimateChamber] [stop] Stopping peltier module")
             peltier.stop()

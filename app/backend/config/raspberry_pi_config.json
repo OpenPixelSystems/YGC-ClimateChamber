@@ -97,5 +97,15 @@
         },
         "unit": "degrees",
         "_comment": "Fans located outside of climate chamber"
+    },
+    "Fridge_relay": {
+        "name": "Fridge_relay",
+        "type": "relayModule",
+        "editable": {
+            "name": "fridge",
+            "gpio_pin": 16
+        },
+        "unit": "state",
+        "_comment": "Relay controlling fridge for cooling functionality"
     }
 }
