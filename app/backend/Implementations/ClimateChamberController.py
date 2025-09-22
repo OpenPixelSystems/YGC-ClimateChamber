@@ -35,6 +35,7 @@ class ClimateChamberController(IClimateChamberController, LoggingMixin):
         self.current_power = 0
         self.latest_sensor_data = {}
         self.latest_control_data = {}
+        self._schedule_cycle_stop = False  # Flag to schedule cycle stop
 
         # Subscribe to sensor data for background steering
         self.sensor_reader.subscribe(self.on_sensor_data)
@@ -64,13 +65,11 @@ class ClimateChamberController(IClimateChamberController, LoggingMixin):
                 current_time_offset = round((datetime.now() - self.desired_graph.start_time).total_seconds())
 
                 if self.guarding_service.get_guarding_state():
-                    self.print("[ClimateChamberController] [on_sensor_data] Pausing steering, max or min sensor temperature exceeded.")
                     self.calculation_service.pause(current_temp, target_temp)
                     output = 0
                     control_status = "GUARDED"
                 else:
                     output = self.calculation_service.calculate_pid_control(current_temp, target_temp, current_time_offset)
-                    self.print("[ClimateChamberController] [on_sensor_data] PID steering active")
                     control_status = "ACTIVE"
 
                 self.current_power = output
@@ -82,7 +81,7 @@ class ClimateChamberController(IClimateChamberController, LoggingMixin):
                     'average_inside_temp': current_temp  # Add average inside temperature for visualization
                 }
             elif not available_sensor_values:
-                self.print(f"[ClimateChamberController] [on_sensor_data] No steering possible due to absent viable sensor data. Available sensors: {list(data.keys())}")
+                pass  # No viable sensor data available
             else:
                 # Manual mode handling
                 current_temp = sum(available_sensor_values) / len(available_sensor_values) if available_sensor_values else None
@@ -103,6 +102,11 @@ class ClimateChamberController(IClimateChamberController, LoggingMixin):
         except Exception as e:
             self.print_error(f"[ClimateChamberController] [on_sensor_data] Error in background steering: {str(e)}")
 
+        # Check if cycle stop was scheduled (e.g., flow execution completed)
+        if self._schedule_cycle_stop:
+            self._schedule_cycle_stop = False
+            self._handle_cycle_stop()
+
         self.get_inside_sensors()
 
     def get_inside_sensors(self):
@@ -114,7 +118,7 @@ class ClimateChamberController(IClimateChamberController, LoggingMixin):
 
     def set_desired_graph(self, graph):
         """Set the desired temperature profile."""
-        self.print("[ClimateChamberController] [set_desired_graph] Desired flow graph set for climate chamber control")
+        # Set desired temperature profile for climate chamber control
         self.desired_graph = graph
         # Pass the schedule to the calculation service for predictive control
         self.calculation_service.set_setpoint_schedule(graph)
@@ -131,17 +135,15 @@ class ClimateChamberController(IClimateChamberController, LoggingMixin):
         self.climate_chamber.start()
         self.sensor_reader.start_background_reading()  # Start background sensor reading
         self.calculation_service.last_time = datetime.now()  # Initialize timestamp
-        self.print("[ClimateChamberController] [start_sensor_stream] ClimateChamberController: Sensor stream started.")
+        self.print("[ClimateChamberController] Sensor stream started")
 
     def manual_control(self, power):
         """Manually steer peltier power"""
         if self.guarding_service.get_guarding_state():
-            self.print()
             self.current_power = 0
-            self.print(f"[ClimateChamberController] [manual_control] Control sensor value exceeded reset peltier power: {self.current_power}")
+            self.print(f"[ClimateChamberController] Manual control blocked by guarding, power reset to 0")
         else:
             self.current_power = power
-            self.print(f"[ClimateChamberController] [manual_control] Manually steer peltier power {power}")
 
     def stop_sensor_stream(self):
         """Stop the sensor data stream."""
@@ -151,7 +153,7 @@ class ClimateChamberController(IClimateChamberController, LoggingMixin):
         self.climate_chamber.stop()
         self.sensor_reader.stop_background_reading()  # Stop background sensor reading
         self.disable_peltier_driver()
-        self.print("[ClimateChamberController] [stop_sensor_stream] Sensor stream stopped.")
+        self.print("[ClimateChamberController] Sensor stream stopped")
 
     def sensor_data_provider(self):
         """Generator function for Server-Sent Events (SSE) - streams pre-calculated data."""
@@ -168,7 +170,7 @@ class ClimateChamberController(IClimateChamberController, LoggingMixin):
                 # Add guarding information to the data stream
                 data['guarding_info'] = self.guarding_service.get_guarding_info()
                 
-                self.print_debug(f"[ClimateChamberController] [sensor_data_provider] Streaming data to webpage {data}")
+                # Stream data to webpage via SSE
                 yield f"data: {json.dumps(data)}\n\n"
 
             except Exception as e:
@@ -179,17 +181,19 @@ class ClimateChamberController(IClimateChamberController, LoggingMixin):
         yield "data: {\"status\": \"stopped\"}\n\n"
 
     def enable_peltier_driver(self):
-        self.print(f"[ClimateChamberController] [enable_peltier_driver] Enabled Peltier driver. ")
+        # Enable Peltier driver
         self.climate_chamber.enable_peltier_modules()
 
     def disable_peltier_driver(self):
-        self.print(f"[ClimateChamberController] [disable_peltier_driver] Disabled Peltier driver. ")
+        # Disable Peltier driver
         self.climate_chamber.disable_peltier_modules()
 
     def set_flow_executor(self, flow_executor):
         """Set the flow executor for flow-based control"""
         self.flow_executor = flow_executor
-        self.print(f"[ClimateChamberController] Flow executor set: {flow_executor.flow_id if flow_executor else None}")
+        # Reset cycle stop flag when setting new flow executor
+        self._schedule_cycle_stop = False
+        # Flow executor configured for flow-based control
 
     def handle_flow_execution(self, available_sensor_values):
         """Handle sensor data during flow execution"""
@@ -206,18 +210,16 @@ class ClimateChamberController(IClimateChamberController, LoggingMixin):
         target_temp = self.flow_executor.get_target_temperature()
         control_action = self.flow_executor.get_control_action()
 
-        self.print(f"[FlowExecution] Step: {control_action}, Target: {target_temp}, Current: {current_temp:.1f}°C")
+        # Flow execution: process current step
 
         # Check if we should advance to next step
         if self.flow_executor.should_advance_step(current_temp, elapsed_time):
             if self.flow_executor.advance_to_next_step():
-                self.print(f"[FlowExecution] Advanced to step {self.flow_executor.current_step_index + 1}")
                 # Update target for new step
                 target_temp = self.flow_executor.get_target_temperature()
                 control_action = self.flow_executor.get_control_action()
             else:
                 # Flow completed
-                self.print(f"[FlowExecution] Flow execution completed")
                 self.flow_executor.stop_execution()
                 return
 
@@ -226,18 +228,18 @@ class ClimateChamberController(IClimateChamberController, LoggingMixin):
             # Start node - just read temperature, no control
             output = 0
             control_status = "INITIALIZING"
-            self.print(f"[FlowExecution] Initializing - Current temperature: {current_temp:.1f}°C")
 
         elif control_action == 'complete':
-            # End node or execution finished
+            # End node or execution finished - stop the cycle
             output = 0
             control_status = "COMPLETE"
-            self.print(f"[FlowExecution] Flow execution complete")
+            self.print("[FlowExecution] End node reached - stopping cycle")
+            # Schedule cycle stop to avoid threading issues
+            self._schedule_cycle_stop = True
 
         elif target_temp is not None:
             # Temperature control step - use calculation service or fallback PID
             if self.guarding_service.get_guarding_state():
-                self.print("[FlowExecution] Pausing steering, guarding active")
                 self.calculation_service.pause(current_temp, target_temp)
                 output = 0
                 control_status = "GUARDED"
@@ -246,7 +248,6 @@ class ClimateChamberController(IClimateChamberController, LoggingMixin):
                     # Try to use calculation service
                     output = self.calculation_service.calculate_pid_control(current_temp, target_temp, elapsed_time)
                     control_status = "FLOW_ACTIVE"
-                    self.print(f"[FlowExecution] PID control: {output:.1f}% (Target: {target_temp}°C)")
                 except Exception as e:
                     # Fallback to simple PID if calculation service fails
                     self.print(f"[FlowExecution] Calculation service failed, using fallback PID: {e}")
@@ -302,6 +303,32 @@ class ClimateChamberController(IClimateChamberController, LoggingMixin):
 
         self._pid_previous_error = error
 
-        self.print(f"[FlowExecution] Simple PID: P={kp*error:.1f}, I={ki*self._pid_integral:.1f}, D={kd*derivative:.1f}, Output={output:.1f}")
+        # Simple PID fallback calculation complete
 
         return output
+
+    def _handle_cycle_stop(self):
+        """Handle automatic cycle stop when flow execution completes"""
+        try:
+            self.print("[ClimateChamberController] Automatically stopping cycle - flow execution completed")
+
+            # Import app_state here to avoid circular imports
+            from app.backend.app_state import get_app_state
+            app_state = get_app_state()
+
+            # Stop flow execution
+            if self.flow_executor:
+                self.flow_executor.stop_execution()
+
+            # Clear flow executor from controller
+            self.set_flow_executor(None)
+
+            # Stop database logging if active
+            if hasattr(app_state, 'database') and app_state.database.logging_active:
+                app_state.database.stop_logging_cycle()
+
+            # Stop sensor stream
+            self.stop_sensor_stream()
+
+        except Exception as e:
+            self.print_error(f"[ClimateChamberController] Error during automatic cycle stop: {str(e)}")

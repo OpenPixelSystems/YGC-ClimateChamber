@@ -66,7 +66,7 @@ class CalculationService(ICalculationService, Subscriptable, LoggingMixin):
 
     def calculate_pid_control(self, current_temp, target_temp, current_time_offset=None):
         """HVAC-optimized PID control with deadband, anti-windup, and equipment protection."""
-        self.print("[CalculationService] [calculate_pid_control] Using HVAC-optimized PID control")
+        # Using HVAC-optimized PID control
         return self._calculate_hvac_pid_control(current_temp, target_temp, current_time_offset)
 
     def set_setpoint_schedule(self, schedule):
@@ -76,7 +76,7 @@ class CalculationService(ICalculationService, Subscriptable, LoggingMixin):
     def pause(self, current_temp, target_temp):
         """Pause the HVAC PID controller for safety reasons."""
         self.was_paused = True
-        self.print("[HVAC_PID] Controller paused - safety threshold exceeded")
+        # Controller paused - safety threshold exceeded
         
         # Update timestamp to prevent large dt on resume
         self.last_time = datetime.now()
@@ -95,7 +95,7 @@ class CalculationService(ICalculationService, Subscriptable, LoggingMixin):
         
     def stop(self):
         """Stop the HVAC PID controller completely."""
-        self.print("[HVAC_PID] Controller stopped")
+        # Controller stopped
         self.current_output = 0
         self.integral = 0
         self.last_time = None
@@ -132,7 +132,7 @@ class CalculationService(ICalculationService, Subscriptable, LoggingMixin):
         
         # Apply deadband to prevent hunting
         if abs(error) <= self.deadband:
-            self.print(f"[HVAC_PID] Within deadband: error={error:.2f}°C, maintaining output={self.current_output:.1f}%")
+            # Within deadband - maintain current output
             self._log_pid_data(filtered_temp, filtered_setpoint, error, self.current_output, "DEADBAND")
             self.notify(self._last_log_data)
             return self.current_output
@@ -144,7 +144,7 @@ class CalculationService(ICalculationService, Subscriptable, LoggingMixin):
             self.last_pv = filtered_temp
             self.integral = 0
             self.was_paused = False
-            self.print("[HVAC_PID] First run initialization")
+            # First run initialization
             return 0.0
         
         # Calculate time delta
@@ -159,7 +159,7 @@ class CalculationService(ICalculationService, Subscriptable, LoggingMixin):
         
         # Validate time delta
         if dt > 10.0:
-            self.print("[HVAC_PID] Large time gap detected, resetting integral")
+            # Large time gap detected, reset integral to prevent instability
             self.integral = 0
             dt = 1.0
         
@@ -232,7 +232,7 @@ class CalculationService(ICalculationService, Subscriptable, LoggingMixin):
     
     def _reset_controller_state(self, error, temp):
         """Reset controller state after pause for bumpless transfer."""
-        self.print("[HVAC_PID] Resetting controller state after pause")
+        # Reset controller state after pause for bumpless transfer
         self.integral = 0  # Clear integral to prevent windup
         self.last_error = error
         self.last_pv = temp
@@ -276,19 +276,19 @@ class CalculationService(ICalculationService, Subscriptable, LoggingMixin):
             # If heating was on and we want to turn off/cool
             if was_heating and (is_off or is_cooling):
                 if time_since_change < self.min_on_time:
-                    self.print(f"[HVAC_PID] Minimum heating time not met ({time_since_change:.1f}s < {self.min_on_time}s)")
+                    # Minimum heating time not met - maintain current output
                     return self.current_output
             
             # If cooling was on and we want to turn off/heat  
             elif was_cooling and (is_off or is_heating):
                 if time_since_change < self.min_on_time:
-                    self.print(f"[HVAC_PID] Minimum cooling time not met ({time_since_change:.1f}s < {self.min_on_time}s)")
+                    # Minimum cooling time not met - maintain current output
                     return self.current_output
             
             # If off and we want to turn on heating/cooling
             elif was_off and (is_heating or is_cooling):
                 if time_since_change < self.min_off_time:
-                    self.print(f"[HVAC_PID] Minimum off time not met ({time_since_change:.1f}s < {self.min_off_time}s)")
+                    # Minimum off time not met - maintain current output
                     return self.current_output
         
         # Update last significant change time if we're making a mode change
@@ -360,4 +360,6 @@ class CalculationService(ICalculationService, Subscriptable, LoggingMixin):
         # The calling method should handle notification
         self._last_log_data = log_data
 
-        self.print(f"[HVAC_PID] {status} | Mode: {mode} | Temp: {temp:.2f}°C | Target: {setpoint:.2f}°C | Error: {error:.2f}°C | Output: {output:.1f}%")
+        # Log PID status for debugging
+        if status == "ACTIVE":
+            self.print(f"[HVAC_PID] {mode} | Temp: {temp:.1f}°C → Target: {setpoint:.1f}°C | Output: {output:.1f}%")

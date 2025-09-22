@@ -98,7 +98,7 @@ class DatabaseManager(LoggingMixin):
             bool: True if cycle started successfully, False otherwise
         """
         if self.logging_active:
-            self.print("Logging cycle already in progress.")
+            return False  # Logging cycle already in progress
             return False
 
         try:
@@ -111,7 +111,7 @@ class DatabaseManager(LoggingMixin):
                 self.current_cycle_id = cursor.lastrowid
                 conn.commit()
                 self.logging_active = True
-                self.print(f"Started logging cycle: {cycle_name} from {origin_page}")
+                self.print(f"[DatabaseManager] Started cycle: {cycle_name}")
                 return True
         except Exception as e:
             self.print_error(f"Error starting logging cycle: {str(e)}")
@@ -124,9 +124,9 @@ class DatabaseManager(LoggingMixin):
             sensor_readings: Dictionary mapping sensor names to {sensor_value, sensor_source}
         """
         if not self.logging_active or not self.current_cycle_id:
-            self.print("No active logging cycle.")
-            return
-        print(f"[DatabaseManager][on_sensor_data] Received sensor data {sensor_readings}")
+            return  # No active logging cycle
+
+        # Process sensor data for database logging
         try:
             with self.get_connection() as conn:
                 cursor = conn.cursor()
@@ -162,7 +162,7 @@ class DatabaseManager(LoggingMixin):
                         "INSERT INTO sensor_readings (sensor_type, cycle_id, sensor_id, timestamp, value) VALUES (?, ?, ?, ?, ?)",
                         (sensor_type, self.current_cycle_id, sensor_name, timestamp, sensor_value)
                     )
-                    self.print(f"[DatabaseManager] [on_sensor_data] Logged: Sensor {sensor_name}, {sensor_type}: {sensor_value}{unit} (source: {sensor_source})")
+                    # Sensor data logged to database
 
                 conn.commit()
         except Exception as e:
@@ -175,8 +175,7 @@ class DatabaseManager(LoggingMixin):
             calculation_readings: Dictionary with keys: pid_output, current_temp, target_temp, error
         """
         if not self.logging_active or not self.current_cycle_id:
-            self.print("No active logging cycle.")
-            return
+            return  # No active logging cycle
 
         try:
             with self.get_connection() as conn:
@@ -200,8 +199,7 @@ class DatabaseManager(LoggingMixin):
                     (self.current_cycle_id, "PID_Control", timestamp, pid_output, current_temp, target_temp, error, control_status)
                 )
 
-                self.print(
-                    f"[DatabaseManager] [on_calculation_data]Logged calculation data: PID Output: {pid_output}, Current Temp: {current_temp}°C, Target Temp: {target_temp}°C, Error: {error}")
+                # Calculation data logged to database
                 conn.commit()
 
         except Exception as e:
@@ -214,7 +212,7 @@ class DatabaseManager(LoggingMixin):
             bool: True if cycle stopped successfully, False otherwise
         """
         if not self.logging_active or not self.current_cycle_id:
-            self.print("No active logging cycle to stop.")
+            return False  # No active logging cycle to stop
             return False
 
         try:
@@ -227,7 +225,7 @@ class DatabaseManager(LoggingMixin):
                 conn.commit()
                 self.logging_active = False
                 self.current_cycle_id = None
-                self.print("Logging cycle stopped.")
+                self.print("[DatabaseManager] Logging cycle stopped")
                 return True
         except Exception as e:
             self.print_error(f"Error stopping logging cycle: {str(e)}")
