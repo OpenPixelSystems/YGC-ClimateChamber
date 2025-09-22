@@ -18,6 +18,60 @@
       },
       "unit": "degrees"
     },
+    "NTC_peltier_2_temperature": {
+      "name": "NTC_peltier_2_temperature",
+      "type": "NTC",
+      "editable": {
+            "SDA": 2,
+            "SCL": 3,
+            "sensor_location": "Inside",
+            "read_pin": 1,
+            "max_value": 120,
+            "min_value": -10,
+            "safety_critical": 0,
+            "i2c_address": "0x4A",
+            "beta_coefficient": 3600.0,
+            "reference_resistance": 10000.0,
+            "reference_voltage": 3.3
+      },
+      "unit": "degrees"
+    },
+    "NTC_peltier_3_temperature": {
+      "name": "NTC_peltier_3_temperature",
+      "type": "NTC",
+      "editable": {
+            "SDA": 2,
+            "SCL": 3,
+            "sensor_location": "Inside",
+            "read_pin": 2,
+            "max_value": 120,
+            "min_value": -10,
+            "safety_critical": 0,
+            "i2c_address": "0x4A",
+            "beta_coefficient": 3600.0,
+            "reference_resistance": 10000.0,
+            "reference_voltage": 3.3
+      },
+      "unit": "degrees"
+    },
+    "NTC_peltier_4_temperature": {
+      "name": "NTC_peltier_4_temperature",
+      "type": "NTC",
+      "editable": {
+            "SDA": 2,
+            "SCL": 3,
+            "sensor_location": "Inside",
+            "read_pin": 3,
+            "max_value": 120,
+            "min_value": -10,
+            "safety_critical": 0,
+            "i2c_address": "0x4A",
+            "beta_coefficient": 3600.0,
+            "reference_resistance": 10000.0,
+            "reference_voltage": 3.3
+      },
+      "unit": "degrees"
+    },
     "Peltier_240W": {
         "name": "Peltier_240W",
         "type": "peltier",
