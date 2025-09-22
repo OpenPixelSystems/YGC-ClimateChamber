@@ -85,6 +85,39 @@ class SensorReader(ISensorReader, Subscriptable):
 
         return sum(temperature_readings) / len(temperature_readings)
 
+    """Return cached sensor values without notifications - for streaming only"""
+    def read_sensors_no_notify(self):
+        # Check if background reading is running
+        background_running = self._background_thread and self._background_thread.is_alive()
+
+        # Try to return cached data first (instant response) - only if background reading is active
+        if background_running:
+            with self._data_lock:
+                if self._cached_sensor_data and self._last_reading_time:
+                    age = (datetime.now() - self._last_reading_time).total_seconds()
+                    if age < 10.0:  # Use cache if less than 10 seconds old
+                        print(f"[SensorReader] Returning cached data for streaming (age: {age:.1f}s)")
+                        cached_data = self._cached_sensor_data.copy()
+                        # Add cache metadata to indicate this is cached data
+                        cache_status = 'cached_recent' if age < 3.0 else 'cached_old'
+                        cached_data['_cache_info'] = {
+                            'source': cache_status,
+                            'age_seconds': round(age, 1),
+                            'cached_at': self._last_reading_time.isoformat(),
+                            'is_recent': age < 3.0
+                        }
+                        # Apply peltier state correction to cached data
+                        cached_data = self._apply_peltier_state_correction(cached_data)
+                        # NO NOTIFICATION - this prevents duplicate calculations
+                        return cached_data
+                    else:
+                        print(f"[SensorReader] Cached data too old ({age:.1f}s) for streaming, returning empty")
+                        return {}
+
+        # If no background reading or no cache, return empty dict for streaming
+        print("[SensorReader] No cached data available for streaming")
+        return {}
+
     """Return cached sensor values (instant response) or direct read if no cache available"""
     def read_sensors(self):
         # Check if background reading is running

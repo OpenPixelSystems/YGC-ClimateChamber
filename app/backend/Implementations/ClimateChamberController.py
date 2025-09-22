@@ -78,7 +78,8 @@ class ClimateChamberController(IClimateChamberController, LoggingMixin):
                     'pid_output': output,
                     'target_temp': target_temp,
                     'control_error': target_temp - current_temp,
-                    'control_status': control_status
+                    'control_status': control_status,
+                    'average_inside_temp': current_temp  # Add average inside temperature for visualization
                 }
             elif not available_sensor_values:
                 self.print(f"[ClimateChamberController] [on_sensor_data] No steering possible due to absent viable sensor data. Available sensors: {list(data.keys())}")
@@ -95,7 +96,8 @@ class ClimateChamberController(IClimateChamberController, LoggingMixin):
                 self.latest_control_data = {
                     'pid_output': self.current_power,
                     'Peltier power': self.current_power,
-                    'control_status': manual_status
+                    'control_status': manual_status,
+                    'average_inside_temp': current_temp  # Add average inside temperature for visualization
                 }
 
         except Exception as e:
@@ -104,9 +106,11 @@ class ClimateChamberController(IClimateChamberController, LoggingMixin):
         self.get_inside_sensors()
 
     def get_inside_sensors(self):
-        for sensor in self.config_manager.mcu_config.sensors:
-            if sensor.type == 'NTC' and sensor.sensor_location == "Inside":
-                self.viable_sensors.append(sensor.name)
+        # Only populate if empty to avoid duplicates
+        if not self.viable_sensors:
+            for sensor in self.config_manager.mcu_config.sensors:
+                if sensor.type == 'NTC' and sensor.sensor_location == "Inside":
+                    self.viable_sensors.append(sensor.name)
 
     def set_desired_graph(self, graph):
         """Set the desired temperature profile."""
@@ -153,70 +157,13 @@ class ClimateChamberController(IClimateChamberController, LoggingMixin):
         """Generator function for Server-Sent Events (SSE) - streams pre-calculated data."""
         while self.running:
             try:
-                # Get the latest sensor data (already processed in background)
-                data = self.latest_sensor_data.copy() if self.latest_sensor_data else {}
+                # Get fresh sensor data for streaming (without triggering notifications)
+                data = self.sensor_reader.read_sensors_no_notify()
 
-                # Add latest control data if available
+                # Add latest control data if available (calculated in on_sensor_data)
                 if self.latest_control_data:
                     data['calculation_data'] = self.latest_control_data.copy()
-                
-                data = self.sensor_reader.read_sensors()
 
-                # Collect all available viable sensor values
-                available_sensor_values = []
-                for sensor_name in self.viable_sensors:
-                    if sensor_name in data and data[sensor_name]['sensor_value'] is not None:
-                        available_sensor_values.append(data[sensor_name]['sensor_value'])
-
-                # If we have a desired temperature profile and any viable sensors, apply control
-                if self.desired_graph and available_sensor_values:
-                    current_temp = sum(available_sensor_values) / len(available_sensor_values)
-                    target_temp = self.desired_graph.get_temperature_at_time()
-                    # Get current time offset for predictive control
-                    current_time_offset = round((datetime.now() - self.desired_graph.start_time).total_seconds())
-                    self.print("Target temperature is: ", target_temp)
-                    if self.guarding_service.get_guarding_state():
-                        print("[ClimateChamberController] [sensor_data_provider] Pausing steering, max or min sensor temperature exceeded.")
-                        self.calculation_service.pause(current_temp, target_temp)
-                        output = 0  # Force output to 0 when guarding is active
-                        control_status = "GUARDED"
-                    else:
-                        output = self.calculation_service.calculate_pid_control(current_temp, target_temp, current_time_offset)
-                        self.print("[ClimateChamberController] [sensor_data_provider] PID steering active")
-                        control_status = "ACTIVE"
-
-                    self.current_power = output
-                    # Add control info to the data - ensure it reflects actual output being used
-                    data['calculation_data'] = {
-                        'pid_output': output,  # This will be 0 when guarded
-                        'target_temp': target_temp,
-                        'control_error': target_temp - current_temp,
-                        'control_status': control_status
-                    }
-                elif not available_sensor_values:
-                    print(f"[ClimateChamberController] [sensor_data_provider] No steering possible due to absent viable sensor data. Available sensors: {list(data.keys())}")
-
-                else:
-                    print(f"[ClimateChamberController] [sensor_data_provider] steering manual control {self.current_power}")
-                    self.calculation_service.manual_pid_control(self.current_power)
-                    data['calculation_data'] = {'Peltier power':self.current_power}
-                    # In manual mode, still pass temperature data if available for logging
-                    current_temp = None
-                    if available_sensor_values:
-                        current_temp = sum(available_sensor_values) / len(available_sensor_values)
-
-                    # Check if manual power is being overridden by guarding
-                    if self.guarding_service.get_guarding_state():
-                        manual_status = "MANUAL_GUARDED"
-                    else:
-                        manual_status = "MANUAL"
-
-                    self.calculation_service.manual_pid_control(self.current_power, current_temp, None)
-                    data['calculation_data'] = {
-                        'pid_output': self.current_power,  # Will be 0 if guarded
-                        'Peltier power': self.current_power,  # Keep for backward compatibility
-                        'control_status': manual_status
-                    }
 
                 # Add guarding information to the data stream
                 data['guarding_info'] = self.guarding_service.get_guarding_info()
@@ -329,7 +276,8 @@ class ClimateChamberController(IClimateChamberController, LoggingMixin):
             'control_error': (target_temp - current_temp) if target_temp else None,
             'control_status': control_status,
             'flow_step': self.flow_executor.current_step_index,
-            'flow_action': control_action
+            'flow_action': control_action,
+            'average_inside_temp': current_temp  # Add average inside temperature for visualization
         }
 
     def _simple_pid_control(self, current_temp, target_temp):

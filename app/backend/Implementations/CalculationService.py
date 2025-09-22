@@ -100,16 +100,12 @@ class CalculationService(ICalculationService, Subscriptable, LoggingMixin):
         self.integral = 0
         self.last_time = None
         self.last_pv = None
-        
+
         # Clear filters
         self.temp_filter.clear()
         self.setpoint_filter.clear()
-        
-        self.notify({
-            "pid_output": 0,
-            "mode": "OFF",
-            "status": "STOPPED"
-        })
+
+        # Don't notify database when stopping - this is just cleanup, not control data
 
     def subscribe(self, callback):
         """Subscribe to PID output notifications."""
@@ -138,6 +134,7 @@ class CalculationService(ICalculationService, Subscriptable, LoggingMixin):
         if abs(error) <= self.deadband:
             self.print(f"[HVAC_PID] Within deadband: error={error:.2f}°C, maintaining output={self.current_output:.1f}%")
             self._log_pid_data(filtered_temp, filtered_setpoint, error, self.current_output, "DEADBAND")
+            self.notify(self._last_log_data)
             return self.current_output
         
         # Initialize on first run
@@ -223,7 +220,10 @@ class CalculationService(ICalculationService, Subscriptable, LoggingMixin):
             'raw_output': raw_output,
             'rate_limited': rate_limited_output
         })
-        
+
+        # Notify subscribers with the logged data
+        self.notify(self._last_log_data)
+
         return final_output
 
     # =============================================================================
@@ -342,7 +342,7 @@ class CalculationService(ICalculationService, Subscriptable, LoggingMixin):
     def _log_pid_data(self, temp, setpoint, error, output, status, details=None):
         """Enhanced logging for HVAC PID debugging."""
         mode = "HEAT" if output > 0 else "COOL" if output < 0 else "OFF"
-        
+
         log_data = {
             "pid_output": output,
             "current_temp": temp,
@@ -352,10 +352,12 @@ class CalculationService(ICalculationService, Subscriptable, LoggingMixin):
             "status": status,
             "deadband": self.deadband
         }
-        
+
         if details:
             log_data.update(details)
-        
-        self.notify(log_data)
-        
+
+        # Store the log data for notification, but don't notify here to avoid duplicates
+        # The calling method should handle notification
+        self._last_log_data = log_data
+
         self.print(f"[HVAC_PID] {status} | Mode: {mode} | Temp: {temp:.2f}°C | Target: {setpoint:.2f}°C | Error: {error:.2f}°C | Output: {output:.1f}%")

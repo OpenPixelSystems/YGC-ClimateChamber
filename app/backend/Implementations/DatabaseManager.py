@@ -189,7 +189,7 @@ class DatabaseManager(LoggingMixin):
                 target_temp = calculation_readings.get("target_temp")
                 error = calculation_readings.get("error")
                 control_status = calculation_readings.get("status", calculation_readings.get("control_status", "UNKNOWN"))
-                
+
                 # Convert None to 0.0 for database storage to avoid NULL issues
                 current_temp = current_temp if current_temp is not None else 0.0
                 target_temp = target_temp if target_temp is not None else 0.0
