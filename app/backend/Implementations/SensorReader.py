@@ -11,14 +11,16 @@ from app.backend.Sensors.DS18B20 import DS18B20
 from app.backend.Sensors.DS18B20Cluster import DS18B20Cluster
 from app.backend.Sensors.MPL3115A2 import MPL3115A2
 from app.backend.Services.Subscribe import Subscriptable
+from app.backend.Technical.Logging import LoggingMixin
 
 
-class SensorReader(ISensorReader, Subscriptable):
+class SensorReader(ISensorReader, Subscriptable, LoggingMixin):
     """Handles initialisation, reading and logging logic of all connected Sensors """
     #TODO add reload functionality for when config file gets edited
 
     def __init__(self, mcu_config: McuConfig):
-        super().__init__()
+        Subscriptable.__init__(self)
+        LoggingMixin.__init__(self)
         self.sensor_list = []
         self.inside_sensors_list = []
         
@@ -146,12 +148,15 @@ class SensorReader(ISensorReader, Subscriptable):
                         return cached_data
                     else:
                         # Cached data too old, reading sensors directly
-        
+                        pass
+
         # Fallback: direct read if background reading not active or no cached data
         if not background_running:
             # Background reading not active, read sensors directly
+            pass
         else:
             # No cached data available, read sensors directly
+            pass
             
         sensor_readings = self._read_sensors_directly()
         
@@ -174,7 +179,6 @@ class SensorReader(ISensorReader, Subscriptable):
         """Start the background sensor reading thread."""
         if self._background_thread and self._background_thread.is_alive():
             return  # Background reading already running
-            return
         
         self._stop_background = False
         self._background_thread = threading.Thread(target=self._background_read_loop, daemon=True)
