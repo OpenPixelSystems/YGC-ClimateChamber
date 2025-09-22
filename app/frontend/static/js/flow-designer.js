@@ -184,7 +184,7 @@ class FlowDesigner {
 
     getDefaultProperties(type) {
         const defaults = {
-            'start-node': { initialTemperature: 20, readCurrent: false },
+            'start-node': { readCurrent: true },
             'temperature-goal': { temperature: 20, tolerance: 0.5 },
             'temperature-hold': { duration: 30, tolerance: 0.5 }, // No temperature property
             'end-node': { cooldown: false }
@@ -584,8 +584,7 @@ class FlowDesigner {
         // Map properties to actual HTML input IDs
         const fieldMappings = {
             'start-node': {
-                'initialTemperature': 'startNodeInitialTemp',
-                'readCurrent': 'startNodeReadCurrent'
+                // No configurable properties for start node
             },
             'temperature-goal': {
                 'temperature': 'tempGoalValue',
@@ -692,8 +691,7 @@ class FlowDesigner {
         // Reverse map from input ID to property name
         const fieldMappings = {
             'start-node': {
-                'startNodeInitialTemp': 'initialTemperature',
-                'startNodeReadCurrent': 'readCurrent'
+                // No configurable properties for start node
             },
             'temperature-goal': {
                 'tempGoalValue': 'temperature',
@@ -845,46 +843,62 @@ class FlowDesigner {
                     z-index: 10000;
                 }
                 .flow-selection-modal .modal-content {
-                    background: white;
+                    background: var(--card-background);
+                    color: var(--text-color);
                     border-radius: 8px;
                     width: 90%;
                     max-width: 600px;
                     max-height: 80%;
                     overflow-y: auto;
-                    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+                    box-shadow: 0 4px 6px var(--shadow-color);
+                    border: 1px solid var(--border-color);
                 }
                 .flow-selection-modal .modal-header {
                     padding: 20px;
-                    border-bottom: 1px solid #eee;
+                    border-bottom: 1px solid var(--border-color);
                     display: flex;
                     justify-content: space-between;
                     align-items: center;
+                }
+                .flow-selection-modal .modal-header h3 {
+                    color: var(--text-color);
+                    margin: 0;
                 }
                 .flow-selection-modal .modal-close {
                     background: none;
                     border: none;
                     font-size: 24px;
                     cursor: pointer;
+                    color: var(--text-color);
+                }
+                .flow-selection-modal .modal-close:hover {
+                    color: var(--danger-color);
                 }
                 .flow-selection-modal .modal-body {
                     padding: 20px;
                 }
                 .flow-selection-modal .flow-item {
-                    border: 1px solid #ddd;
+                    border: 1px solid var(--border-color);
                     border-radius: 5px;
                     margin-bottom: 10px;
                     padding: 15px;
                     display: flex;
                     justify-content: space-between;
                     align-items: center;
+                    background: var(--card-background);
+                }
+                .flow-selection-modal .flow-item:hover {
+                    background: var(--background-color);
                 }
                 .flow-selection-modal .flow-name {
                     font-weight: bold;
                     margin-bottom: 5px;
+                    color: var(--text-color);
                 }
                 .flow-selection-modal .flow-details {
                     font-size: 12px;
-                    color: #666;
+                    color: var(--text-color);
+                    opacity: 0.7;
                 }
                 .flow-selection-modal .flow-details span {
                     margin-right: 15px;
@@ -892,29 +906,35 @@ class FlowDesigner {
                 .flow-selection-modal .flow-actions button {
                     margin-left: 10px;
                     padding: 5px 10px;
-                    border: 1px solid #007bff;
-                    background: #007bff;
+                    border: 1px solid var(--primary-color);
+                    background: var(--primary-color);
                     color: white;
                     border-radius: 3px;
                     cursor: pointer;
                     font-size: 12px;
                 }
+                .flow-selection-modal .flow-actions button:hover {
+                    opacity: 0.9;
+                }
                 .flow-selection-modal .btn-delete {
-                    background: #dc3545 !important;
-                    border-color: #dc3545 !important;
+                    background: var(--danger-color) !important;
+                    border-color: var(--danger-color) !important;
                 }
                 .flow-selection-modal .modal-footer {
                     padding: 20px;
-                    border-top: 1px solid #eee;
+                    border-top: 1px solid var(--border-color);
                     text-align: right;
                 }
                 .flow-selection-modal .modal-footer button {
                     padding: 8px 16px;
-                    border: 1px solid #6c757d;
-                    background: #6c757d;
-                    color: white;
+                    border: 1px solid var(--border-color);
+                    background: var(--card-background);
+                    color: var(--text-color);
                     border-radius: 4px;
                     cursor: pointer;
+                }
+                .flow-selection-modal .modal-footer button:hover {
+                    background: var(--background-color);
                 }
             `;
             document.head.appendChild(styles);
@@ -1099,6 +1119,13 @@ class FlowDesigner {
 
             if (response.ok) {
                 this.showMessage('Flow exported to server successfully!', 'success');
+
+                // Redirect to flow execution page if provided
+                if (result.redirectTo) {
+                    setTimeout(() => {
+                        window.location.href = result.redirectTo;
+                    }, 1500); // Give time to show the success message
+                }
             } else {
                 this.showMessage(`Export failed: ${result.error}`, 'error');
             }
@@ -1453,9 +1480,10 @@ class FlowDesigner {
                 return {
                     ...baseStep,
                     action: 'initialize',
-                    targetTemperature: node.properties.readCurrent ? null : node.properties.initialTemperature,
-                    readCurrentTemperature: node.properties.readCurrent,
-                    duration: 0
+                    targetTemperature: null, // Start node never sets a target temperature
+                    readCurrentTemperature: true, // Always read current temperature as starting point
+                    duration: 0,
+                    description: 'Initialize flow and read current chamber temperature'
                 };
 
             case 'temperature-goal':

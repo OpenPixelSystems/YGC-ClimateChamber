@@ -31,6 +31,7 @@ class ClimateChamberController(IClimateChamberController, LoggingMixin):
 
         self.running = False
         self.desired_graph : Graph = None
+        self.flow_executor = None  # Will be set when flow execution starts
         self.current_power = 0
         self.latest_sensor_data = {}
         self.latest_control_data = {}
@@ -53,8 +54,11 @@ class ClimateChamberController(IClimateChamberController, LoggingMixin):
                 if sensor_name in data and data[sensor_name]['sensor_value'] is not None:
                     available_sensor_values.append(data[sensor_name]['sensor_value'])
 
+            # Check for flow execution mode first
+            if self.flow_executor and self.flow_executor.is_executing and available_sensor_values:
+                self.handle_flow_execution(available_sensor_values)
             # Apply steering logic if we have a desired temperature profile and viable sensors
-            if self.desired_graph and available_sensor_values:
+            elif self.desired_graph and available_sensor_values:
                 current_temp = sum(available_sensor_values) / len(available_sensor_values)
                 target_temp = self.desired_graph.get_temperature_at_time()
                 current_time_offset = round((datetime.now() - self.desired_graph.start_time).total_seconds())
@@ -234,3 +238,122 @@ class ClimateChamberController(IClimateChamberController, LoggingMixin):
     def disable_peltier_driver(self):
         self.print(f"[ClimateChamberController] [disable_peltier_driver] Disabled Peltier driver. ")
         self.climate_chamber.disable_peltier_modules()
+
+    def set_flow_executor(self, flow_executor):
+        """Set the flow executor for flow-based control"""
+        self.flow_executor = flow_executor
+        self.print(f"[ClimateChamberController] Flow executor set: {flow_executor.flow_id if flow_executor else None}")
+
+    def handle_flow_execution(self, available_sensor_values):
+        """Handle sensor data during flow execution"""
+        if not self.flow_executor or not self.flow_executor.is_executing:
+            return
+
+        # Calculate average temperature from inside sensors
+        current_temp = sum(available_sensor_values) / len(available_sensor_values)
+
+        # Calculate elapsed time since flow start
+        elapsed_time = (datetime.now() - self.flow_executor.start_time).total_seconds()
+
+        # Get target temperature for current step
+        target_temp = self.flow_executor.get_target_temperature()
+        control_action = self.flow_executor.get_control_action()
+
+        self.print(f"[FlowExecution] Step: {control_action}, Target: {target_temp}, Current: {current_temp:.1f}°C")
+
+        # Check if we should advance to next step
+        if self.flow_executor.should_advance_step(current_temp, elapsed_time):
+            if self.flow_executor.advance_to_next_step():
+                self.print(f"[FlowExecution] Advanced to step {self.flow_executor.current_step_index + 1}")
+                # Update target for new step
+                target_temp = self.flow_executor.get_target_temperature()
+                control_action = self.flow_executor.get_control_action()
+            else:
+                # Flow completed
+                self.print(f"[FlowExecution] Flow execution completed")
+                self.flow_executor.stop_execution()
+                return
+
+        # Apply control based on current step
+        if control_action == 'initialize':
+            # Start node - just read temperature, no control
+            output = 0
+            control_status = "INITIALIZING"
+            self.print(f"[FlowExecution] Initializing - Current temperature: {current_temp:.1f}°C")
+
+        elif control_action == 'complete':
+            # End node or execution finished
+            output = 0
+            control_status = "COMPLETE"
+            self.print(f"[FlowExecution] Flow execution complete")
+
+        elif target_temp is not None:
+            # Temperature control step - use calculation service or fallback PID
+            if self.guarding_service.get_guarding_state():
+                self.print("[FlowExecution] Pausing steering, guarding active")
+                self.calculation_service.pause(current_temp, target_temp)
+                output = 0
+                control_status = "GUARDED"
+            else:
+                try:
+                    # Try to use calculation service
+                    output = self.calculation_service.calculate_pid_control(current_temp, target_temp, elapsed_time)
+                    control_status = "FLOW_ACTIVE"
+                    self.print(f"[FlowExecution] PID control: {output:.1f}% (Target: {target_temp}°C)")
+                except Exception as e:
+                    # Fallback to simple PID if calculation service fails
+                    self.print(f"[FlowExecution] Calculation service failed, using fallback PID: {e}")
+                    output = self._simple_pid_control(current_temp, target_temp)
+                    control_status = "FLOW_FALLBACK"
+
+        else:
+            # No target temperature (shouldn't happen in normal flow)
+            output = 0
+            control_status = "NO_TARGET"
+
+        # Apply the control output
+        self.current_power = output
+        self.climate_chamber.apply_control({
+            'pid_output': output,
+            'current_temp': current_temp,
+            'target_temp': target_temp,
+            'error': (target_temp - current_temp) if target_temp else None,
+            'mode': 'FLOW_EXECUTION',
+            'status': control_status
+        })
+
+        # Store latest control data for streaming
+        self.latest_control_data = {
+            'pid_output': output,
+            'target_temp': target_temp,
+            'control_error': (target_temp - current_temp) if target_temp else None,
+            'control_status': control_status,
+            'flow_step': self.flow_executor.current_step_index,
+            'flow_action': control_action
+        }
+
+    def _simple_pid_control(self, current_temp, target_temp):
+        """Simple PID controller fallback for flow execution"""
+        if not hasattr(self, '_pid_integral'):
+            self._pid_integral = 0
+            self._pid_previous_error = 0
+
+        # Simple PID constants (can be made configurable)
+        kp = 10.0  # Proportional gain
+        ki = 0.1   # Integral gain
+        kd = 1.0   # Derivative gain
+
+        error = target_temp - current_temp
+        self._pid_integral += error
+        derivative = error - self._pid_previous_error
+
+        output = kp * error + ki * self._pid_integral + kd * derivative
+
+        # Clamp output to reasonable range
+        output = max(-100, min(100, output))
+
+        self._pid_previous_error = error
+
+        self.print(f"[FlowExecution] Simple PID: P={kp*error:.1f}, I={ki*self._pid_integral:.1f}, D={kd*derivative:.1f}, Output={output:.1f}")
+
+        return output

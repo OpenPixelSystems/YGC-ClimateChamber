@@ -5,6 +5,7 @@ import time
 from pathlib import Path
 
 from app.backend.app_state import get_app_state
+from app.backend.FlowExecution.FlowExecutor import FlowExecutor
 
 flow_bp = Blueprint('flow', __name__)
 
@@ -17,6 +18,32 @@ def flow_designer():
         flash('Cannot edit flow while a cycle is running. Stop the current cycle first.', 'error')
         return redirect(url_for('home.index'))
     return render_template('flow_designer.html')
+
+@flow_bp.route('/flow-execution')
+def flow_execution():
+    """Display the flow execution page"""
+    app_state = get_app_state()
+
+    # Check if there's a flow ready for execution
+    if not hasattr(app_state, 'flow_executor') or not app_state.flow_executor:
+        flash('No flow loaded for execution. Please design and export a flow first.', 'error')
+        return redirect(url_for('flow.flow_designer'))
+
+    # Check if a cycle is already active and it's not a flow execution cycle
+    if app_state.database.logging_active:
+        # Get the current cycle's origin page to check if it's a flow execution cycle
+        with app_state.database.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT origin_page FROM cycles WHERE cycle_id = ?", (app_state.database.current_cycle_id,))
+            cycle_row = cursor.fetchone()
+            origin_page = cycle_row[0] if cycle_row else None
+
+        # Only redirect if it's not a flow execution cycle
+        if origin_page != 'flow-execution':
+            flash('Cannot start flow execution while a cycle is running. Stop the current cycle first.', 'error')
+            return redirect(url_for('home.index'))
+
+    return render_template('flow_execution.html')
 
 @flow_bp.route('/store-flow-data', methods=['POST'])
 def store_flow_data():
@@ -37,14 +64,15 @@ def store_flow_data():
         if 'executionSteps' not in execution_flow or 'metadata' not in execution_flow:
             return jsonify({"error": "Invalid execution flow structure"}), 400
 
-        # Store flow data for execution
+        # Create FlowExecutor and store in app_state
         app_state = get_app_state()
-        app_state.execution_flow = execution_flow
-        app_state.full_flow_data = full_flow
+        flow_executor = FlowExecutor(execution_flow, full_flow)
+        app_state.flow_executor = flow_executor
 
         return jsonify({
             "success": True,
             "message": "Flow exported to server successfully",
+            "redirectTo": "/flow-execution",
             "flowId": execution_flow.get('flowId'),
             "totalSteps": execution_flow['metadata'].get('totalSteps'),
             "estimatedDuration": execution_flow['metadata'].get('estimatedDurationMinutes')
@@ -70,17 +98,119 @@ def get_execution_flow():
     try:
         app_state = get_app_state()
 
-        # Check if execution flow exists
-        if hasattr(app_state, 'execution_flow'):
+        # Check if FlowExecutor exists
+        if hasattr(app_state, 'flow_executor') and app_state.flow_executor:
             return jsonify({
                 "success": True,
-                "executionFlow": app_state.execution_flow
+                "executionFlow": app_state.flow_executor.execution_flow,
+                "status": app_state.flow_executor.get_execution_status()
             })
         else:
             return jsonify({
                 "success": False,
                 "error": "No execution flow found"
             }), 404
+
+    except Exception as e:
+        return jsonify({"error": f"An error occurred: {str(e)}"}), 500
+
+@flow_bp.route('/start-flow-execution', methods=['POST'])
+def start_flow_execution():
+    """Start executing the stored flow"""
+    try:
+        app_state = get_app_state()
+
+        if not hasattr(app_state, 'flow_executor') or not app_state.flow_executor:
+            return jsonify({"error": "No flow loaded for execution"}), 400
+
+        # Check if a cycle is already running
+        if app_state.database.logging_active:
+            return jsonify({"error": "A cycle is already running"}), 400
+
+        # Get request data for custom cycle name
+        data = request.get_json(silent=True) or {}
+        custom_name = data.get('cycleName')
+
+        # Set start time
+        from datetime import datetime
+        app_state.start_time = datetime.now()
+
+        # Generate cycle name
+        if custom_name:
+            cycle_name = custom_name
+        else:
+            flow_id = app_state.flow_executor.execution_flow.get('flowId', 'Flow')
+            cycle_name = f"Flow Execution - {flow_id} - " + datetime.now().strftime("%d%m%Y-%H:%M:%S")
+
+        # Start database logging for flow execution
+        app_state.database.start_logging_cycle(cycle_name, "flow-execution")
+
+        # Start flow execution
+        app_state.flow_executor.start_execution()
+
+        # Set flow executor in controller for flow-based control
+        app_state.controller.set_flow_executor(app_state.flow_executor)
+
+        # Start sensor reading in background
+        app_state.controller.start_sensor_stream()
+
+        return jsonify({
+            "success": True,
+            "message": "Flow execution started",
+            "cycleName": cycle_name,
+            "status": app_state.flow_executor.get_execution_status()
+        })
+
+    except Exception as e:
+        return jsonify({"error": f"An error occurred: {str(e)}"}), 500
+
+@flow_bp.route('/stop-flow-execution', methods=['POST'])
+def stop_flow_execution():
+    """Stop flow execution"""
+    try:
+        app_state = get_app_state()
+
+        if not hasattr(app_state, 'flow_executor') or not app_state.flow_executor:
+            return jsonify({"error": "No flow loaded"}), 400
+
+        # Stop flow execution
+        app_state.flow_executor.stop_execution()
+
+        # Clear flow executor from controller
+        app_state.controller.set_flow_executor(None)
+
+        # Stop database logging if active
+        if app_state.database.logging_active:
+            app_state.database.stop_logging_cycle()
+
+        # Stop sensor stream
+        app_state.controller.stop_sensor_stream()
+
+        return jsonify({
+            "success": True,
+            "message": "Flow execution stopped",
+            "status": app_state.flow_executor.get_execution_status()
+        })
+
+    except Exception as e:
+        return jsonify({"error": f"An error occurred: {str(e)}"}), 500
+
+@flow_bp.route('/get-flow-execution-status', methods=['GET'])
+def get_flow_execution_status():
+    """Get current flow execution status"""
+    try:
+        app_state = get_app_state()
+
+        if not hasattr(app_state, 'flow_executor') or not app_state.flow_executor:
+            return jsonify({
+                "success": False,
+                "error": "No flow loaded"
+            }), 404
+
+        return jsonify({
+            "success": True,
+            "status": app_state.flow_executor.get_execution_status()
+        })
 
     except Exception as e:
         return jsonify({"error": f"An error occurred: {str(e)}"}), 500

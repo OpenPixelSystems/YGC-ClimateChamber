@@ -1,0 +1,124 @@
+{
+  "version": "1.0",
+  "created": "2025-09-22T18:41:54.421Z",
+  "nodes": [
+    {
+      "id": "node_1",
+      "type": "start-node",
+      "x": 124,
+      "y": 142.625,
+      "properties": {
+        "readCurrent": true
+      }
+    },
+    {
+      "id": "node_2",
+      "type": "temperature-goal",
+      "x": 430,
+      "y": 190.625,
+      "properties": {
+        "temperature": 20,
+        "tolerance": 0.5
+      }
+    },
+    {
+      "id": "node_3",
+      "type": "temperature-hold",
+      "x": 769,
+      "y": 238.625,
+      "properties": {
+        "duration": 30,
+        "tolerance": 0.5
+      }
+    },
+    {
+      "id": "node_4",
+      "type": "end-node",
+      "x": 952,
+      "y": 220.625,
+      "properties": {
+        "cooldown": false
+      }
+    }
+  ],
+  "connections": [
+    {
+      "from": "node_1",
+      "to": "node_2",
+      "lineElement": {}
+    },
+    {
+      "from": "node_2",
+      "to": "node_3",
+      "lineElement": {}
+    },
+    {
+      "from": "node_3",
+      "to": "node_4",
+      "lineElement": {}
+    }
+  ],
+  "metadata": {
+    "nodeCount": 4,
+    "connectionCount": 3,
+    "canvasSize": {
+      "width": 1275,
+      "height": 596
+    }
+  },
+  "executionFlow": {
+    "version": "1.0",
+    "flowId": "flow_1758566514422",
+    "created": "2025-09-22T18:41:54.422Z",
+    "metadata": {
+      "totalSteps": 4,
+      "estimatedDurationMinutes": 30,
+      "temperatureRange": {
+        "min": 20,
+        "max": 20
+      }
+    },
+    "executionSteps": [
+      {
+        "stepId": 1,
+        "stepType": "start-node",
+        "description": "Initialize flow and read current chamber temperature",
+        "action": "initialize",
+        "targetTemperature": null,
+        "readCurrentTemperature": true,
+        "duration": 0
+      },
+      {
+        "stepId": 2,
+        "stepType": "temperature-goal",
+        "description": "Reach target temperature 20\u00b0C (\u00b10.5\u00b0C)",
+        "action": "reach_temperature",
+        "targetTemperature": 20,
+        "tolerance": 0.5,
+        "duration": 0,
+        "maxWaitTime": 60
+      },
+      {
+        "stepId": 3,
+        "stepType": "temperature-hold",
+        "description": "Hold 20\u00b0C for 30 minutes (\u00b10.5\u00b0C)",
+        "action": "hold_temperature",
+        "targetTemperature": 20,
+        "readCurrentTemperature": false,
+        "tolerance": 0.5,
+        "duration": 30
+      },
+      {
+        "stepId": 4,
+        "stepType": "end-node",
+        "description": "End flow immediately",
+        "action": "finalize",
+        "cooldown": false,
+        "duration": 0
+      }
+    ]
+  },
+  "name": "hgkdc",
+  "lastModified": "2025-09-22T18:41:54.422Z",
+  "id": "flow_20250922184154"
+}
