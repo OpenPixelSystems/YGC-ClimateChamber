@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+
+{% block title %}Temperature Flow Designer{% endblock %}
+
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='styles/flow-designer.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="flow-designer-container">
+    <div class="designer-header">
+        <h1>Temperature Flow Designer</h1>
+        <div class="header-controls">
+            <button id="clearCanvas" class="btn btn-secondary">Clear Canvas</button>
+            <button id="validateFlow" class="btn btn-primary">Validate Flow</button>
+            <button id="exportFlow" class="btn btn-success">Export Flow</button>
+        </div>
+    </div>
+
+    <div class="designer-workspace">
+        <!-- Node Palette -->
+        <div class="node-palette">
+            <h3>Node Palette</h3>
+            <div class="palette-section">
+                <h4>Control Nodes</h4>
+                <div class="node-template" data-node-type="start-node">
+                    <div class="node-icon">🚀</div>
+                    <div class="node-label">Start Node</div>
+                </div>
+                <div class="node-template" data-node-type="end-node">
+                    <div class="node-icon">🏁</div>
+                    <div class="node-label">End Node</div>
+                </div>
+            </div>
+            <div class="palette-section">
+                <h4>Temperature Nodes</h4>
+                <div class="node-template" data-node-type="temperature-goal">
+                    <div class="node-icon">🎯</div>
+                    <div class="node-label">Temperature Goal</div>
+                </div>
+                <div class="node-template" data-node-type="temperature-hold">
+                    <div class="node-icon">⏱️</div>
+                    <div class="node-label">Temperature Hold</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Design Canvas -->
+        <div class="design-canvas-container">
+            <div class="canvas-toolbar">
+                <span class="canvas-title">Flow Design Canvas</span>
+                <span class="canvas-info">Drag nodes from the palette to design your temperature flow</span>
+            </div>
+            <div id="designCanvas" class="design-canvas">
+                <!-- Flow nodes will be added here dynamically -->
+            </div>
+        </div>
+
+        <!-- Properties Panel -->
+        <div class="properties-panel">
+            <h3>Node Properties</h3>
+            <div id="nodeProperties" class="properties-content">
+                <p class="no-selection">Select a node to edit its properties</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Flow Status -->
+    <div class="flow-status">
+        <div class="status-item">
+            <span class="status-label">Flow Status:</span>
+            <span id="flowStatus" class="status-value">Empty</span>
+        </div>
+        <div class="status-item">
+            <span class="status-label">Total Nodes:</span>
+            <span id="nodeCount" class="status-value">0</span>
+        </div>
+        <div class="status-item">
+            <span class="status-label">Estimated Duration:</span>
+            <span id="estimatedDuration" class="status-value">--</span>
+        </div>
+    </div>
+</div>
+
+<!-- Node Property Templates -->
+<div id="propertyTemplates" style="display: none;">
+    <!-- Start Node Properties -->
+    <div id="startNodeProps" class="property-template">
+        <h4>Start Node Settings</h4>
+        <p>This node marks the beginning of the temperature flow cycle.</p>
+        <div class="form-group">
+            <label for="startNodeInitialTemp">Initial Temperature (°C):</label>
+            <input type="number" id="startNodeInitialTemp" class="form-control" min="-40" max="100" step="0.1" value="20">
+            <small class="form-help">Starting temperature of the chamber before cycle begins</small>
+        </div>
+        <div class="form-group">
+            <label>
+                <input type="checkbox" id="startNodeReadCurrent">
+                Read current chamber temperature
+            </label>
+            <small class="form-help">Use the actual chamber temperature as starting point</small>
+        </div>
+    </div>
+
+    <!-- Temperature Goal Properties -->
+    <div id="temperatureGoalProps" class="property-template">
+        <h4>Temperature Goal Settings</h4>
+        <div class="form-group">
+            <label for="tempGoalValue">Target Temperature (°C):</label>
+            <input type="number" id="tempGoalValue" class="form-control" min="-40" max="100" step="0.1">
+            <small class="form-help">Temperature the chamber should reach</small>
+        </div>
+        <div class="form-group">
+            <label for="tempGoalTolerance">Tolerance (±°C):</label>
+            <input type="number" id="tempGoalTolerance" class="form-control" min="0.1" max="5" step="0.1" value="0.5">
+            <small class="form-help">Acceptable temperature deviation</small>
+        </div>
+    </div>
+
+    <!-- Temperature Hold Properties -->
+    <div id="temperatureHoldProps" class="property-template">
+        <h4>Temperature Hold Settings</h4>
+        <div class="form-group">
+            <label>Hold Temperature:</label>
+            <div class="inherited-value" id="inheritedTemperature">
+                <span class="inherited-text">Inherited from previous node</span>
+                <span class="inherited-value-display" id="inheritedTempValue">--</span>
+            </div>
+            <small class="form-help">Temperature will be inherited from the connected previous node</small>
+        </div>
+        <div class="form-group">
+            <label for="tempHoldDuration">Duration (minutes):</label>
+            <input type="number" id="tempHoldDuration" class="form-control" min="1" max="1440" step="1">
+            <small class="form-help">How long to hold the temperature</small>
+        </div>
+        <div class="form-group">
+            <label for="tempHoldTolerance">Tolerance (±°C):</label>
+            <input type="number" id="tempHoldTolerance" class="form-control" min="0.1" max="5" step="0.1" value="0.5">
+            <small class="form-help">Acceptable temperature deviation</small>
+        </div>
+    </div>
+
+    <!-- End Node Properties -->
+    <div id="endNodeProps" class="property-template">
+        <h4>End Node Settings</h4>
+        <p>This node marks the end of the temperature flow cycle.</p>
+        <div class="form-group">
+            <label>
+                <input type="checkbox" id="endNodeCooldown">
+                Cool down to ambient temperature
+            </label>
+            <small class="form-help">Automatically cool chamber after cycle completion</small>
+        </div>
+    </div>
+</div>
+
+<!-- Connection Line SVG -->
+<svg id="connectionSvg" class="connection-svg">
+    <defs>
+        <marker id="arrowhead" markerWidth="10" markerHeight="7"
+                refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#007bff" />
+        </marker>
+    </defs>
+    <!-- Connection lines will be drawn here -->
+</svg>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/flow-designer.js') }}"></script>
+{% endblock %}
