@@ -5,6 +5,7 @@ class FlowDesigner {
         this.selectedNode = null;
         this.nodeCounter = 0;
         this.draggedElement = null;
+        this.currentFlowName = null;
         this.canvas = document.getElementById('designCanvas');
         this.connectionSvg = document.getElementById('connectionSvg');
 
@@ -27,7 +28,25 @@ class FlowDesigner {
     init() {
         this.setupEventListeners();
         this.setupDragAndDrop();
+        this.initializeSVG();
         this.updateStatus();
+    }
+
+    initializeSVG() {
+        // Ensure SVG has proper dimensions
+        const canvasRect = this.canvas.getBoundingClientRect();
+        if (canvasRect.width > 0 && canvasRect.height > 0) {
+            this.connectionSvg.setAttribute('width', canvasRect.width);
+            this.connectionSvg.setAttribute('height', canvasRect.height);
+            this.connectionSvg.style.width = '100%';
+            this.connectionSvg.style.height = '100%';
+        } else {
+            // If canvas isn't rendered yet, set a reasonable default and fix later
+            this.connectionSvg.setAttribute('width', '100%');
+            this.connectionSvg.setAttribute('height', '100%');
+            this.connectionSvg.style.width = '100%';
+            this.connectionSvg.style.height = '100%';
+        }
     }
 
     async loadConfig() {
@@ -44,13 +63,18 @@ class FlowDesigner {
         // Header controls
         document.getElementById('clearCanvas').addEventListener('click', () => this.clearCanvas());
         document.getElementById('validateFlow').addEventListener('click', () => this.validateFlow());
+        document.getElementById('saveFlow').addEventListener('click', () => this.saveFlow());
+        document.getElementById('loadFlow').addEventListener('click', () => this.loadFlow());
         document.getElementById('exportFlow').addEventListener('click', () => this.exportFlow());
 
         // Canvas events
         this.canvas.addEventListener('click', (e) => this.handleCanvasClick(e));
 
         // Window resize
-        window.addEventListener('resize', () => this.redrawConnections());
+        window.addEventListener('resize', () => {
+            this.initializeSVG();
+            this.redrawConnections();
+        });
     }
 
     setupDragAndDrop() {
@@ -452,13 +476,18 @@ class FlowDesigner {
         const fromNode = this.nodes.get(connectionData.from);
         const toNode = this.nodes.get(connectionData.to);
 
-        if (!fromNode || !toNode) return;
+        if (!fromNode || !toNode) {
+            console.error('createConnectionLine: Missing nodes', connectionData);
+            return;
+        }
 
         // Create the line element
         const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
         line.setAttribute('stroke', '#007bff');
         line.setAttribute('stroke-width', '2');
         line.setAttribute('marker-end', 'url(#arrowhead)');
+        line.setAttribute('opacity', '1');
+        line.style.pointerEvents = 'none';
 
         // Set initial position
         this.updateConnectionLinePosition(connectionData, line);
@@ -468,6 +497,15 @@ class FlowDesigner {
 
         // Add to SVG
         this.connectionSvg.appendChild(line);
+
+        console.log('Created SVG line element:', line, 'SVG container:', this.connectionSvg);
+        console.log('Line attributes:', {
+            x1: line.getAttribute('x1'),
+            y1: line.getAttribute('y1'),
+            x2: line.getAttribute('x2'),
+            y2: line.getAttribute('y2'),
+            stroke: line.getAttribute('stroke')
+        });
     }
 
     updateConnectionLinePosition(connectionData, line) {
@@ -717,8 +755,8 @@ class FlowDesigner {
         }
     }
 
-    clearCanvas() {
-        if (confirm('Are you sure you want to clear the entire canvas?')) {
+    clearCanvas(showConfirm = true) {
+        if (!showConfirm || confirm('Are you sure you want to clear the entire canvas?')) {
             // Clean up all line elements
             this.connections.forEach(conn => {
                 if (conn.lineElement) {
@@ -729,9 +767,13 @@ class FlowDesigner {
             this.nodes.clear();
             this.connections = [];
             this.selectedNode = null;
-            this.canvas.innerHTML = '';
+            this.currentFlowName = null;
 
-            // Re-create the SVG with just the defs
+            // Clear only the flow nodes, but preserve the SVG
+            const flowNodes = this.canvas.querySelectorAll('.flow-node');
+            flowNodes.forEach(node => node.remove());
+
+            // Clear the SVG content but keep the SVG element itself
             this.connectionSvg.innerHTML = `
                 <defs>
                     <marker id="arrowhead" markerWidth="10" markerHeight="7"
@@ -744,6 +786,190 @@ class FlowDesigner {
             document.getElementById('nodeProperties').innerHTML =
                 '<p class="no-selection">Select a node to edit its properties</p>';
             this.updateStatus();
+        }
+    }
+
+    /**
+     * Show flow selection modal
+     */
+    showFlowSelectionModal(flows) {
+        const modalHtml = `
+            <div id="flowSelectionModal" class="flow-selection-modal">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>Load Flow Diagram</h3>
+                        <button class="modal-close" onclick="this.closest('.flow-selection-modal').remove()">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="flow-list">
+                            ${flows.map(flow => `
+                                <div class="flow-item" data-flow-id="${flow.id}">
+                                    <div class="flow-info">
+                                        <div class="flow-name">${flow.name}</div>
+                                        <div class="flow-details">
+                                            <span>Created: ${new Date(flow.created).toLocaleDateString()}</span>
+                                            <span>Modified: ${new Date(flow.lastModified).toLocaleDateString()}</span>
+                                            <span>Nodes: ${flow.metadata.nodeCount}</span>
+                                        </div>
+                                    </div>
+                                    <div class="flow-actions">
+                                        <button onclick="flowDesigner.loadSelectedFlow('${flow.id}')" class="btn-load">Load</button>
+                                        <button onclick="flowDesigner.deleteFlow('${flow.id}')" class="btn-delete">Delete</button>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button onclick="this.closest('.flow-selection-modal').remove()">Cancel</button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Add modal styles if not already present
+        if (!document.getElementById('flowSelectionModalStyles')) {
+            const styles = document.createElement('style');
+            styles.id = 'flowSelectionModalStyles';
+            styles.textContent = `
+                .flow-selection-modal {
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: rgba(0,0,0,0.5);
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    z-index: 10000;
+                }
+                .flow-selection-modal .modal-content {
+                    background: white;
+                    border-radius: 8px;
+                    width: 90%;
+                    max-width: 600px;
+                    max-height: 80%;
+                    overflow-y: auto;
+                    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+                }
+                .flow-selection-modal .modal-header {
+                    padding: 20px;
+                    border-bottom: 1px solid #eee;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                }
+                .flow-selection-modal .modal-close {
+                    background: none;
+                    border: none;
+                    font-size: 24px;
+                    cursor: pointer;
+                }
+                .flow-selection-modal .modal-body {
+                    padding: 20px;
+                }
+                .flow-selection-modal .flow-item {
+                    border: 1px solid #ddd;
+                    border-radius: 5px;
+                    margin-bottom: 10px;
+                    padding: 15px;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                }
+                .flow-selection-modal .flow-name {
+                    font-weight: bold;
+                    margin-bottom: 5px;
+                }
+                .flow-selection-modal .flow-details {
+                    font-size: 12px;
+                    color: #666;
+                }
+                .flow-selection-modal .flow-details span {
+                    margin-right: 15px;
+                }
+                .flow-selection-modal .flow-actions button {
+                    margin-left: 10px;
+                    padding: 5px 10px;
+                    border: 1px solid #007bff;
+                    background: #007bff;
+                    color: white;
+                    border-radius: 3px;
+                    cursor: pointer;
+                    font-size: 12px;
+                }
+                .flow-selection-modal .btn-delete {
+                    background: #dc3545 !important;
+                    border-color: #dc3545 !important;
+                }
+                .flow-selection-modal .modal-footer {
+                    padding: 20px;
+                    border-top: 1px solid #eee;
+                    text-align: right;
+                }
+                .flow-selection-modal .modal-footer button {
+                    padding: 8px 16px;
+                    border: 1px solid #6c757d;
+                    background: #6c757d;
+                    color: white;
+                    border-radius: 4px;
+                    cursor: pointer;
+                }
+            `;
+            document.head.appendChild(styles);
+        }
+
+        // Add modal to page
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+    }
+
+    /**
+     * Load selected flow from modal
+     */
+    async loadSelectedFlow(flowId) {
+        try {
+            const response = await fetch(`/get-flow-diagram/${flowId}`);
+            const result = await response.json();
+
+            if (response.ok) {
+                this.loadFlowData(result.flowData);
+                this.showMessage(`Flow "${result.flowData.name}" loaded successfully!`, 'success');
+
+                // Close modal
+                document.getElementById('flowSelectionModal')?.remove();
+            } else {
+                this.showMessage(`Load failed: ${result.error}`, 'error');
+            }
+        } catch (error) {
+            this.showMessage(`Load failed: ${error.message}`, 'error');
+        }
+    }
+
+    /**
+     * Delete flow
+     */
+    async deleteFlow(flowId) {
+        if (!confirm('Are you sure you want to delete this flow?')) return;
+
+        try {
+            const response = await fetch(`/delete-flow-diagram/${flowId}`, {
+                method: 'DELETE'
+            });
+
+            const result = await response.json();
+
+            if (response.ok) {
+                this.showMessage('Flow deleted successfully!', 'success');
+
+                // Refresh the modal
+                document.getElementById('flowSelectionModal')?.remove();
+                this.loadFlow();
+            } else {
+                this.showMessage(`Delete failed: ${result.error}`, 'error');
+            }
+        } catch (error) {
+            this.showMessage(`Delete failed: ${error.message}`, 'error');
         }
     }
 
@@ -840,6 +1066,9 @@ class FlowDesigner {
         return { valid: errors.length === 0, errors };
     }
 
+    /**
+     * Export flow to server for execution
+     */
     async exportFlow() {
         const validation = this.validateFlow();
         if (!validation.valid) {
@@ -848,6 +1077,14 @@ class FlowDesigner {
         }
 
         const flowData = this.serializeFlow();
+        const executionFlow = this.convertToExecutionFlow();
+
+        // Send both the original flow data and the execution-ready format
+        const exportData = {
+            originalFlow: flowData,
+            executionFlow: executionFlow,
+            fullFlowData: this.getFullFlowData()
+        };
 
         try {
             const response = await fetch('/store-flow-data', {
@@ -855,18 +1092,260 @@ class FlowDesigner {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify(flowData)
+                body: JSON.stringify(exportData)
             });
 
             const result = await response.json();
 
             if (response.ok) {
-                this.showMessage('Flow exported successfully!', 'success');
+                this.showMessage('Flow exported to server successfully!', 'success');
             } else {
                 this.showMessage(`Export failed: ${result.error}`, 'error');
             }
         } catch (error) {
             this.showMessage(`Export failed: ${error.message}`, 'error');
+        }
+    }
+
+    /**
+     * Save flow diagram to local storage with name prompt
+     */
+    async saveFlow() {
+        const validation = this.validateFlow();
+        if (!validation.valid) {
+            this.showMessage('Cannot save invalid flow. Please fix validation errors first.', 'error');
+            return;
+        }
+
+        const flowName = prompt('Enter a name for this flow:');
+        if (!flowName) return;
+
+        const fullFlowData = this.getFullFlowData();
+        fullFlowData.name = flowName;
+        fullFlowData.lastModified = new Date().toISOString();
+
+        try {
+            const response = await fetch('/save-flow-diagram', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(fullFlowData)
+            });
+
+            const result = await response.json();
+
+            if (response.ok) {
+                this.showMessage(`Flow "${flowName}" saved successfully!`, 'success');
+                this.currentFlowName = flowName;
+            } else {
+                this.showMessage(`Save failed: ${result.error}`, 'error');
+            }
+        } catch (error) {
+            this.showMessage(`Save failed: ${error.message}`, 'error');
+        }
+    }
+
+    /**
+     * Load flow diagram from server
+     */
+    async loadFlow() {
+        try {
+            // First get list of available flows
+            const response = await fetch('/get-saved-flows');
+            const result = await response.json();
+
+            if (!response.ok) {
+                this.showMessage(`Failed to load flows: ${result.error}`, 'error');
+                return;
+            }
+
+            const flows = result.flows;
+            if (flows.length === 0) {
+                this.showMessage('No saved flows found.', 'info');
+                return;
+            }
+
+            // Show flow selection modal
+            this.showFlowSelectionModal(flows);
+
+        } catch (error) {
+            this.showMessage(`Load failed: ${error.message}`, 'error');
+        }
+    }
+
+    /**
+     * Get complete flow data including all visual and logical information
+     */
+    getFullFlowData() {
+        const nodes = Array.from(this.nodes.values()).map(node => ({
+            id: node.id,
+            type: node.type,
+            x: node.x,
+            y: node.y,
+            properties: { ...node.properties }
+        }));
+
+        return {
+            version: "1.0",
+            created: new Date().toISOString(),
+            nodes: nodes,
+            connections: [...this.connections],
+            metadata: {
+                nodeCount: this.nodes.size,
+                connectionCount: this.connections.length,
+                canvasSize: {
+                    width: this.canvas.clientWidth,
+                    height: this.canvas.clientHeight
+                }
+            },
+            executionFlow: this.convertToExecutionFlow()
+        };
+    }
+
+    /**
+     * Load flow data into the designer
+     */
+    loadFlowData(flowData) {
+        // Clear existing flow
+        this.clearCanvas(false); // Don't show confirmation
+
+        // Restore nodes first
+        flowData.nodes.forEach(nodeData => {
+            // Use center coordinates for node creation
+            const centerX = nodeData.x + 50; // Convert from left edge to center
+            const centerY = nodeData.y + 25; // Convert from top edge to center
+
+            const nodeElement = this.createNodeElement(nodeData.type, nodeData.id, centerX, centerY);
+
+            // Extract the actual positioned coordinates from the element after creation
+            const actualLeft = parseInt(nodeElement.style.left) || 0;
+            const actualTop = parseInt(nodeElement.style.top) || 0;
+
+            const node = {
+                id: nodeData.id,
+                type: nodeData.type,
+                x: actualLeft, // Use actual element coordinates
+                y: actualTop,  // Use actual element coordinates
+                element: nodeElement,
+                properties: { ...nodeData.properties }
+            };
+
+            this.nodes.set(nodeData.id, node);
+            this.canvas.appendChild(nodeElement);
+
+            console.log(`Restored node ${nodeData.id} at element position (${actualLeft}, ${actualTop}), original (${nodeData.x}, ${nodeData.y})`);
+        });
+
+        // Use setTimeout to ensure DOM elements are rendered before creating connections
+        setTimeout(() => {
+            console.log('SVG element:', this.connectionSvg);
+            console.log('SVG dimensions:', {
+                width: this.connectionSvg.clientWidth,
+                height: this.connectionSvg.clientHeight,
+                offsetWidth: this.connectionSvg.offsetWidth,
+                offsetHeight: this.connectionSvg.offsetHeight
+            });
+
+            // Ensure SVG is properly initialized and sized
+            if (!this.connectionSvg.querySelector('defs')) {
+                this.connectionSvg.innerHTML = `
+                    <defs>
+                        <marker id="arrowhead" markerWidth="10" markerHeight="7"
+                                refX="9" refY="3.5" orient="auto">
+                            <polygon points="0 0, 10 3.5, 0 7" fill="#007bff" />
+                        </marker>
+                    </defs>
+                `;
+                console.log('Recreated SVG defs');
+            }
+
+            // Fix SVG dimensions - ensure it matches its parent container
+            const canvasRect = this.canvas.getBoundingClientRect();
+            this.connectionSvg.setAttribute('width', canvasRect.width);
+            this.connectionSvg.setAttribute('height', canvasRect.height);
+            this.connectionSvg.style.width = '100%';
+            this.connectionSvg.style.height = '100%';
+
+            // Ensure SVG is properly visible
+            this.connectionSvg.style.visibility = 'visible';
+            this.connectionSvg.style.display = 'block';
+            this.connectionSvg.style.pointerEvents = 'none';
+
+            console.log('Fixed SVG dimensions:', {
+                canvasRect: canvasRect,
+                svgWidth: this.connectionSvg.getAttribute('width'),
+                svgHeight: this.connectionSvg.getAttribute('height'),
+                svgRect: this.connectionSvg.getBoundingClientRect(),
+                svgStyle: {
+                    position: getComputedStyle(this.connectionSvg).position,
+                    zIndex: getComputedStyle(this.connectionSvg).zIndex,
+                    display: getComputedStyle(this.connectionSvg).display,
+                    visibility: getComputedStyle(this.connectionSvg).visibility,
+                    opacity: getComputedStyle(this.connectionSvg).opacity
+                },
+                canvasStyle: {
+                    position: getComputedStyle(this.canvas).position,
+                    overflow: getComputedStyle(this.canvas).overflow,
+                    zIndex: getComputedStyle(this.canvas).zIndex,
+                    display: getComputedStyle(this.canvas).display
+                }
+            });
+
+            // Log all node positions before creating connections
+            console.log('All nodes after loading:');
+            this.nodes.forEach(node => {
+                console.log(`Node ${node.id}:`, {
+                    x: node.x,
+                    y: node.y,
+                    styleLeft: node.element.style.left,
+                    styleTop: node.element.style.top,
+                    boundingRect: node.element.getBoundingClientRect()
+                });
+            });
+
+            // Restore connections after nodes are fully rendered
+            flowData.connections.forEach((connData, index) => {
+                const fromNode = this.nodes.get(connData.from);
+                const toNode = this.nodes.get(connData.to);
+
+                if (fromNode && toNode) {
+                    const connectionData = {
+                        from: connData.from,
+                        to: connData.to,
+                        lineElement: null
+                    };
+
+                    this.connections.push(connectionData);
+                    this.createConnectionLine(connectionData);
+
+                    // Debug connection positions
+                    const fromPos = this.getConnectorPosition(fromNode, 'start');
+                    const toPos = this.getConnectorPosition(toNode, 'end');
+                    console.log(`Restored connection ${index + 1}:`, connData.from, '->', connData.to,
+                               `from(${fromPos.x}, ${fromPos.y}) to(${toPos.x}, ${toPos.y})`);
+                } else {
+                    console.error(`Failed to restore connection ${index + 1}: missing nodes`, connData);
+                }
+            });
+
+            // Force a redraw of all connections
+            this.redrawConnections();
+
+            console.log(`Loaded flow with ${this.nodes.size} nodes and ${this.connections.length} connections`);
+            console.log('SVG children after loading:', this.connectionSvg.children);
+        }, 200); // Increased timeout even more
+
+        // Update counter and status
+        this.nodeCounter = Math.max(...Array.from(this.nodes.keys()).map(id =>
+            parseInt(id.replace('node_', '')) || 0
+        ));
+
+        this.updateStatus();
+
+        // Set current flow name if available
+        if (flowData.name) {
+            this.currentFlowName = flowData.name;
         }
     }
 
@@ -893,6 +1372,169 @@ class FlowDesigner {
             nodes: nodes,
             connections: [...this.connections],
             created: new Date().toISOString()
+        };
+    }
+
+    /**
+     * Converts the flow diagram to an execution-ready JSON structure
+     * Removes visual positioning and focuses on sequential execution order
+     */
+    convertToExecutionFlow() {
+        const validation = this.performValidation();
+        if (!validation.valid) {
+            throw new Error(`Cannot convert invalid flow: ${validation.errors.join(', ')}`);
+        }
+
+        // Find execution order by traversing from start node
+        const executionOrder = this.determineExecutionOrder();
+
+        // Convert nodes to execution steps
+        const executionSteps = executionOrder.map((nodeId, index) => {
+            const node = this.nodes.get(nodeId);
+            return this.convertNodeToExecutionStep(node, index);
+        });
+
+        // Calculate total estimated duration
+        const totalDuration = executionSteps.reduce((sum, step) => {
+            return sum + (step.duration || 0);
+        }, 0);
+
+        return {
+            version: "1.0",
+            flowId: `flow_${Date.now()}`,
+            created: new Date().toISOString(),
+            metadata: {
+                totalSteps: executionSteps.length,
+                estimatedDurationMinutes: totalDuration,
+                temperatureRange: this.getTemperatureRange(executionSteps)
+            },
+            executionSteps: executionSteps
+        };
+    }
+
+    /**
+     * Determines the execution order by traversing the flow graph from start to end
+     */
+    determineExecutionOrder() {
+        // Find start node
+        const startNode = Array.from(this.nodes.values()).find(node => node.type === 'start-node');
+        if (!startNode) {
+            throw new Error('No start node found');
+        }
+
+        const executionOrder = [];
+        const visited = new Set();
+        let currentNodeId = startNode.id;
+
+        while (currentNodeId && !visited.has(currentNodeId)) {
+            visited.add(currentNodeId);
+            executionOrder.push(currentNodeId);
+
+            // Find next node
+            const nextConnection = this.connections.find(conn => conn.from === currentNodeId);
+            currentNodeId = nextConnection ? nextConnection.to : null;
+        }
+
+        return executionOrder;
+    }
+
+    /**
+     * Converts a flow node to an execution step
+     */
+    convertNodeToExecutionStep(node, stepIndex) {
+        const baseStep = {
+            stepId: stepIndex + 1,
+            stepType: node.type,
+            description: this.getStepDescription(node)
+        };
+
+        switch (node.type) {
+            case 'start-node':
+                return {
+                    ...baseStep,
+                    action: 'initialize',
+                    targetTemperature: node.properties.readCurrent ? null : node.properties.initialTemperature,
+                    readCurrentTemperature: node.properties.readCurrent,
+                    duration: 0
+                };
+
+            case 'temperature-goal':
+                return {
+                    ...baseStep,
+                    action: 'reach_temperature',
+                    targetTemperature: node.properties.temperature,
+                    tolerance: node.properties.tolerance,
+                    duration: 0, // Duration is variable - depends on how long it takes to reach target
+                    maxWaitTime: 60 // Maximum time to wait for temperature to be reached (minutes)
+                };
+
+            case 'temperature-hold':
+                const inheritedTemp = this.getInheritedTemperature(node.id);
+                return {
+                    ...baseStep,
+                    action: 'hold_temperature',
+                    targetTemperature: inheritedTemp === 'current' ? null : inheritedTemp,
+                    readCurrentTemperature: inheritedTemp === 'current',
+                    tolerance: node.properties.tolerance,
+                    duration: node.properties.duration
+                };
+
+            case 'end-node':
+                return {
+                    ...baseStep,
+                    action: 'finalize',
+                    cooldown: node.properties.cooldown,
+                    duration: node.properties.cooldown ? 10 : 0 // 10 minutes cooldown if enabled
+                };
+
+            default:
+                throw new Error(`Unknown node type: ${node.type}`);
+        }
+    }
+
+    /**
+     * Generates a human-readable description for each step
+     */
+    getStepDescription(node) {
+        switch (node.type) {
+            case 'start-node':
+                if (node.properties.readCurrent) {
+                    return 'Initialize flow using current chamber temperature';
+                } else {
+                    return `Initialize flow with temperature ${node.properties.initialTemperature}°C`;
+                }
+
+            case 'temperature-goal':
+                return `Reach target temperature ${node.properties.temperature}°C (±${node.properties.tolerance}°C)`;
+
+            case 'temperature-hold':
+                const inheritedTemp = this.getInheritedTemperature(node.id);
+                const tempText = inheritedTemp === 'current' ? 'current temperature' : `${inheritedTemp}°C`;
+                return `Hold ${tempText} for ${node.properties.duration} minutes (±${node.properties.tolerance}°C)`;
+
+            case 'end-node':
+                return node.properties.cooldown ? 'End flow with cooldown' : 'End flow immediately';
+
+            default:
+                return 'Unknown step';
+        }
+    }
+
+    /**
+     * Calculates the temperature range used in the flow
+     */
+    getTemperatureRange(executionSteps) {
+        const temperatures = executionSteps
+            .filter(step => step.targetTemperature !== null && step.targetTemperature !== undefined)
+            .map(step => step.targetTemperature);
+
+        if (temperatures.length === 0) {
+            return { min: null, max: null };
+        }
+
+        return {
+            min: Math.min(...temperatures),
+            max: Math.max(...temperatures)
         };
     }
 
