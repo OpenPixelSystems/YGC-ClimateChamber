@@ -97,20 +97,8 @@
 <div id="propertyTemplates" style="display: none;">
     <!-- Start Node Properties -->
     <div id="startNodeProps" class="property-template">
-        <h4>Start Node Settings</h4>
-        <p>This node marks the beginning of the temperature flow cycle.</p>
-        <div class="form-group">
-            <label for="startNodeInitialTemp">Initial Temperature (°C):</label>
-            <input type="number" id="startNodeInitialTemp" class="form-control" min="-40" max="100" step="0.1" value="20">
-            <small class="form-help">Starting temperature of the chamber before cycle begins</small>
-        </div>
-        <div class="form-group">
-            <label>
-                <input type="checkbox" id="startNodeReadCurrent">
-                Read current chamber temperature
-            </label>
-            <small class="form-help">Use the actual chamber temperature as starting point</small>
-        </div>
+        <h4>Start Node</h4>
+        <p>This node marks the beginning of the temperature flow cycle and automatically reads the current chamber temperature as the starting point.</p>
     </div>
 
     <!-- Temperature Goal Properties -->
@@ -153,15 +141,8 @@
 
     <!-- End Node Properties -->
     <div id="endNodeProps" class="property-template">
-        <h4>End Node Settings</h4>
-        <p>This node marks the end of the temperature flow cycle.</p>
-        <div class="form-group">
-            <label>
-                <input type="checkbox" id="endNodeCooldown">
-                Cool down to ambient temperature
-            </label>
-            <small class="form-help">Automatically cool chamber after cycle completion</small>
-        </div>
+        <h4>End Node</h4>
+        <p>This node marks the end of the temperature flow cycle. The cycle will automatically complete when this node is reached.</p>
     </div>
 </div>
 
