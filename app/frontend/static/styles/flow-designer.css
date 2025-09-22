@@ -188,7 +188,6 @@
     justify-content: center;
     cursor: pointer;
     user-select: none;
-    transition: all 0.2s;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
@@ -244,7 +243,6 @@
     background: var(--primary-color, #007bff);
     border-radius: 50%;
     cursor: pointer;
-    transition: all 0.2s;
     z-index: 10;
     border: 2px solid white;
     box-shadow: 0 2px 4px rgba(0,0,0,0.3);
@@ -331,6 +329,10 @@
 .connection-svg line {
     stroke: var(--primary-color, #007bff);
     stroke-width: 2;
+}
+
+.connection-svg line {
+    /* No transition - arrows should move immediately with nodes during drag */
 }
 
 /* Properties Panel */

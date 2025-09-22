@@ -172,7 +172,6 @@ class FlowDesigner {
         let isDragging = false;
         let dragOffset = { x: 0, y: 0 };
         let hasMovedDuringDrag = false;
-        let redrawTimeout = null;
 
         node.addEventListener('mousedown', (e) => {
             if (e.target.classList.contains('node-delete') ||
@@ -414,14 +413,29 @@ class FlowDesigner {
         if (exists) return;
 
         // Remove any existing input connections to the target node
-        this.connections = this.connections.filter(conn => conn.to !== toNodeId);
-
-        this.connections.push({
-            from: fromNodeId,
-            to: toNodeId
+        this.connections = this.connections.filter(conn => {
+            if (conn.to === toNodeId) {
+                // Remove the SVG line element for the old connection
+                if (conn.lineElement) {
+                    conn.lineElement.remove();
+                }
+                return false;
+            }
+            return true;
         });
 
-        this.redrawConnections();
+        // Create the new connection with its own line element
+        const connectionData = {
+            from: fromNodeId,
+            to: toNodeId,
+            lineElement: null
+        };
+
+        this.connections.push(connectionData);
+
+        // Create the persistent line element
+        this.createConnectionLine(connectionData);
+
         this.updateStatus();
         this.updateAllInheritedTemperatures();
     }
@@ -434,49 +448,52 @@ class FlowDesigner {
         this.hidePreviewLine();
     }
 
-    redrawConnections() {
-        const svg = this.connectionSvg;
+    createConnectionLine(connectionData) {
+        const fromNode = this.nodes.get(connectionData.from);
+        const toNode = this.nodes.get(connectionData.to);
 
-        // Clear all lines but preserve the defs section with the arrow marker
-        const lines = svg.querySelectorAll('line');
-        lines.forEach(line => line.remove());
+        if (!fromNode || !toNode) return;
 
-        this.connections.forEach(conn => {
-            const fromNode = this.nodes.get(conn.from);
-            const toNode = this.nodes.get(conn.to);
-
-            if (fromNode && toNode) {
-                this.drawConnection(fromNode, toNode);
-            }
-        });
-    }
-
-    drawConnection(fromNode, toNode) {
-        // Use the same precise positioning as preview lines
-        const fromPos = this.getConnectorPosition(fromNode, 'start');
-        const toPos = this.getConnectorPosition(toNode, 'end');
-
-        console.log('PERMANENT: From node', fromNode.id, 'at', fromPos);
-        console.log('PERMANENT: To node', toNode.id, 'at', toPos);
-
-        // Validate coordinates
-        if (fromPos.x === 0 && fromPos.y === 0 || toPos.x === 0 && toPos.y === 0) {
-            console.error('Invalid connector positions for permanent connection');
-            return;
-        }
-
-        // Create the connection line
+        // Create the line element
         const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-        line.setAttribute('x1', fromPos.x);
-        line.setAttribute('y1', fromPos.y);
-        line.setAttribute('x2', toPos.x);
-        line.setAttribute('y2', toPos.y);
         line.setAttribute('stroke', '#007bff');
         line.setAttribute('stroke-width', '2');
         line.setAttribute('marker-end', 'url(#arrowhead)');
 
+        // Set initial position
+        this.updateConnectionLinePosition(connectionData, line);
+
+        // Store the line element reference
+        connectionData.lineElement = line;
+
+        // Add to SVG
         this.connectionSvg.appendChild(line);
     }
+
+    updateConnectionLinePosition(connectionData, line) {
+        const fromNode = this.nodes.get(connectionData.from);
+        const toNode = this.nodes.get(connectionData.to);
+
+        if (!fromNode || !toNode) return;
+
+        const fromPos = this.getConnectorPosition(fromNode, 'start');
+        const toPos = this.getConnectorPosition(toNode, 'end');
+
+        line.setAttribute('x1', fromPos.x);
+        line.setAttribute('y1', fromPos.y);
+        line.setAttribute('x2', toPos.x);
+        line.setAttribute('y2', toPos.y);
+    }
+
+    redrawConnections() {
+        // Update positions of existing line elements (with animation)
+        this.connections.forEach(conn => {
+            if (conn.lineElement) {
+                this.updateConnectionLinePosition(conn, conn.lineElement);
+            }
+        });
+    }
+
 
     selectNode(nodeId) {
         // Clear previous selection
@@ -672,10 +689,17 @@ class FlowDesigner {
             // Remove node element
             nodeData.element.remove();
 
-            // Remove connections
-            this.connections = this.connections.filter(conn =>
-                conn.from !== nodeId && conn.to !== nodeId
-            );
+            // Remove connections and their line elements
+            this.connections = this.connections.filter(conn => {
+                if (conn.from === nodeId || conn.to === nodeId) {
+                    // Remove the line element
+                    if (conn.lineElement) {
+                        conn.lineElement.remove();
+                    }
+                    return false;
+                }
+                return true;
+            });
 
             // Remove from nodes map
             this.nodes.delete(nodeId);
@@ -695,11 +719,28 @@ class FlowDesigner {
 
     clearCanvas() {
         if (confirm('Are you sure you want to clear the entire canvas?')) {
+            // Clean up all line elements
+            this.connections.forEach(conn => {
+                if (conn.lineElement) {
+                    conn.lineElement.remove();
+                }
+            });
+
             this.nodes.clear();
             this.connections = [];
             this.selectedNode = null;
             this.canvas.innerHTML = '';
-            this.connectionSvg.innerHTML = '';
+
+            // Re-create the SVG with just the defs
+            this.connectionSvg.innerHTML = `
+                <defs>
+                    <marker id="arrowhead" markerWidth="10" markerHeight="7"
+                            refX="9" refY="3.5" orient="auto">
+                        <polygon points="0 0, 10 3.5, 0 7" fill="#007bff" />
+                    </marker>
+                </defs>
+            `;
+
             document.getElementById('nodeProperties').innerHTML =
                 '<p class="no-selection">Select a node to edit its properties</p>';
             this.updateStatus();
