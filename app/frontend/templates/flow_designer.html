@@ -54,6 +54,16 @@
             </div>
             <div id="designCanvas" class="design-canvas">
                 <!-- Flow nodes will be added here dynamically -->
+                <!-- Connection Line SVG -->
+                <svg id="connectionSvg" class="connection-svg">
+                    <defs>
+                        <marker id="arrowhead" markerWidth="10" markerHeight="7"
+                                refX="9" refY="3.5" orient="auto">
+                            <polygon points="0 0, 10 3.5, 0 7" fill="#007bff" />
+                        </marker>
+                    </defs>
+                    <!-- Connection lines will be drawn here -->
+                </svg>
             </div>
         </div>
 
@@ -155,16 +165,6 @@
     </div>
 </div>
 
-<!-- Connection Line SVG -->
-<svg id="connectionSvg" class="connection-svg">
-    <defs>
-        <marker id="arrowhead" markerWidth="10" markerHeight="7"
-                refX="9" refY="3.5" orient="auto">
-            <polygon points="0 0, 10 3.5, 0 7" fill="#007bff" />
-        </marker>
-    </defs>
-    <!-- Connection lines will be drawn here -->
-</svg>
 
 {% endblock %}
 

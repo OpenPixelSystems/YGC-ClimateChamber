@@ -7,6 +7,13 @@ class FlowDesigner {
         this.draggedElement = null;
         this.canvas = document.getElementById('designCanvas');
         this.connectionSvg = document.getElementById('connectionSvg');
+
+        // Node and connector constants (matching CSS)
+        this.NODE_WIDTH = 100;
+        this.NODE_HEIGHT = 50;
+        this.CONNECTOR_SIZE = 16;
+        this.CONNECTOR_OFFSET = 8;
+
         this.config = {
             minTemp: -40,
             maxTemp: 100,
@@ -165,6 +172,7 @@ class FlowDesigner {
         let isDragging = false;
         let dragOffset = { x: 0, y: 0 };
         let hasMovedDuringDrag = false;
+        let redrawTimeout = null;
 
         node.addEventListener('mousedown', (e) => {
             if (e.target.classList.contains('node-delete') ||
@@ -191,13 +199,14 @@ class FlowDesigner {
             node.style.left = `${Math.max(0, Math.min(x, this.canvas.clientWidth - 100))}px`;
             node.style.top = `${Math.max(0, Math.min(y, this.canvas.clientHeight - 50))}px`;
 
-            // Update node data
+            // Update node data (stored positions match style.left/top for consistency)
             const nodeData = this.nodes.get(node.dataset.nodeId);
             if (nodeData) {
-                nodeData.x = x + 50; // Center point
-                nodeData.y = y + 25;
+                nodeData.x = parseInt(node.style.left) || 0; // Left edge position
+                nodeData.y = parseInt(node.style.top) || 0;  // Top edge position
             }
 
+            // Redraw connections immediately for accurate positioning
             this.redrawConnections();
         });
 
@@ -205,6 +214,9 @@ class FlowDesigner {
             if (isDragging) {
                 isDragging = false;
                 node.style.zIndex = '';
+
+                // Final redraw to ensure accuracy
+                this.redrawConnections();
 
                 // If the user didn't move the mouse much, treat it as a click for selection
                 if (!hasMovedDuringDrag) {
@@ -317,22 +329,29 @@ class FlowDesigner {
     }
 
     getConnectorPosition(node, type) {
-        // Get the actual connector element
-        const connector = node.element.querySelector(`.node-connector.${type}`);
-        if (!connector) {
-            console.error('Connector not found:', type, node.id);
+        // Use the node's exact position in the canvas coordinate system
+        // Node position is stored as the top-left corner when created/dragged
+        const nodeLeft = parseInt(node.element.style.left) || 0;
+        const nodeTop = parseInt(node.element.style.top) || 0;
+
+        let x, y;
+
+        if (type === 'start') {
+            // Start connector: positioned at right edge, vertically centered
+            // CSS: right: -8px, top: 50%, so connector center is at:
+            x = nodeLeft + this.NODE_WIDTH + this.CONNECTOR_OFFSET; // Right edge + offset
+            y = nodeTop + (this.NODE_HEIGHT / 2); // Vertical center
+        } else if (type === 'end') {
+            // End connector: positioned at left edge, vertically centered
+            // CSS: left: -8px, top: 50%, so connector center is at:
+            x = nodeLeft - this.CONNECTOR_OFFSET; // Left edge - offset
+            y = nodeTop + (this.NODE_HEIGHT / 2); // Vertical center
+        } else {
+            console.error('Unknown connector type:', type);
             return { x: 0, y: 0 };
         }
 
-        // Get the SVG container bounds for coordinate conversion
-        const svgRect = this.connectionSvg.getBoundingClientRect();
-        const connectorRect = connector.getBoundingClientRect();
-
-        // Calculate the center of the connector relative to the SVG
-        const x = connectorRect.left - svgRect.left + (connectorRect.width / 2);
-        const y = connectorRect.top - svgRect.top + (connectorRect.height / 2);
-
-        console.log(`${type} connector position:`, { x, y }, 'SVG rect:', svgRect, 'Connector rect:', connectorRect);
+        console.log(`${type} connector for node ${node.id}:`, { x, y }, 'Node at:', { nodeLeft, nodeTop });
 
         return { x, y };
     }
