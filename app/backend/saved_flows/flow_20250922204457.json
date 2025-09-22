@@ -1,0 +1,249 @@
+{
+  "version": "1.0",
+  "created": "2025-09-22T20:44:57.102Z",
+  "nodes": [
+    {
+      "id": "node_1",
+      "type": "start-node",
+      "x": 0,
+      "y": 189,
+      "properties": {
+        "readCurrent": true
+      }
+    },
+    {
+      "id": "node_2",
+      "type": "end-node",
+      "x": 1088,
+      "y": 219,
+      "properties": {
+        "cooldown": false
+      }
+    },
+    {
+      "id": "node_3",
+      "type": "temperature-goal",
+      "x": 128,
+      "y": 113,
+      "properties": {
+        "temperature": 45,
+        "tolerance": 1
+      }
+    },
+    {
+      "id": "node_4",
+      "type": "temperature-hold",
+      "x": 261,
+      "y": 193,
+      "properties": {
+        "duration": 5,
+        "tolerance": 1
+      }
+    },
+    {
+      "id": "node_5",
+      "type": "temperature-goal",
+      "x": 388,
+      "y": 117,
+      "properties": {
+        "temperature": 15,
+        "tolerance": 0.5
+      }
+    },
+    {
+      "id": "node_6",
+      "type": "temperature-hold",
+      "x": 506,
+      "y": 200,
+      "properties": {
+        "duration": 5,
+        "tolerance": 2
+      }
+    },
+    {
+      "id": "node_7",
+      "type": "temperature-goal",
+      "x": 626,
+      "y": 123,
+      "properties": {
+        "temperature": 5,
+        "tolerance": 0.5
+      }
+    },
+    {
+      "id": "node_8",
+      "type": "temperature-goal",
+      "x": 772,
+      "y": 125,
+      "properties": {
+        "temperature": 30,
+        "tolerance": 0.5
+      }
+    },
+    {
+      "id": "node_9",
+      "type": "temperature-hold",
+      "x": 910,
+      "y": 218,
+      "properties": {
+        "duration": 5,
+        "tolerance": 2
+      }
+    }
+  ],
+  "connections": [
+    {
+      "from": "node_1",
+      "to": "node_3",
+      "lineElement": {}
+    },
+    {
+      "from": "node_3",
+      "to": "node_4",
+      "lineElement": {}
+    },
+    {
+      "from": "node_4",
+      "to": "node_5",
+      "lineElement": {}
+    },
+    {
+      "from": "node_5",
+      "to": "node_6",
+      "lineElement": {}
+    },
+    {
+      "from": "node_6",
+      "to": "node_7",
+      "lineElement": {}
+    },
+    {
+      "from": "node_7",
+      "to": "node_8",
+      "lineElement": {}
+    },
+    {
+      "from": "node_8",
+      "to": "node_9",
+      "lineElement": {}
+    },
+    {
+      "from": "node_9",
+      "to": "node_2",
+      "lineElement": {}
+    }
+  ],
+  "metadata": {
+    "nodeCount": 9,
+    "connectionCount": 8,
+    "canvasSize": {
+      "width": 1275,
+      "height": 596
+    }
+  },
+  "executionFlow": {
+    "version": "1.0",
+    "flowId": "flow_1758573897103",
+    "created": "2025-09-22T20:44:57.104Z",
+    "metadata": {
+      "totalSteps": 9,
+      "estimatedDurationMinutes": 15,
+      "temperatureRange": {
+        "min": 5,
+        "max": 45
+      }
+    },
+    "executionSteps": [
+      {
+        "stepId": 1,
+        "stepType": "start-node",
+        "description": "Initialize flow and read current chamber temperature",
+        "action": "initialize",
+        "targetTemperature": null,
+        "readCurrentTemperature": true,
+        "duration": 0
+      },
+      {
+        "stepId": 2,
+        "stepType": "temperature-goal",
+        "description": "Reach target temperature 45\u00b0C (\u00b11\u00b0C)",
+        "action": "reach_temperature",
+        "targetTemperature": 45,
+        "tolerance": 1,
+        "duration": 0,
+        "maxWaitTime": 60
+      },
+      {
+        "stepId": 3,
+        "stepType": "temperature-hold",
+        "description": "Hold 45\u00b0C for 5 minutes (\u00b11\u00b0C)",
+        "action": "hold_temperature",
+        "targetTemperature": 45,
+        "readCurrentTemperature": false,
+        "tolerance": 1,
+        "duration": 5
+      },
+      {
+        "stepId": 4,
+        "stepType": "temperature-goal",
+        "description": "Reach target temperature 15\u00b0C (\u00b10.5\u00b0C)",
+        "action": "reach_temperature",
+        "targetTemperature": 15,
+        "tolerance": 0.5,
+        "duration": 0,
+        "maxWaitTime": 60
+      },
+      {
+        "stepId": 5,
+        "stepType": "temperature-hold",
+        "description": "Hold 15\u00b0C for 5 minutes (\u00b12\u00b0C)",
+        "action": "hold_temperature",
+        "targetTemperature": 15,
+        "readCurrentTemperature": false,
+        "tolerance": 2,
+        "duration": 5
+      },
+      {
+        "stepId": 6,
+        "stepType": "temperature-goal",
+        "description": "Reach target temperature 5\u00b0C (\u00b10.5\u00b0C)",
+        "action": "reach_temperature",
+        "targetTemperature": 5,
+        "tolerance": 0.5,
+        "duration": 0,
+        "maxWaitTime": 60
+      },
+      {
+        "stepId": 7,
+        "stepType": "temperature-goal",
+        "description": "Reach target temperature 30\u00b0C (\u00b10.5\u00b0C)",
+        "action": "reach_temperature",
+        "targetTemperature": 30,
+        "tolerance": 0.5,
+        "duration": 0,
+        "maxWaitTime": 60
+      },
+      {
+        "stepId": 8,
+        "stepType": "temperature-hold",
+        "description": "Hold 30\u00b0C for 5 minutes (\u00b12\u00b0C)",
+        "action": "hold_temperature",
+        "targetTemperature": 30,
+        "readCurrentTemperature": false,
+        "tolerance": 2,
+        "duration": 5
+      },
+      {
+        "stepId": 9,
+        "stepType": "end-node",
+        "description": "End flow immediately",
+        "action": "finalize",
+        "cooldown": false,
+        "duration": 0
+      }
+    ]
+  },
+  "name": "Test_long",
+  "lastModified": "2025-09-22T20:44:57.104Z",
+  "id": "flow_20250922204457"
+}
