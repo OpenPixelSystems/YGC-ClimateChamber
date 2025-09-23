@@ -19,7 +19,7 @@
       "unit": "degrees"
     },
   "Temperature_inside_bottom": {
-      "name": "Temperature_inside_top",
+      "name": "Temperature_inside_bottom",
       "type": "NTC",
       "editable": {
             "SDA": 2,
@@ -37,7 +37,7 @@
       "unit": "degrees"
     },
   "Temperature_inside_peltier": {
-      "name": "Temperature_inside_top",
+      "name": "Temperature_inside_peltier",
       "type": "NTC",
       "editable": {
             "SDA": 2,
@@ -55,7 +55,7 @@
       "unit": "degrees"
     },
   "Temperature_outside_peltier": {
-      "name": "Temperature_inside_top",
+      "name": "Temperature_outside_peltier",
       "type": "NTC",
       "editable": {
             "SDA": 2,
