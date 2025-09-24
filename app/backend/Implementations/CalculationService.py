@@ -25,7 +25,7 @@ class CalculationService(ICalculationService, Subscriptable, LoggingMixin):
         
         # HVAC specific parameters
         self.deadband = 0.5  # ±0.5°C deadband to prevent hunting
-        self.max_output_rate = 25.0  # Maximum output change rate per second (%)
+        self.max_output_rate = 100.0  # Maximum output change rate per second (%) - increased for faster response
         self.min_on_time = 2.0  # Minimum on time for equipment protection (seconds)
         self.min_off_time = 2.0  # Minimum off time for equipment protection (seconds)
         
@@ -40,7 +40,7 @@ class CalculationService(ICalculationService, Subscriptable, LoggingMixin):
         
         # Anti-windup and bumpless transfer
         self.output_limits = (-100.0, 100.0)  # Heating/Cooling limits
-        self.integral_limits = (-50.0, 50.0)  # Integral windup limits
+        self.integral_limits = (-200.0, 200.0)  # Integral windup limits (allows Ki*200 max contribution)
         
         # Predictive control (optional)
         self.setpoint_schedule = None
@@ -129,14 +129,7 @@ class CalculationService(ICalculationService, Subscriptable, LoggingMixin):
         
         # Calculate error
         error = filtered_setpoint - filtered_temp
-        
-        # Apply deadband to prevent hunting
-        if abs(error) <= self.deadband:
-            # Within deadband - maintain current output
-            self._log_pid_data(filtered_temp, filtered_setpoint, error, self.current_output, "DEADBAND")
-            self.notify(self._last_log_data)
-            return self.current_output
-        
+
         # Initialize on first run
         if self.last_time is None:
             self.last_time = current_time
@@ -215,10 +208,12 @@ class CalculationService(ICalculationService, Subscriptable, LoggingMixin):
         self._log_pid_data(filtered_temp, filtered_setpoint, error, final_output, "ACTIVE", {
             'proportional': proportional,
             'integral': integral_term,
+            'integral_raw': self.integral,
             'derivative': derivative_term,
             'feedforward': feedforward,
             'raw_output': raw_output,
-            'rate_limited': rate_limited_output
+            'rate_limited': rate_limited_output,
+            'is_saturated': self._is_output_saturated()
         })
 
         # Notify subscribers with the logged data
@@ -240,8 +235,8 @@ class CalculationService(ICalculationService, Subscriptable, LoggingMixin):
     
     def _is_output_saturated(self):
         """Check if output is at limits to prevent integral windup."""
-        return (self.current_output <= self.output_limits[0] + 1.0 or 
-                self.current_output >= self.output_limits[1] - 1.0)
+        return (self.current_output <= self.output_limits[0] or
+                self.current_output >= self.output_limits[1])
     
     def _apply_output_rate_limiting(self, desired_output, dt):
         """Apply maximum rate of change limiting for equipment protection."""
