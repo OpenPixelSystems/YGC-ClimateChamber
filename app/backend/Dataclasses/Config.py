@@ -17,6 +17,10 @@ class GraphConfig:
     min_y: float = -10
     max_y: float = 100
     max_rico: float = 10
+    max_rico_heating: float = 10
+    max_rico_cooling: float = 10
+    heating_curve_factor: float = 0.6
+    cooling_curve_factor: float = 0.7
 
 @dataclass
 class ISensorConfig:

@@ -30,6 +30,7 @@ class FlowDesigner {
         this.setupDragAndDrop();
         this.initializeSVG();
         this.updateStatus();
+        this.startTemperatureUpdates();
     }
 
     initializeSVG() {
@@ -185,7 +186,7 @@ class FlowDesigner {
     getDefaultProperties(type) {
         const defaults = {
             'start-node': { readCurrent: true },
-            'temperature-goal': { temperature: 20, tolerance: 0.5 },
+            'temperature-goal': { temperature: 20, tolerance: 0.5, estimatedDuration: 0 },
             'temperature-hold': { duration: 30, tolerance: 0.5 }, // No temperature property
             'end-node': { cooldown: false }
         };
@@ -462,6 +463,10 @@ class FlowDesigner {
 
         this.updateStatus();
         this.updateAllInheritedTemperatures();
+
+        // Recalculate estimated durations for all temperature-goal nodes downstream
+        // (connection change affects all nodes after it)
+        this.recalculateAllEstimatedDurations();
     }
 
     clearPendingConnection() {
@@ -575,6 +580,11 @@ class FlowDesigner {
             panel.innerHTML = template.innerHTML;
             this.populateProperties(nodeData);
             this.bindPropertyEvents(nodeData);
+
+            // Update temperature immediately if start node is selected
+            if (nodeData.type === 'start-node') {
+                this.updateStartNodeTemperature();
+            }
         }
     }
 
@@ -617,6 +627,21 @@ class FlowDesigner {
         // If this is a temperature hold node, show inherited temperature
         if (nodeData.type === 'temperature-hold') {
             this.updateInheritedTemperature(nodeData);
+        }
+
+        // If this is a temperature-goal node, show/update estimated duration
+        if (nodeData.type === 'temperature-goal') {
+            const durationDisplay = document.getElementById('tempGoalEstimatedDuration');
+            if (durationDisplay) {
+                const duration = nodeData.properties.estimatedDuration || 0;
+                if (duration > 0) {
+                    durationDisplay.textContent = `${duration} min`;
+                } else {
+                    durationDisplay.textContent = 'Unknown';
+                }
+            }
+            // Recalculate duration in case connections have changed
+            this.calculateAndUpdateEstimatedDuration(nodeData);
         }
     }
 
@@ -714,6 +739,12 @@ class FlowDesigner {
                          input.type === 'number' ? parseFloat(input.value) : input.value;
 
             nodeData.properties[propName] = value;
+
+            // Recalculate estimated duration for temperature-goal nodes when temperature changes
+            if (nodeData.type === 'temperature-goal' && propName === 'temperature') {
+                this.calculateAndUpdateEstimatedDuration(nodeData);
+            }
+
             this.updateStatus();
             this.updateAllInheritedTemperatures();
         }
@@ -746,6 +777,9 @@ class FlowDesigner {
                 document.getElementById('nodeProperties').innerHTML =
                     '<p class="no-selection">Select a node to edit its properties</p>';
             }
+
+            // Recalculate durations for remaining nodes
+            this.recalculateAllEstimatedDurations();
 
             this.redrawConnections();
             this.updateStatus();
@@ -1097,7 +1131,7 @@ class FlowDesigner {
         }
 
         const flowData = this.serializeFlow();
-        const executionFlow = this.convertToExecutionFlow();
+        const executionFlow = await this.convertToExecutionFlow();
 
         // Send both the original flow data and the execution-ready format
         const exportData = {
@@ -1406,7 +1440,7 @@ class FlowDesigner {
      * Converts the flow diagram to an execution-ready JSON structure
      * Removes visual positioning and focuses on sequential execution order
      */
-    convertToExecutionFlow() {
+    async convertToExecutionFlow() {
         const validation = this.performValidation();
         if (!validation.valid) {
             throw new Error(`Cannot convert invalid flow: ${validation.errors.join(', ')}`);
@@ -1415,10 +1449,23 @@ class FlowDesigner {
         // Find execution order by traversing from start node
         const executionOrder = this.determineExecutionOrder();
 
+        // Get current chamber temperature for estimation
+        let currentTemp = null;
+        try {
+            const tempResponse = await fetch('/get-current-chamber-temperature');
+            const tempData = await tempResponse.json();
+            if (tempData.success) {
+                currentTemp = tempData.temperature;
+            }
+        } catch (error) {
+            console.warn('Could not fetch current temperature:', error);
+        }
+
         // Convert nodes to execution steps
         const executionSteps = executionOrder.map((nodeId, index) => {
             const node = this.nodes.get(nodeId);
-            return this.convertNodeToExecutionStep(node, index);
+            const prevNode = index > 0 ? this.nodes.get(executionOrder[index - 1]) : null;
+            return this.convertNodeToExecutionStep(node, index, prevNode, currentTemp);
         });
 
         // Calculate total estimated duration
@@ -1468,7 +1515,7 @@ class FlowDesigner {
     /**
      * Converts a flow node to an execution step
      */
-    convertNodeToExecutionStep(node, stepIndex) {
+    convertNodeToExecutionStep(node, stepIndex, prevNode = null, currentTemp = null) {
         const baseStep = {
             stepId: stepIndex + 1,
             stepType: node.type,
@@ -1487,12 +1534,15 @@ class FlowDesigner {
                 };
 
             case 'temperature-goal':
+                // Use stored estimated duration if available, otherwise calculate
+                const estimatedDuration = node.properties.estimatedDuration ||
+                    this.calculateEstimatedDuration(prevNode, node.properties.temperature, currentTemp);
                 return {
                     ...baseStep,
                     action: 'reach_temperature',
                     targetTemperature: node.properties.temperature,
                     tolerance: node.properties.tolerance,
-                    duration: 0, // Duration is variable - depends on how long it takes to reach target
+                    duration: estimatedDuration, // Estimated duration in minutes
                     maxWaitTime: 60 // Maximum time to wait for temperature to be reached (minutes)
                 };
 
@@ -1549,6 +1599,141 @@ class FlowDesigner {
     }
 
     /**
+     * Recalculate estimated durations for all temperature-goal nodes
+     */
+    async recalculateAllEstimatedDurations() {
+        for (const node of this.nodes.values()) {
+            if (node.type === 'temperature-goal') {
+                await this.calculateAndUpdateEstimatedDuration(node);
+            }
+        }
+    }
+
+    /**
+     * Calculate and update estimated duration for a temperature-goal node
+     */
+    async calculateAndUpdateEstimatedDuration(nodeData) {
+        if (nodeData.type !== 'temperature-goal') return;
+
+        // Find the previous node
+        const incomingConnection = this.connections.find(conn => conn.to === nodeData.id);
+        const prevNode = incomingConnection ? this.nodes.get(incomingConnection.from) : null;
+
+        // If no previous node is connected, cannot estimate duration
+        if (!prevNode) {
+            nodeData.properties.estimatedDuration = 0;
+
+            // Update the UI if this node is currently selected
+            const durationDisplay = document.getElementById('tempGoalEstimatedDuration');
+            if (durationDisplay) {
+                durationDisplay.textContent = 'Not connected';
+            }
+
+            // Update total flow duration in status bar
+            this.updateStatus();
+
+            console.log(`Cannot estimate duration for ${nodeData.id} - no incoming connection`);
+            return;
+        }
+
+        // Get current temperature if needed
+        let currentTemp = null;
+        if (prevNode.type === 'start-node' && prevNode.properties.readCurrent) {
+            try {
+                const response = await fetch('/get-current-chamber-temperature');
+                const data = await response.json();
+                if (data.success) {
+                    currentTemp = data.temperature;
+                }
+            } catch (error) {
+                console.warn('Could not fetch temperature for estimation:', error);
+            }
+        }
+
+        // Calculate duration
+        const duration = this.calculateEstimatedDuration(prevNode, nodeData.properties.temperature, currentTemp);
+
+        // Store in node properties
+        nodeData.properties.estimatedDuration = duration;
+
+        // Update the UI if this node is currently selected
+        const durationDisplay = document.getElementById('tempGoalEstimatedDuration');
+        if (durationDisplay) {
+            if (duration > 0) {
+                durationDisplay.textContent = `${duration} min`;
+            } else {
+                durationDisplay.textContent = 'Unknown';
+            }
+        }
+
+        // Update total flow duration in status bar
+        this.updateStatus();
+
+        console.log(`Updated estimated duration for ${nodeData.id}:`, duration, 'minutes');
+    }
+
+    /**
+     * Calculate estimated duration to reach target temperature
+     */
+    calculateEstimatedDuration(prevNode, targetTemp, currentTemp) {
+        let startTemp = currentTemp;
+
+        // Determine starting temperature
+        if (prevNode) {
+            if (prevNode.type === 'start-node') {
+                if (prevNode.properties.readCurrent && currentTemp !== null) {
+                    startTemp = currentTemp;
+                } else if (!prevNode.properties.readCurrent) {
+                    startTemp = prevNode.properties.initialTemperature;
+                }
+            } else if (prevNode.type === 'temperature-goal') {
+                startTemp = prevNode.properties.temperature;
+            } else if (prevNode.type === 'temperature-hold') {
+                const inheritedTemp = this.getInheritedTemperature(prevNode.id);
+                startTemp = inheritedTemp === 'current' ? currentTemp : inheritedTemp;
+            }
+        }
+
+        // If we can't determine start temperature, return 0 (unknown)
+        if (startTemp === null || startTemp === undefined || startTemp === 'current') {
+            console.log('Cannot estimate duration - unknown start temp:', { prevNode: prevNode?.type, startTemp, targetTemp, currentTemp });
+            return 0;
+        }
+
+        const tempDifference = Math.abs(targetTemp - startTemp);
+        const isHeating = targetTemp > startTemp;
+
+        // Get max rate from config (degrees per minute)
+        const maxRate = isHeating ?
+            (this.config.max_rico_heating || 10) :
+            (this.config.max_rico_cooling || 10);
+
+        // Get curve factor (0-1, where lower=more curved, 1=linear)
+        const curveFactor = isHeating ?
+            (this.config.heating_curve_factor || 0.6) :
+            (this.config.cooling_curve_factor || 0.7);
+
+        // Calculate estimated time in minutes with non-linear curve factor
+        // The curve factor adjusts for slower approach to target temperature
+        // Lower curve factor = more time needed (exponential slowdown)
+        const linearTime = tempDifference / maxRate;
+        const estimatedMinutes = Math.ceil(linearTime / curveFactor);
+
+        console.log('Estimated duration:', {
+            startTemp,
+            targetTemp,
+            tempDifference,
+            isHeating,
+            maxRate,
+            curveFactor,
+            linearTime,
+            estimatedMinutes
+        });
+
+        return estimatedMinutes;
+    }
+
+    /**
      * Calculates the temperature range used in the flow
      */
     getTemperatureRange(executionSteps) {
@@ -1566,6 +1751,46 @@ class FlowDesigner {
         };
     }
 
+    /**
+     * Start periodic temperature updates for start nodes
+     */
+    startTemperatureUpdates() {
+        // Update immediately
+        this.updateStartNodeTemperature();
+
+        // Then update every 5 seconds
+        this.temperatureUpdateInterval = setInterval(() => {
+            this.updateStartNodeTemperature();
+        }, 5000);
+    }
+
+    /**
+     * Update temperature display in properties panel
+     */
+    async updateStartNodeTemperature() {
+        try {
+            const response = await fetch('/get-current-chamber-temperature');
+            const data = await response.json();
+
+            const tempDisplay = document.getElementById('currentChamberTemp');
+            if (!tempDisplay) return; // Element not in DOM (no start node selected)
+
+            if (data.success) {
+                tempDisplay.textContent = `${data.temperature.toFixed(1)}°C`;
+                tempDisplay.style.color = '#4CAF50';
+            } else {
+                tempDisplay.textContent = 'N/A';
+                tempDisplay.style.color = '#999';
+            }
+        } catch (error) {
+            const tempDisplay = document.getElementById('currentChamberTemp');
+            if (tempDisplay) {
+                tempDisplay.textContent = 'Error fetching temperature';
+                tempDisplay.style.color = '#dc3545';
+            }
+        }
+    }
+
     updateStatus() {
         document.getElementById('nodeCount').textContent = this.nodes.size;
 
@@ -1573,21 +1798,39 @@ class FlowDesigner {
         document.getElementById('flowStatus').textContent = validation.valid ? 'Valid' : 'Invalid';
         document.getElementById('flowStatus').className = `status-value ${validation.valid ? 'valid' : 'invalid'}`;
 
-        // Calculate estimated duration
+        // Calculate total estimated duration (temperature-hold + temperature-goal durations)
         let totalDuration = 0;
+        let hasUnknownDurations = false;
+
         this.nodes.forEach(node => {
             if (node.type === 'temperature-hold' && node.properties.duration) {
                 totalDuration += node.properties.duration;
+            } else if (node.type === 'temperature-goal') {
+                const estimatedDuration = node.properties.estimatedDuration || 0;
+                if (estimatedDuration > 0) {
+                    totalDuration += estimatedDuration;
+                } else {
+                    hasUnknownDurations = true;
+                }
             }
         });
 
+        const durationElement = document.getElementById('estimatedDuration');
         if (totalDuration > 0) {
             const hours = Math.floor(totalDuration / 60);
-            const minutes = totalDuration % 60;
-            document.getElementById('estimatedDuration').textContent =
-                hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+            const minutes = Math.round(totalDuration % 60);
+            let durationText = hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+
+            // Add "+" if there are unknown durations
+            if (hasUnknownDurations) {
+                durationText += '+';
+            }
+
+            durationElement.textContent = durationText;
+        } else if (hasUnknownDurations) {
+            durationElement.textContent = 'Calculating...';
         } else {
-            document.getElementById('estimatedDuration').textContent = 'Variable';
+            durationElement.textContent = '--';
         }
     }
 

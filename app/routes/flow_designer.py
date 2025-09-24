@@ -89,8 +89,59 @@ def get_flow_config():
     return jsonify({
         'min_temp': config.min_y,
         'max_temp': config.max_y,
-        'max_hold_time': 1440  # 24 hours in minutes
+        'max_hold_time': 1440,  # 24 hours in minutes
+        'max_rico_heating': config.max_rico_heating,
+        'max_rico_cooling': config.max_rico_cooling,
+        'heating_curve_factor': config.heating_curve_factor,
+        'cooling_curve_factor': config.cooling_curve_factor
     })
+
+@flow_bp.route('/get-current-chamber-temperature', methods=['GET'])
+def get_current_chamber_temperature():
+    """Get current average temperature inside the climate chamber"""
+    try:
+        app_state = get_app_state()
+
+        # Get current sensor readings
+        sensor_data = app_state.controller.sensor_reader.read_sensors()
+
+        # Calculate average of inside temperatures
+        inside_temps = []
+        for sensor_name, value in sensor_data.items():
+            # Skip metadata entries
+            if sensor_name.startswith('_'):
+                continue
+
+            # Handle nested dict structure {sensor_name: {'sensor_value': x, 'sensor_source': y}}
+            if isinstance(value, dict):
+                temp_value = value.get('sensor_value')
+            else:
+                temp_value = value
+
+            if 'inside' in sensor_name.lower() and temp_value is not None:
+                inside_temps.append(temp_value)
+
+        if inside_temps:
+            avg_temp = sum(inside_temps) / len(inside_temps)
+            return jsonify({
+                'success': True,
+                'temperature': round(avg_temp, 2),
+                'sensor_count': len(inside_temps)
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'No inside temperature sensors available'
+            }), 404
+
+    except Exception as e:
+        import traceback
+        print(f"[get_current_chamber_temperature] Error: {str(e)}")
+        print(traceback.format_exc())
+        return jsonify({
+            'success': False,
+            'error': f'An error occurred: {str(e)}'
+        }), 500
 
 @flow_bp.route('/get-execution-flow', methods=['GET'])
 def get_execution_flow():

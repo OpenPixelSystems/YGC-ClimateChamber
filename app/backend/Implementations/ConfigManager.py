@@ -66,10 +66,16 @@ class ConfigManager(IConfigManager, LoggingMixin):
                 self._graph_config.min_y = float(config_data.get("min_y", {}).get("editable", {}).get("value", 0))
                 self._graph_config.max_y = float(config_data.get("max_y", {}).get("editable", {}).get("value", 0.0))
                 self._graph_config.max_rico = float(config_data.get("max_rico", {}).get("editable", {}).get("value", 0.0))
+                self._graph_config.max_rico_heating = float(config_data.get("max_rico_heating", {}).get("editable", {}).get("value", 10.0))
+                self._graph_config.max_rico_cooling = float(config_data.get("max_rico_cooling", {}).get("editable", {}).get("value", 10.0))
+                self._graph_config.heating_curve_factor = float(config_data.get("heating_curve_factor", {}).get("editable", {}).get("value", 0.6))
+                self._graph_config.cooling_curve_factor = float(config_data.get("cooling_curve_factor", {}).get("editable", {}).get("value", 0.7))
 
                 self.print(f"[ConfigManager] [__load_graph_config] Loaded graph config - max_points={self._graph_config.max_points}, "
                       f"min_x={self._graph_config.min_x}, min_y={self._graph_config.min_y}, max_y={self._graph_config.max_y}, "
-                      f"max_rico={self._graph_config.max_rico}")
+                      f"max_rico={self._graph_config.max_rico}, max_rico_heating={self._graph_config.max_rico_heating}, "
+                      f"max_rico_cooling={self._graph_config.max_rico_cooling}, heating_curve_factor={self._graph_config.heating_curve_factor}, "
+                      f"cooling_curve_factor={self._graph_config.cooling_curve_factor}")
         except (FileNotFoundError, KeyError, json.JSONDecodeError, ValueError) as e:
             self.print_error(f"[ConfigManager] [__load_graph_config] Error loading config: {str(e)}")
             self.print_error("Using default values")

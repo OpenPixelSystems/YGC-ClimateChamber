@@ -1,11 +1,46 @@
 /* Flow Designer Styles */
+
+/* Flow Designer CSS Variables */
+:root {
+    --flow-bg: #f8f9fa;
+    --flow-card-bg: #ffffff;
+    --flow-text: #333333;
+    --flow-text-muted: #666666;
+    --flow-border: #dee2e6;
+    --flow-bg-light: #f8f9fa;
+    --flow-bg-hover: #e9ecef;
+    --flow-primary-light: #e7f1ff;
+    --flow-canvas-bg: #ffffff;
+    --flow-grid-color: #e9ecef;
+    --flow-node-bg: #ffffff;
+    --flow-node-shadow: rgba(0, 0, 0, 0.1);
+    --flow-svg-line: #999999;
+}
+
+/* Dark mode flow designer variables */
+.dark-mode {
+    --flow-bg: #1a1a1a;
+    --flow-card-bg: #2d2d2d;
+    --flow-text: #e0e0e0;
+    --flow-text-muted: #999999;
+    --flow-border: #555555;
+    --flow-bg-light: #3d3d3d;
+    --flow-bg-hover: #4d4d4d;
+    --flow-primary-light: #1e3a5f;
+    --flow-canvas-bg: #252525;
+    --flow-grid-color: #3a3a3a;
+    --flow-node-bg: #3d3d3d;
+    --flow-node-shadow: rgba(0, 0, 0, 0.5);
+    --flow-svg-line: #666666;
+}
+
 .flow-designer-container {
     padding: 20px;
     height: 100vh;
     display: flex;
     flex-direction: column;
-    background: var(--bg-color, #f8f9fa);
-    color: var(--text-color, #333);
+    background: var(--flow-bg);
+    color: var(--flow-text);
 }
 
 .designer-header {
@@ -14,14 +49,14 @@
     align-items: center;
     margin-bottom: 20px;
     padding: 20px;
-    background: var(--card-bg, white);
+    background: var(--flow-card-bg);
     border-radius: 8px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 .designer-header h1 {
     margin: 0;
-    color: var(--primary-color, #007bff);
+    color: var(--primary-color);
 }
 
 .header-controls {
@@ -75,7 +110,7 @@
 /* Node Palette */
 .node-palette {
     width: 250px;
-    background: var(--card-bg, white);
+    background: var(--flow-card-bg);
     border-radius: 8px;
     padding: 20px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
@@ -84,7 +119,7 @@
 
 .node-palette h3 {
     margin: 0 0 20px 0;
-    color: var(--primary-color, #007bff);
+    color: var(--primary-color);
 }
 
 .palette-section {
@@ -94,7 +129,7 @@
 .palette-section h4 {
     margin: 0 0 10px 0;
     font-size: 14px;
-    color: var(--text-muted, #666);
+    color: var(--flow-text-muted);
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
@@ -104,7 +139,7 @@
     align-items: center;
     padding: 12px;
     margin-bottom: 8px;
-    background: var(--bg-light, #f8f9fa);
+    background: var(--flow-bg-light);
     border: 2px solid transparent;
     border-radius: 6px;
     cursor: move;
@@ -113,8 +148,8 @@
 }
 
 .node-template:hover {
-    background: var(--bg-hover, #e9ecef);
-    border-color: var(--primary-color, #007bff);
+    background: var(--flow-bg-hover);
+    border-color: var(--primary-color);
     transform: translateY(-1px);
 }
 
@@ -132,7 +167,7 @@
     flex: 1;
     display: flex;
     flex-direction: column;
-    background: var(--card-bg, white);
+    background: var(--flow-card-bg);
     border-radius: 8px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     position: relative;
@@ -141,32 +176,32 @@
 
 .canvas-toolbar {
     padding: 15px 20px;
-    border-bottom: 1px solid var(--border-color, #dee2e6);
-    background: var(--bg-light, #f8f9fa);
+    border-bottom: 1px solid var(--flow-border);
+    background: var(--flow-bg-light);
 }
 
 .canvas-title {
     font-weight: 600;
-    color: var(--text-color, #333);
+    color: var(--flow-text);
 }
 
 .canvas-info {
     font-size: 12px;
-    color: var(--text-muted, #666);
+    color: var(--flow-text-muted);
     margin-left: 10px;
 }
 
 .design-canvas {
     flex: 1;
     position: relative;
-    background: linear-gradient(
+    background: var(--flow-canvas-bg) linear-gradient(
         to right,
-        var(--grid-color, #e9ecef) 1px,
+        var(--flow-grid-color) 1px,
         transparent 1px
     ),
     linear-gradient(
         to bottom,
-        var(--grid-color, #e9ecef) 1px,
+        var(--flow-grid-color) 1px,
         transparent 1px
     );
     background-size: 20px 20px;
@@ -179,8 +214,8 @@
     position: absolute;
     width: 100px;
     height: 50px;
-    background: var(--card-bg, white);
-    border: 2px solid var(--border-color, #dee2e6);
+    background: var(--flow-node-bg);
+    border: 2px solid var(--flow-border);
     border-radius: 8px;
     display: flex;
     flex-direction: column;
@@ -188,18 +223,18 @@
     justify-content: center;
     cursor: pointer;
     user-select: none;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 4px var(--flow-node-shadow);
 }
 
 .flow-node:hover {
-    border-color: var(--primary-color, #007bff);
+    border-color: var(--primary-color);
     transform: translateY(-1px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    box-shadow: 0 4px 8px var(--flow-node-shadow);
 }
 
 .flow-node.selected {
-    border-color: var(--primary-color, #007bff);
-    background: var(--primary-light, #e7f1ff);
+    border-color: var(--primary-color);
+    background: var(--flow-primary-light);
     box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
 }
 
@@ -327,7 +362,7 @@
 }
 
 .connection-svg line {
-    stroke: var(--primary-color, #007bff);
+    stroke: var(--primary-color);
     stroke-width: 2;
 }
 
@@ -338,7 +373,7 @@
 /* Properties Panel */
 .properties-panel {
     width: 300px;
-    background: var(--card-bg, white);
+    background: var(--flow-card-bg);
     border-radius: 8px;
     padding: 20px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
@@ -347,11 +382,11 @@
 
 .properties-panel h3 {
     margin: 0 0 20px 0;
-    color: var(--primary-color, #007bff);
+    color: var(--primary-color);
 }
 
 .properties-content .no-selection {
-    color: var(--text-muted, #666);
+    color: var(--flow-text-muted);
     font-style: italic;
     text-align: center;
     margin: 40px 0;
@@ -359,7 +394,7 @@
 
 .property-template h4 {
     margin: 0 0 15px 0;
-    color: var(--text-color, #333);
+    color: var(--flow-text);
 }
 
 .form-group {
@@ -370,23 +405,23 @@
     display: block;
     margin-bottom: 5px;
     font-weight: 500;
-    color: var(--text-color, #333);
+    color: var(--flow-text);
 }
 
 .form-control {
     width: 100%;
     padding: 8px 12px;
-    border: 1px solid var(--border-color, #dee2e6);
+    border: 1px solid var(--flow-border);
     border-radius: 4px;
     font-size: 14px;
     background: var(--input-bg, white);
-    color: var(--text-color, #333);
+    color: var(--flow-text);
     transition: border-color 0.2s;
 }
 
 .form-control:focus {
     outline: none;
-    border-color: var(--primary-color, #007bff);
+    border-color: var(--primary-color);
     box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
 }
 
@@ -394,13 +429,13 @@
     display: block;
     margin-top: 5px;
     font-size: 12px;
-    color: var(--text-muted, #666);
+    color: var(--flow-text-muted);
 }
 
 .inherited-value {
     padding: 8px 12px;
-    background: var(--bg-light, #f8f9fa);
-    border: 1px solid var(--border-color, #dee2e6);
+    background: var(--flow-bg-light);
+    border: 1px solid var(--flow-border);
     border-radius: 4px;
     display: flex;
     justify-content: space-between;
@@ -409,13 +444,13 @@
 }
 
 .inherited-text {
-    color: var(--text-muted, #666);
+    color: var(--flow-text-muted);
     font-style: italic;
 }
 
 .inherited-value-display {
     font-weight: 600;
-    color: var(--primary-color, #007bff);
+    color: var(--primary-color);
 }
 
 /* Flow Status */
@@ -424,7 +459,7 @@
     gap: 30px;
     margin-top: 20px;
     padding: 15px 20px;
-    background: var(--card-bg, white);
+    background: var(--flow-card-bg);
     border-radius: 8px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
@@ -437,12 +472,12 @@
 
 .status-label {
     font-weight: 500;
-    color: var(--text-muted, #666);
+    color: var(--flow-text-muted);
 }
 
 .status-value {
     font-weight: 600;
-    color: var(--text-color, #333);
+    color: var(--flow-text);
 }
 
 .status-value.valid {
@@ -453,34 +488,7 @@
     color: #dc3545;
 }
 
-/* Dark Mode Support */
-@media (prefers-color-scheme: dark) {
-    :root {
-        --bg-color: #1a1a1a;
-        --card-bg: #2d2d2d;
-        --text-color: #ffffff;
-        --text-muted: #a0a0a0;
-        --border-color: #404040;
-        --bg-light: #383838;
-        --bg-hover: #404040;
-        --input-bg: #2d2d2d;
-        --grid-color: #404040;
-        --primary-light: rgba(0, 123, 255, 0.2);
-    }
-}
-
-body.dark-mode {
-    --bg-color: #1a1a1a;
-    --card-bg: #2d2d2d;
-    --text-color: #ffffff;
-    --text-muted: #a0a0a0;
-    --border-color: #404040;
-    --bg-light: #383838;
-    --bg-hover: #404040;
-    --input-bg: #2d2d2d;
-    --grid-color: #404040;
-    --primary-light: rgba(0, 123, 255, 0.2);
-}
+/* Dark mode is now handled by flow-specific CSS variables at the top of the file */
 
 /* Responsive Design */
 @media (max-width: 1200px) {
