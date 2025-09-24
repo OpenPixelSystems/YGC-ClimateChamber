@@ -488,6 +488,51 @@
     color: #dc3545;
 }
 
+/* Info boxes for temperature display and estimates */
+.info-box {
+    margin-top: 15px;
+    padding: 10px;
+    background-color: #f0f9ff;
+    border-radius: 4px;
+}
+
+.dark-mode .info-box {
+    background-color: #1e3a5f;
+}
+
+.info-box-label {
+    font-weight: 600;
+    color: #1976d2;
+}
+
+.dark-mode .info-box-label {
+    color: #64b5f6;
+}
+
+.info-box-value {
+    font-size: 18px;
+    font-weight: 700;
+    font-family: 'Courier New', monospace;
+    margin-top: 5px;
+}
+
+.info-box-value.temperature {
+    color: #4CAF50;
+}
+
+.dark-mode .info-box-value.temperature {
+    color: #81c784;
+}
+
+.info-box-value.duration {
+    font-size: 16px;
+    color: #2196F3;
+}
+
+.dark-mode .info-box-value.duration {
+    color: #64b5f6;
+}
+
 /* Dark mode is now handled by flow-specific CSS variables at the top of the file */
 
 /* Responsive Design */

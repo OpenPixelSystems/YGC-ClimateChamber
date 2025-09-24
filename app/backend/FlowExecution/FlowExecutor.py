@@ -28,6 +28,9 @@ class FlowExecutor:
         self.start_time: Optional[datetime] = None
         self.logger = logging.getLogger(__name__)
 
+        # Store initial/current temperature when start node executes
+        self.initial_temperature: Optional[float] = None
+
         # Validate flow data
         self._validate_flow_data()
 
@@ -68,6 +71,11 @@ class FlowExecutor:
         """Get execution progress as percentage."""
         if self.total_steps == 0:
             return 0.0
+        # When execution is complete or on the last step (end node), show 100%
+        if not self.is_executing or self.current_step_index >= self.total_steps - 1:
+            current_step = self.current_step
+            if current_step and current_step.get('stepType') == 'end-node':
+                return 100.0
         return (self.current_step_index / self.total_steps) * 100
 
     def get_execution_steps(self) -> List[Dict[str, Any]]:
@@ -133,7 +141,8 @@ class FlowExecutor:
             'progressPercentage': self.progress_percentage,
             'currentStep': self.current_step,
             'startTime': self.start_time.isoformat() if self.start_time else None,
-            'estimatedDuration': self.estimated_duration
+            'estimatedDuration': self.estimated_duration,
+            'initialTemperature': self.initial_temperature
         }
 
     def get_target_temperature(self) -> Optional[float]:
@@ -150,7 +159,14 @@ class FlowExecutor:
         if not current_step:
             return None
 
-        return current_step.get('targetTemperature')
+        target_temp = current_step.get('targetTemperature')
+
+        # If targetTemperature is None and readCurrentTemperature is True,
+        # use the initial temperature captured from start node
+        if target_temp is None and current_step.get('readCurrentTemperature'):
+            return self.initial_temperature
+
+        return target_temp
 
     def should_advance_step(self, current_temp: float, elapsed_time: float) -> bool:
         """
@@ -173,6 +189,10 @@ class FlowExecutor:
         step_type = current_step.get('stepType')
 
         if step_type == 'start-node':
+            # Capture initial temperature when start node is active
+            if self.initial_temperature is None:
+                self.initial_temperature = current_temp
+                self.logger.info(f"Captured initial temperature: {current_temp}°C")
             # Start node advances immediately after reading current temperature
             return True
 
@@ -271,7 +291,8 @@ class FlowExecutor:
             'full_flow_data': self.full_flow_data,
             'current_step_index': self.current_step_index,
             'is_executing': self.is_executing,
-            'start_time': self.start_time.isoformat() if self.start_time else None
+            'start_time': self.start_time.isoformat() if self.start_time else None,
+            'initial_temperature': self.initial_temperature
         }
 
     @classmethod
@@ -280,6 +301,7 @@ class FlowExecutor:
         executor = cls(data['execution_flow'], data['full_flow_data'])
         executor.current_step_index = data.get('current_step_index', 0)
         executor.is_executing = data.get('is_executing', False)
+        executor.initial_temperature = data.get('initial_temperature')
         if data.get('start_time'):
             executor.start_time = datetime.fromisoformat(data['start_time'])
         return executor

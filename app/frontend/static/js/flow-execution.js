@@ -459,8 +459,18 @@ class FlowExecutionManager {
       document.getElementById('tolerance').textContent = 'N/A';
       document.getElementById('duration').textContent = 'Instant';
     } else {
-      document.getElementById('targetTemperature').textContent =
-        step.targetTemperature !== null ? `${step.targetTemperature}°C` : '--';
+      // Handle target temperature display
+      let tempText = '--';
+      if (step.targetTemperature !== null) {
+        tempText = `${step.targetTemperature}°C`;
+      } else if (step.readCurrentTemperature && this.currentStatus?.initialTemperature !== null) {
+        // For hold nodes that read current temp, show the initial temperature from start node
+        tempText = `${this.currentStatus.initialTemperature.toFixed(1)}°C (from start)`;
+      } else if (step.readCurrentTemperature) {
+        tempText = 'Current temp (reading...)';
+      }
+
+      document.getElementById('targetTemperature').textContent = tempText;
       document.getElementById('tolerance').textContent =
         step.tolerance ? `±${step.tolerance}°C` : '--';
       document.getElementById('duration').textContent =
@@ -474,14 +484,21 @@ class FlowExecutionManager {
   updateStepProgress() {
     const stepItems = document.querySelectorAll('.step-item');
     const currentIndex = this.currentStatus?.currentStepIndex || 0;
+    const isExecuting = this.currentStatus?.isExecuting;
+    const currentStep = this.currentStatus?.currentStep;
 
     stepItems.forEach((item, index) => {
       item.classList.remove('active', 'completed');
 
       if (index < currentIndex) {
         item.classList.add('completed');
-      } else if (index === currentIndex && this.currentStatus?.isExecuting) {
-        item.classList.add('active');
+      } else if (index === currentIndex) {
+        // If on end node and not executing anymore, mark as completed
+        if (currentStep?.stepType === 'end-node' && !isExecuting) {
+          item.classList.add('completed');
+        } else if (isExecuting) {
+          item.classList.add('active');
+        }
       }
     });
   }

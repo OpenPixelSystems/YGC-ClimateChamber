@@ -175,12 +175,12 @@ class FlowDesigner {
 
     getNodeConfig(type) {
         const configs = {
-            'start-node': { icon: '🚀', label: 'Start' },
-            'temperature-goal': { icon: '🎯', label: 'Temp Goal' },
-            'temperature-hold': { icon: '⏱️', label: 'Temp Hold' },
-            'end-node': { icon: '🏁', label: 'End' }
+            'start-node': { icon: '▶', label: 'Start' },
+            'temperature-goal': { icon: '◎', label: 'Temp Goal' },
+            'temperature-hold': { icon: '⏸', label: 'Temp Hold' },
+            'end-node': { icon: '■', label: 'End' }
         };
-        return configs[type] || { icon: '❓', label: 'Unknown' };
+        return configs[type] || { icon: '?', label: 'Unknown' };
     }
 
     getDefaultProperties(type) {
@@ -1107,7 +1107,7 @@ class FlowDesigner {
             const inheritedTemp = this.getInheritedTemperature(node.id);
             if (inheritedTemp === null) {
                 errors.push(`Temperature hold node must be connected to receive temperature`);
-            } else if (inheritedTemp < this.config.minTemp || inheritedTemp > this.config.maxTemp) {
+            } else if (inheritedTemp !== 'current' && (inheritedTemp < this.config.minTemp || inheritedTemp > this.config.maxTemp)) {
                 errors.push(`Inherited temperature out of range (${this.config.minTemp}°C to ${this.config.maxTemp}°C)`);
             }
 
