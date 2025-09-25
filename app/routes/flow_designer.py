@@ -202,6 +202,9 @@ def start_flow_execution():
         # Set flow executor in controller for flow-based control
         app_state.controller.set_flow_executor(app_state.flow_executor)
 
+        # Enable Peltier elements for flow execution
+        app_state.controller.enable_peltier_driver()
+
         # Start sensor reading in background
         app_state.controller.start_sensor_stream()
 
@@ -229,6 +232,9 @@ def stop_flow_execution():
 
         # Clear flow executor from controller
         app_state.controller.set_flow_executor(None)
+
+        # Disable Peltier elements when stopping flow execution
+        app_state.controller.disable_peltier_driver()
 
         # Stop database logging if active
         if app_state.database.logging_active:
