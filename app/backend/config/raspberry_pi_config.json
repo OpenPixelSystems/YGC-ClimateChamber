@@ -36,13 +36,13 @@
       },
       "unit": "degrees"
     },
-  "Temperature_inside_peltier": {
-      "name": "Temperature_inside_peltier",
+  "Temperature_outside_ambient": {
+      "name": "Temperature_outside_ambient",
       "type": "NTC",
       "editable": {
             "SDA": 2,
             "SCL": 3,
-            "sensor_location": "Inside",
+            "sensor_location": "outside",
             "read_pin": 2,
             "max_value": 120,
             "min_value": -10,
