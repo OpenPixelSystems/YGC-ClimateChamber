@@ -4,13 +4,23 @@
  */
 
 import UniversalChartManager from './universal-chart-manager.js';
+import { PerformanceProfiles, getOptimalProfile } from './chart-performance-config.js';
 
 export default class ChartManager {
-  constructor(sensorGraph) {
+  constructor(sensorGraph, performanceProfile = null) {
     this.sensorGraph = sensorGraph;
+
+    // Auto-detect optimal performance profile for climate chamber data
+    const profile = performanceProfile || getOptimalProfile(
+      null, // Unknown total points
+      1000, // Assume ~1 second update frequency
+      'medium' // Assume medium device capability
+    );
+
     this.universalManager = new UniversalChartManager({
       canvasId: 'newGraph',
-      type: 'realtime'
+      type: 'realtime',
+      ...profile
     });
   }
 

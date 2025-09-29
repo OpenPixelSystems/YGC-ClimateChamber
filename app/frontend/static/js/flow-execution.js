@@ -2,17 +2,23 @@ import EventManager from './event-manager.js';
 import ChartManager from './chart-manager.js';
 import SensorManager from './sensor-manager.js';
 import UniversalChartManager from './universal-chart-manager.js';
+import { PerformanceProfiles, getOptimalProfile } from './chart-performance-config.js';
 import { formatTime } from './utils.js';
 
 /**
  * FlowChartManager - Specialized chart manager for flow execution
  */
 class FlowChartManager {
-  constructor(flowExecutionManager) {
+  constructor(flowExecutionManager, performanceProfile = null) {
     this.flowExecutionManager = flowExecutionManager;
+
+    // Use high-performance profile for long-running flow executions
+    const profile = performanceProfile || PerformanceProfiles.HIGH_PERFORMANCE;
+
     this.universalManager = new UniversalChartManager({
       canvasId: 'flowGraph',
-      type: 'realtime'
+      type: 'realtime',
+      ...profile
     });
   }
 
