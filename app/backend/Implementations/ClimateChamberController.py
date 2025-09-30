@@ -10,6 +10,7 @@ from app.backend.Interfaces.IClimateChamber import IClimateChamber
 from app.backend.Interfaces.IClimateChamberController import IClimateChamberController
 from app.backend.Interfaces.IConfigManager import IConfigManager
 from app.backend.Interfaces.ISensorReader import ISensorReader
+from app.backend.Services.TemperatureSimulation import get_temperature_simulation_service
 
 
 class ClimateChamberController(IClimateChamberController, LoggingMixin):
@@ -73,6 +74,14 @@ class ClimateChamberController(IClimateChamberController, LoggingMixin):
                     control_status = "ACTIVE"
 
                 self.current_power = output
+
+                # Update temperature simulation service with new PID output
+                try:
+                    simulation_service = get_temperature_simulation_service()
+                    simulation_service.update_pid_output(output)
+                except Exception as e:
+                    self.print(f"[ClimateChamberController] Warning: Failed to update temperature simulation: {e}")
+
                 self.latest_control_data = {
                     'pid_output': output,
                     'target_temp': target_temp,
@@ -141,14 +150,30 @@ class ClimateChamberController(IClimateChamberController, LoggingMixin):
         """Manually steer peltier power"""
         if self.guarding_service.get_guarding_state():
             self.current_power = 0
+            power = 0
             self.print(f"[ClimateChamberController] Manual control blocked by guarding, power reset to 0")
         else:
             self.current_power = power
+
+        # Update temperature simulation service with manual power setting
+        try:
+            simulation_service = get_temperature_simulation_service()
+            simulation_service.update_pid_output(power)
+        except Exception as e:
+            self.print(f"[ClimateChamberController] Warning: Failed to update temperature simulation: {e}")
 
     def stop_sensor_stream(self):
         """Stop the sensor data stream."""
         self.running = False
         self.current_power = 0
+
+        # Reset temperature simulation service
+        try:
+            simulation_service = get_temperature_simulation_service()
+            simulation_service.update_pid_output(0)
+        except Exception as e:
+            self.print(f"[ClimateChamberController] Warning: Failed to reset temperature simulation: {e}")
+
         self.calculation_service.stop()
         self.climate_chamber.stop()
         self.sensor_reader.stop_background_reading()  # Stop background sensor reading
@@ -261,6 +286,14 @@ class ClimateChamberController(IClimateChamberController, LoggingMixin):
 
         # Apply the control output
         self.current_power = output
+
+        # Update temperature simulation service with flow PID output
+        try:
+            simulation_service = get_temperature_simulation_service()
+            simulation_service.update_pid_output(output)
+        except Exception as e:
+            self.print(f"[ClimateChamberController] Warning: Failed to update temperature simulation: {e}")
+
         self.climate_chamber.apply_control({
             'pid_output': output,
             'current_temp': current_temp,

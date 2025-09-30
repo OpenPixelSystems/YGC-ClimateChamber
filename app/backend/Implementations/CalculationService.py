@@ -357,4 +357,4 @@ class CalculationService(ICalculationService, Subscriptable, LoggingMixin):
 
         # Log PID status for debugging
         if status == "ACTIVE":
-            self.print(f"[HVAC_PID] {mode} | Temp: {temp:.1f}°C → Target: {setpoint:.1f}°C | Output: {output:.1f}%")
+            self.print(f"[HVAC_PID] {mode} | Temp: {temp:.1f}°C -> Target: {setpoint:.1f}°C | Output: {output:.1f}%")

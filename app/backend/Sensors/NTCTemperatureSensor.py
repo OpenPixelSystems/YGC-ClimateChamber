@@ -6,6 +6,7 @@ from typing import Dict, Optional
 from app.backend.Dataclasses.Config import NTCConfig
 from app.backend.Providers.gpio_provider import gpio
 from app.backend.Interfaces.ISensor import ISensor
+from app.backend.Services.TemperatureSimulation import get_temperature_simulation_service
 
 
 class NTCTemperatureSensor(ISensor):
@@ -140,29 +141,42 @@ class NTCTemperatureSensor(ISensor):
         return temp_c
 
     def _get_simulated_value(self) -> float:
-        """Generate a simulated temperature sensor value with natural variation.
+        """Generate a simulated temperature sensor value based on PID control output and physics.
 
         Returns:
-            Simulated temperature reading with realistic variation.
+            Simulated temperature reading with realistic physics-based behavior.
         """
-        # Initialize with a reasonable temperature value
-        if self._last_reading is None:
-            self._last_reading = 25.0  # 25°C
+        try:
+            # Use the physics-based temperature simulation service
+            simulation_service = get_temperature_simulation_service()
+            simulated_temp = simulation_service.get_simulated_temperature(
+                sensor_name=self.name,  # Use self.name instead of self._name
+                min_temp=self._min_value,
+                max_temp=self._max_value
+            )
+            self._last_reading = simulated_temp
+            return round(simulated_temp, 2)  # 2 decimal places for temperature
+        except Exception as e:
+            print(f"[NTCTemperatureSensor] Warning: Temperature simulation failed, using fallback: {e}")
 
-        # Apply small random variation (±2°C)
-        variation = random.uniform(-2.0, 2.0)
-        new_value = self._last_reading + (variation * 0.1)  # Small gradual changes
+            # Fallback to old simple simulation if service fails
+            if self._last_reading is None:
+                self._last_reading = 25.0  # 25°C
 
-        # Add some occasional temperature changes to simulate real behavior
-        if random.random() < 0.02:  # 2% chance of larger change
-            change = random.uniform(-5.0, 5.0)
-            new_value += change
+            # Apply small random variation (±2°C)
+            variation = random.uniform(-2.0, 2.0)
+            new_value = self._last_reading + (variation * 0.1)  # Small gradual changes
 
-        # Keep value within specified min and max bounds
-        new_value = max(self._min_value, min(self._max_value, new_value))
-        self._last_reading = new_value
+            # Add some occasional temperature changes to simulate real behavior
+            if random.random() < 0.02:  # 2% chance of larger change
+                change = random.uniform(-5.0, 5.0)
+                new_value += change
 
-        return round(new_value, 2)  # 2 decimal places for temperature
+            # Keep value within specified min and max bounds
+            new_value = max(self._min_value, min(self._max_value, new_value))
+            self._last_reading = new_value
+
+            return round(new_value, 2)  # 2 decimal places for temperature
 
     def read(self) -> Dict[str, Optional[float]]:
         """Read temperature from the NTC sensor via ADS1115.

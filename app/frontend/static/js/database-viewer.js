@@ -3,12 +3,15 @@
  */
 
 import UniversalChartManager from './universal-chart-manager.js';
+import { PerformanceProfiles } from './chart-performance-config.js';
 
 class DatabaseViewer {
     constructor() {
+        // Use HIGH_QUALITY profile for database viewing (detailed analysis)
         this.chartManager = new UniversalChartManager({
             canvasId: 'temperatureChart',
-            type: 'database'
+            type: 'database',
+            ...PerformanceProfiles.HIGH_QUALITY
         });
         
         this.dropdown = document.getElementById('cycleDropdown');
@@ -67,17 +70,39 @@ class DatabaseViewer {
 
     async loadCycleData(cycle_name) {
         try {
+            // Show loading state
+            const chart = this.chartManager.getChart();
+            if (chart) {
+                chart.options.plugins.title.text = 'Loading data...';
+                chart.update('none');
+            }
+
             const res = await fetch(`/api/data/${cycle_name}`);
             if (!res.ok) throw new Error('Failed to fetch cycle data');
             const data = await res.json();
 
             const displayType = this.displayTypeDropdown.value;
             const datasets = this.processDataForDisplay(data, displayType);
-            
+
+            // Log data statistics for performance monitoring
+            const totalDataPoints = datasets.reduce((sum, dataset) => sum + dataset.data.length, 0);
+            console.log(`[DatabaseViewer] Loaded cycle "${cycle_name}" with ${datasets.length} datasets and ${totalDataPoints} total data points`);
+
             this.updateChartTitle(displayType);
             this.chartManager.loadDatabaseData(datasets);
+
+            // Performance warning for very large datasets
+            if (totalDataPoints > 10000) {
+                console.warn(`[DatabaseViewer] Large dataset warning: ${totalDataPoints} points may impact performance. Consider using data filtering.`);
+            }
         } catch (error) {
             console.error('Error loading cycle data:', error);
+            // Show error in chart title
+            const chart = this.chartManager.getChart();
+            if (chart) {
+                chart.options.plugins.title.text = 'Error loading data';
+                chart.update('none');
+            }
         }
     }
 
@@ -139,36 +164,71 @@ class DatabaseViewer {
             });
         }
 
-        // Create datasets
-        const sensorDatasets = Object.entries(sensors).map(([sensor, data]) => ({
-            label: sensor,
-            data: data.timestamps.map((timestamp, i) => ({
+        // Create datasets with performance optimization
+        const sensorDatasets = Object.entries(sensors).map(([sensor, data]) => {
+            // Apply data decimation for large datasets to improve performance
+            let processedData = data.timestamps.map((timestamp, i) => ({
                 x: new Date(timestamp),
                 y: data.values[i]
-            })),
-            borderColor: this.getRandomColor(),
-            backgroundColor: this.getRandomColor(0.1),
-            fill: false,
-            tension: 0.3,
-            pointRadius: 3,
-            yAxisID: 'y'
-        }));
+            }));
+
+            // Use decimation for large datasets (applies LTTB algorithm if needed)
+            if (processedData.length > 1000) {
+                console.log(`[DatabaseViewer] Large dataset detected for ${sensor}: ${processedData.length} points. Applying optimization.`);
+            }
+
+            return {
+                label: sensor,
+                data: processedData,
+                borderColor: this.getRandomColor(),
+                backgroundColor: this.getRandomColor(0.1),
+                fill: false,
+                tension: 0.1, // Reduced for better performance
+                pointRadius: 0, // Remove point markers for better performance
+                borderWidth: 2, // Slightly thicker line since no points
+                yAxisID: 'y'
+            };
+        });
 
         const calculationDatasets = Object.entries(calculations).map(([calcName, data]) => {
             const isError = calcName.includes('Error');
             const isPIDOutput = calcName.includes('PID_Output');
+            const isTemperature = calcName.includes('Current_Temp') || calcName.includes('Target_Temp');
+
+            // Process calculation data with optimization
+            let processedData = data.timestamps.map((timestamp, i) => ({
+                x: new Date(timestamp),
+                y: data.values[i]
+            }));
+
+            // Log large datasets for calculations too
+            if (processedData.length > 1000) {
+                console.log(`[DatabaseViewer] Large calculation dataset detected for ${calcName}: ${processedData.length} points.`);
+            }
+
+            // Choose colors based on calculation type for better readability
+            let borderColor;
+            if (isPIDOutput) {
+                borderColor = '#e74c3c'; // Red for PID output
+            } else if (isTemperature && calcName.includes('Target')) {
+                borderColor = '#3498db'; // Blue for target temperature
+            } else if (isTemperature && calcName.includes('Current')) {
+                borderColor = '#2ecc71'; // Green for current temperature
+            } else if (isError) {
+                borderColor = '#f39c12'; // Orange for error
+            } else {
+                borderColor = this.getRandomColor();
+            }
 
             return {
-                label: calcName,
-                data: data.timestamps.map((timestamp, i) => ({
-                    x: new Date(timestamp),
-                    y: data.values[i]
-                })),
-                borderColor: this.getRandomColor(),
-                backgroundColor: this.getRandomColor(0.1),
+                label: this.formatCalculationLabel(calcName),
+                data: processedData,
+                borderColor: borderColor,
+                backgroundColor: borderColor.replace(')', ', 0.1)').replace('rgb', 'rgba'),
                 fill: false,
-                tension: 0.3,
-                pointRadius: 2,
+                tension: 0.1, // Reduced for better performance
+                pointRadius: 0, // Remove points for calculations too
+                borderWidth: isPIDOutput ? 2 : 1.5, // Emphasize PID output
                 borderDash: isPIDOutput ? [5, 5] : [],
                 yAxisID: isError ? 'y1' : 'y'
             };
@@ -177,21 +237,43 @@ class DatabaseViewer {
         return [...sensorDatasets, ...calculationDatasets];
     }
 
+    formatCalculationLabel(calcName) {
+        // Make calculation labels more readable
+        return calcName
+            .replace(/_/g, ' ')
+            .replace('PID Output', 'PID Output (%)')
+            .replace('Current Temp', 'Current Temp (°C)')
+            .replace('Target Temp', 'Target Temp (°C)')
+            .replace('Error', 'Error (°C)');
+    }
+
     updateChartTitle(displayType) {
         const chart = this.chartManager.getChart();
         if (!chart) return;
 
-        const title = `Sensor ${displayType === 'all' ? 'Data' : displayType.charAt(0).toUpperCase() + displayType.slice(1)} Over Time`;
-        
+        const title = `${displayType === 'all' ? 'All Sensor Data' :
+                      displayType === 'calculations' ? 'PID Control Data' :
+                      displayType.charAt(0).toUpperCase() + displayType.slice(1) + ' Data'} Over Time`;
+
         if (!chart.options.plugins.title) {
             chart.options.plugins.title = {};
         }
-        
+
         chart.options.plugins.title.display = true;
         chart.options.plugins.title.text = title;
 
-        // Update Y axis label
-        const yAxisLabel = displayType === 'humidity' ? 'Humidity (%)' : 'Temperature (°C)';
+        // Update Y axis label based on display type
+        let yAxisLabel = 'Value';
+        if (displayType === 'temperature' || displayType === 'all') {
+            yAxisLabel = 'Temperature (°C)';
+        } else if (displayType === 'humidity') {
+            yAxisLabel = 'Humidity (%)';
+        } else if (displayType === 'current') {
+            yAxisLabel = 'Current (A)';
+        } else if (displayType === 'calculations') {
+            yAxisLabel = 'Temperature (°C) / PID Output (%)';
+        }
+
         if (chart.options.scales.y && chart.options.scales.y.title) {
             chart.options.scales.y.title.text = yAxisLabel;
         }

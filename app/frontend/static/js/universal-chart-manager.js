@@ -1217,58 +1217,50 @@ export default class UniversalChartManager {
 
         const { sensor_data, calculation_data } = cycleData;
         const cycleStart = new Date(cycleStartTime).getTime();
-        
-        // Process temperature sensor data
-        if (sensor_data && sensor_data.temperature && sensor_data.temperature[0]) {
-            sensor_data.temperature[0].forEach(([sensorId, timestamp, value]) => {
-                if (typeof value === 'number') {
-                    let dataset = this.chartInstance.data.datasets.find(ds => ds.label === sensorId);
-                    
-                    if (!dataset) {
-                        dataset = {
-                            label: sensorId,
-                            data: [],
-                            borderColor: getRandomColor(),
-                            fill: false,
-                            pointRadius: 1
-                        };
-                        this.chartInstance.data.datasets.push(dataset);
-                    }
-                    
-                    // Convert timestamp to elapsed seconds from cycle start
-                    const dataTime = new Date(timestamp).getTime();
-                    const elapsedSeconds = Math.floor((dataTime - cycleStart) / 1000);
-                    
-                    dataset.data.push({ x: elapsedSeconds, y: value });
+
+        console.log('[ChartManager] Loading historical data:', { sensor_data, calculation_data });
+
+        // Process all sensor data types using a generic approach
+        if (sensor_data) {
+            // Handle all sensor data categories (temperature, current, pressure, etc.)
+            Object.entries(sensor_data).forEach(([sensorType, sensorCategories]) => {
+                if (Array.isArray(sensorCategories) && sensorCategories.length > 0) {
+                    // Process each sensor category array
+                    sensorCategories.forEach(sensorGroup => {
+                        if (Array.isArray(sensorGroup)) {
+                            sensorGroup.forEach(([sensorId, timestamp, value]) => {
+                                if (typeof value === 'number') {
+                                    this.addHistoricalDataPoint(sensorId, timestamp, value, cycleStart);
+                                }
+                            });
+                        }
+                    });
                 }
             });
         }
-        
-        // Process current sensor data
-        if (sensor_data && sensor_data.current && sensor_data.current[0]) {
-            sensor_data.current[0].forEach(([sensorId, timestamp, value]) => {
-                if (typeof value === 'number') {
-                    let dataset = this.chartInstance.data.datasets.find(ds => ds.label === sensorId);
-                    
-                    if (!dataset) {
-                        dataset = {
-                            label: sensorId,
-                            data: [],
-                            borderColor: getRandomColor(),
-                            fill: false,
-                            pointRadius: 1
-                        };
-                        this.chartInstance.data.datasets.push(dataset);
-                    }
-                    
-                    const dataTime = new Date(timestamp).getTime();
-                    const elapsedSeconds = Math.floor((dataTime - cycleStart) / 1000);
-                    
-                    dataset.data.push({ x: elapsedSeconds, y: value });
+
+        // Process calculation data
+        if (calculation_data) {
+            Object.entries(calculation_data).forEach(([calcType, calcCategories]) => {
+                if (Array.isArray(calcCategories) && calcCategories.length > 0) {
+                    calcCategories.forEach(calcGroup => {
+                        if (Array.isArray(calcGroup)) {
+                            calcGroup.forEach(([calcId, timestamp, value]) => {
+                                if (typeof value === 'number') {
+                                    // Prefix calculation data to distinguish from sensor data
+                                    const calcLabel = `calc_${calcId}`;
+                                    this.addHistoricalDataPoint(calcLabel, timestamp, value, cycleStart);
+                                }
+                            });
+                        }
+                    });
                 }
             });
         }
-        
+
+        // Apply performance optimizations to loaded data
+        this.applyPerformanceOptimizationsToLoadedData();
+
         // Update max elapsed time based on loaded data
         this.chartInstance.data.datasets.forEach(dataset => {
             if (dataset.data && dataset.data.length > 0) {
@@ -1278,10 +1270,65 @@ export default class UniversalChartManager {
                 }
             }
         });
-        
+
         // Update time axis to accommodate the data
         this.updateTimeAxis(this.maxElapsedSeconds);
-        this.chartInstance.update();
+        this.chartInstance.update('none'); // Use optimized update mode
+
+        console.log(`[ChartManager] Loaded ${this.chartInstance.data.datasets.length} datasets with historical data`);
+    }
+
+    /**
+     * Add a single historical data point with performance optimizations
+     */
+    addHistoricalDataPoint(sensorId, timestamp, value, cycleStart) {
+        let dataset = this.chartInstance.data.datasets.find(ds => ds.label === sensorId);
+
+        if (!dataset) {
+            // Apply performance optimization settings to new datasets
+            dataset = {
+                label: sensorId,
+                data: [],
+                borderColor: getRandomColor(),
+                fill: false,
+                pointRadius: this.config.pointRadius || 0, // Use config setting
+                borderWidth: this.config.borderWidth || 1, // Use config setting
+                tension: 0
+            };
+            this.chartInstance.data.datasets.push(dataset);
+        }
+
+        // Convert timestamp to elapsed seconds from cycle start
+        const dataTime = new Date(timestamp).getTime();
+        const elapsedSeconds = Math.floor((dataTime - cycleStart) / 1000);
+
+        dataset.data.push({ x: elapsedSeconds, y: value });
+    }
+
+    /**
+     * Apply performance optimizations to loaded historical data
+     */
+    applyPerformanceOptimizationsToLoadedData() {
+        this.chartInstance.data.datasets.forEach(dataset => {
+            if (dataset.data && dataset.data.length > 0) {
+                // Apply rolling window and decimation to loaded data
+                if (dataset.data.length > this.config.maxDataPoints) {
+                    if (dataset.data.length > this.config.decimationThreshold) {
+                        // Apply decimation using LTTB algorithm
+                        dataset.data = this.decimateData(dataset.data, this.config.maxDataPoints);
+                        console.log(`[ChartManager] Applied decimation to ${dataset.label}: ${dataset.data.length} points`);
+                    } else {
+                        // Simple rolling window - keep most recent points
+                        dataset.data = dataset.data.slice(-this.config.maxDataPoints);
+                        console.log(`[ChartManager] Applied rolling window to ${dataset.label}: ${dataset.data.length} points`);
+                    }
+                }
+
+                // Apply performance optimization settings
+                dataset.pointRadius = this.config.pointRadius || 0;
+                dataset.borderWidth = this.config.borderWidth || 1;
+            }
+        });
     }
 
     /**

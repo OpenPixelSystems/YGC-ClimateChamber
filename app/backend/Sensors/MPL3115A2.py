@@ -2,6 +2,7 @@ import os
 import random
 from typing import Dict, Optional
 from app.backend.Interfaces.ISensor import ISensor
+from app.backend.Services.TemperatureSimulation import get_temperature_simulation_service
 
 
 class MPL3115A2(ISensor):
@@ -94,20 +95,32 @@ class MPL3115A2(ISensor):
         Returns:
             Dictionary with simulated pressure, altitude, and temperature readings.
         """
-        # Apply small random variations to each measurement
+        # Apply small random variations to pressure and altitude
         pressure_variation = random.uniform(-2.0, 2.0)  # ±2 hPa variation
         altitude_variation = random.uniform(-0.5, 0.5)  # ±0.5 m variation
-        temp_variation = random.uniform(-0.2, 0.2)  # ±0.2°C variation
 
         # Update readings with variation
         new_pressure = self._last_readings['pressure'] + pressure_variation
         new_altitude = self._last_readings['altitude'] + altitude_variation
-        new_temperature = self._last_readings['temperature'] + temp_variation
 
-        # Keep values within reasonable bounds
+        # Use physics-based temperature simulation
+        try:
+            simulation_service = get_temperature_simulation_service()
+            new_temperature = simulation_service.get_simulated_temperature(
+                sensor_name=f"{self._name}_temperature",
+                min_temp=-40.0,
+                max_temp=85.0
+            )
+        except Exception as e:
+            print(f"[MPL3115A2] Warning: Temperature simulation failed, using fallback: {e}")
+            # Fallback to old simple simulation
+            temp_variation = random.uniform(-0.2, 0.2)  # ±0.2°C variation
+            new_temperature = self._last_readings['temperature'] + temp_variation
+            new_temperature = max(-40.0, min(85.0, new_temperature))  # Sensor operating range
+
+        # Keep pressure and altitude values within reasonable bounds
         new_pressure = max(800.0, min(1200.0, new_pressure))  # Reasonable pressure range
         new_altitude = max(-500.0, min(5000.0, new_altitude))  # Reasonable altitude range
-        new_temperature = max(-40.0, min(85.0, new_temperature))  # Sensor operating range
 
         # Store for next iteration
         self._last_readings['pressure'] = new_pressure
