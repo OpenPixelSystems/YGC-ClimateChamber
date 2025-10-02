@@ -19,7 +19,7 @@
     "ki": {
         "name": "ki",
         "editable": {
-            "value": 0.1
+            "value": 0.5
         },
         "unit": "",
         "_comment": "Integral control"

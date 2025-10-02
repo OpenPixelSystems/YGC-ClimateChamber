@@ -1,7 +1,7 @@
 {
     "_comment": "This file contains the parameters for the raspberry pi, reformatted for unified configuration parsing.",
-    "Temperature_inside_top": {
-      "name": "Temperature_inside_top",
+    "NTC_peltier_1_temperature": {
+      "name": "NTC_peltier_1_temperature",
       "type": "NTC",
       "editable": {
             "SDA": 2,
@@ -18,8 +18,8 @@
       },
       "unit": "degrees"
     },
-  "Temperature_inside_bottom": {
-      "name": "Temperature_inside_bottom",
+    "NTC_peltier_2_temperature": {
+      "name": "NTC_peltier_2_temperature",
       "type": "NTC",
       "editable": {
             "SDA": 2,
@@ -36,13 +36,13 @@
       },
       "unit": "degrees"
     },
-  "Temperature_outside_ambient": {
-      "name": "Temperature_outside_ambient",
+    "NTC_peltier_3_temperature": {
+      "name": "NTC_peltier_3_temperature",
       "type": "NTC",
       "editable": {
             "SDA": 2,
             "SCL": 3,
-            "sensor_location": "outside",
+            "sensor_location": "Inside",
             "read_pin": 2,
             "max_value": 120,
             "min_value": -10,
@@ -54,13 +54,13 @@
       },
       "unit": "degrees"
     },
-  "Temperature_outside_peltier": {
-      "name": "Temperature_outside_peltier",
+    "NTC_peltier_4_temperature": {
+      "name": "NTC_peltier_4_temperature",
       "type": "NTC",
       "editable": {
             "SDA": 2,
             "SCL": 3,
-            "sensor_location": "Outside",
+            "sensor_location": "Inside",
             "read_pin": 3,
             "max_value": 120,
             "min_value": -10,
@@ -82,7 +82,7 @@
             "R_EN": 5,
             "L_EN": 6,
             "PWM_FREQUENCY": 5000,
-            "Duty cycle limit": 100
+            "Duty cycle limit": 30
         },
         "unit": "degrees",
         "_comment": "Temperature sensor on inside of Peltier element 1"

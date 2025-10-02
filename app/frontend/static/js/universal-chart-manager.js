@@ -14,6 +14,11 @@ export default class UniversalChartManager {
             responsive: config.responsive !== false,
             maintainAspectRatio: config.maintainAspectRatio || false,
             animation: config.animation || false,
+            // Performance optimization settings
+            maxDataPoints: config.maxDataPoints || 2000, // Rolling window size
+            decimationThreshold: config.decimationThreshold || 5000, // Start decimating after this many points
+            batchUpdateInterval: config.batchUpdateInterval || 1000, // Batch updates every 1000ms
+            enableBatchUpdates: config.enableBatchUpdates !== false,
             ...config
         };
         
@@ -34,6 +39,11 @@ export default class UniversalChartManager {
         this.dragEnd = null;
         this.selectionOverlay = null;
         this.originalXLimits = null;
+
+        // Performance optimization properties
+        this.pendingDataUpdates = new Map(); // Store pending data updates for batch processing
+        this.lastUpdateTime = 0;
+        this.batchUpdateTimer = null;
     }
 
     /**
@@ -282,24 +292,76 @@ export default class UniversalChartManager {
             this.maxElapsedSeconds = elapsedSeconds;
         }
 
+        // Use batch updates for better performance
+        if (this.config.enableBatchUpdates) {
+            this.addToPendingUpdates(data, elapsedSeconds, selectedSensors, guardingInfo);
+            return;
+        }
+
+        // Direct update (fallback for immediate updates)
+        this.processDataUpdate(data, elapsedSeconds, selectedSensors, guardingInfo);
+    }
+
+    /**
+     * Add data to pending updates for batch processing
+     */
+    addToPendingUpdates(data, elapsedSeconds, selectedSensors, guardingInfo) {
+        // Store the latest data for each sensor
+        Object.entries(data).forEach(([sensorName, value]) => {
+            if (typeof value === 'number') {
+                this.pendingDataUpdates.set(sensorName, { x: elapsedSeconds, y: value });
+            }
+        });
+
+        // Store guarding info (latest wins)
+        this.pendingGuardingInfo = guardingInfo;
+
+        // Set up batch update timer if not already running
+        if (!this.batchUpdateTimer) {
+            this.batchUpdateTimer = setTimeout(() => {
+                this.processBatchUpdate(selectedSensors);
+            }, this.config.batchUpdateInterval);
+        }
+    }
+
+    /**
+     * Process batched updates for better performance
+     */
+    processBatchUpdate(selectedSensors) {
+        if (this.pendingDataUpdates.size === 0) {
+            this.batchUpdateTimer = null;
+            return;
+        }
+
+        // Process all pending updates
+        this.pendingDataUpdates.forEach((dataPoint, sensorName) => {
+            this.addDataPointToDataset(sensorName, dataPoint, selectedSensors);
+        });
+
+        // Handle guarding information
+        this.handleGuardingInfo(this.pendingGuardingInfo);
+
+        // Update time axis with latest elapsed time
+        const latestTime = Math.max(...Array.from(this.pendingDataUpdates.values()).map(point => point.x));
+        this.updateTimeAxis(latestTime);
+
+        // Update chart with optimized mode
+        this.chartInstance.update('none'); // Skip animations for better performance
+
+        // Clear pending updates
+        this.pendingDataUpdates.clear();
+        this.pendingGuardingInfo = null;
+        this.batchUpdateTimer = null;
+    }
+
+    /**
+     * Process individual data update (direct mode)
+     */
+    processDataUpdate(data, elapsedSeconds, selectedSensors, guardingInfo) {
         // Process sensor data
         Object.entries(data).forEach(([sensorName, value]) => {
             if (typeof value === 'number') {
-                let dataset = this.chartInstance.data.datasets.find(ds => ds.label === sensorName);
-                
-                if (!dataset) {
-                    dataset = {
-                        label: sensorName,
-                        data: [],
-                        borderColor: getRandomColor(),
-                        fill: false,
-                        pointRadius: 1,
-                        hidden: !selectedSensors.has(sensorName)
-                    };
-                    this.chartInstance.data.datasets.push(dataset);
-                }
-                
-                dataset.data.push({ x: elapsedSeconds, y: value });
+                this.addDataPointToDataset(sensorName, { x: elapsedSeconds, y: value }, selectedSensors);
             }
         });
 
@@ -308,7 +370,99 @@ export default class UniversalChartManager {
 
         // Update time axis
         this.updateTimeAxis(elapsedSeconds);
-        this.chartInstance.update();
+        this.chartInstance.update('none');
+    }
+
+    /**
+     * Add data point to dataset with rolling window optimization
+     */
+    addDataPointToDataset(sensorName, dataPoint, selectedSensors) {
+        let dataset = this.chartInstance.data.datasets.find(ds => ds.label === sensorName);
+
+        if (!dataset) {
+            dataset = {
+                label: sensorName,
+                data: [],
+                borderColor: getRandomColor(),
+                fill: false,
+                pointRadius: 0, // Disable point markers for better performance
+                borderWidth: 1,
+                hidden: !selectedSensors.has(sensorName)
+            };
+            this.chartInstance.data.datasets.push(dataset);
+        }
+
+        // Add new data point
+        dataset.data.push(dataPoint);
+
+        // Apply rolling window to limit memory usage
+        if (dataset.data.length > this.config.maxDataPoints) {
+            // Apply decimation if above threshold
+            if (dataset.data.length > this.config.decimationThreshold) {
+                dataset.data = this.decimateData(dataset.data, this.config.maxDataPoints);
+            } else {
+                // Simple rolling window - remove oldest points
+                dataset.data = dataset.data.slice(-this.config.maxDataPoints);
+            }
+        }
+    }
+
+    /**
+     * Decimate data using Largest Triangle Three Buckets (LTTB) algorithm
+     */
+    decimateData(data, targetPoints) {
+        if (data.length <= targetPoints) return data;
+
+        // Always keep first and last points
+        if (targetPoints <= 2) return [data[0], data[data.length - 1]];
+
+        const bucketSize = (data.length - 2) / (targetPoints - 2);
+        const decimated = [data[0]]; // Always keep first point
+
+        let bucketIndex = 1;
+        let nextBucketIndex = Math.floor(bucketIndex + bucketSize);
+
+        for (let i = 1; i < targetPoints - 1; i++) {
+            // Calculate points for triangle area calculation
+            const pointA = decimated[decimated.length - 1];
+
+            // Get average point in next bucket for triangle calculation
+            let avgX = 0, avgY = 0, avgRangeStart = Math.floor(nextBucketIndex);
+            let avgRangeEnd = Math.min(Math.floor(nextBucketIndex + bucketSize), data.length);
+
+            for (let j = avgRangeStart; j < avgRangeEnd; j++) {
+                avgX += data[j].x;
+                avgY += data[j].y;
+            }
+            avgX /= (avgRangeEnd - avgRangeStart);
+            avgY /= (avgRangeEnd - avgRangeStart);
+
+            // Find the point in current bucket that forms largest triangle
+            let maxArea = 0;
+            let maxAreaIndex = Math.floor(bucketIndex);
+            const currentBucketStart = Math.floor(bucketIndex);
+            const currentBucketEnd = Math.min(Math.floor(bucketIndex + bucketSize), data.length);
+
+            for (let j = currentBucketStart; j < currentBucketEnd; j++) {
+                const pointB = data[j];
+                const area = Math.abs(
+                    (pointA.x - avgX) * (pointB.y - pointA.y) -
+                    (pointA.x - pointB.x) * (avgY - pointA.y)
+                );
+
+                if (area > maxArea) {
+                    maxArea = area;
+                    maxAreaIndex = j;
+                }
+            }
+
+            decimated.push(data[maxAreaIndex]);
+            bucketIndex = nextBucketIndex;
+            nextBucketIndex = Math.floor(bucketIndex + bucketSize);
+        }
+
+        decimated.push(data[data.length - 1]); // Always keep last point
+        return decimated;
     }
 
     /**
@@ -1063,58 +1217,50 @@ export default class UniversalChartManager {
 
         const { sensor_data, calculation_data } = cycleData;
         const cycleStart = new Date(cycleStartTime).getTime();
-        
-        // Process temperature sensor data
-        if (sensor_data && sensor_data.temperature && sensor_data.temperature[0]) {
-            sensor_data.temperature[0].forEach(([sensorId, timestamp, value]) => {
-                if (typeof value === 'number') {
-                    let dataset = this.chartInstance.data.datasets.find(ds => ds.label === sensorId);
-                    
-                    if (!dataset) {
-                        dataset = {
-                            label: sensorId,
-                            data: [],
-                            borderColor: getRandomColor(),
-                            fill: false,
-                            pointRadius: 1
-                        };
-                        this.chartInstance.data.datasets.push(dataset);
-                    }
-                    
-                    // Convert timestamp to elapsed seconds from cycle start
-                    const dataTime = new Date(timestamp).getTime();
-                    const elapsedSeconds = Math.floor((dataTime - cycleStart) / 1000);
-                    
-                    dataset.data.push({ x: elapsedSeconds, y: value });
+
+        console.log('[ChartManager] Loading historical data:', { sensor_data, calculation_data });
+
+        // Process all sensor data types using a generic approach
+        if (sensor_data) {
+            // Handle all sensor data categories (temperature, current, pressure, etc.)
+            Object.entries(sensor_data).forEach(([sensorType, sensorCategories]) => {
+                if (Array.isArray(sensorCategories) && sensorCategories.length > 0) {
+                    // Process each sensor category array
+                    sensorCategories.forEach(sensorGroup => {
+                        if (Array.isArray(sensorGroup)) {
+                            sensorGroup.forEach(([sensorId, timestamp, value]) => {
+                                if (typeof value === 'number') {
+                                    this.addHistoricalDataPoint(sensorId, timestamp, value, cycleStart);
+                                }
+                            });
+                        }
+                    });
                 }
             });
         }
-        
-        // Process current sensor data
-        if (sensor_data && sensor_data.current && sensor_data.current[0]) {
-            sensor_data.current[0].forEach(([sensorId, timestamp, value]) => {
-                if (typeof value === 'number') {
-                    let dataset = this.chartInstance.data.datasets.find(ds => ds.label === sensorId);
-                    
-                    if (!dataset) {
-                        dataset = {
-                            label: sensorId,
-                            data: [],
-                            borderColor: getRandomColor(),
-                            fill: false,
-                            pointRadius: 1
-                        };
-                        this.chartInstance.data.datasets.push(dataset);
-                    }
-                    
-                    const dataTime = new Date(timestamp).getTime();
-                    const elapsedSeconds = Math.floor((dataTime - cycleStart) / 1000);
-                    
-                    dataset.data.push({ x: elapsedSeconds, y: value });
+
+        // Process calculation data
+        if (calculation_data) {
+            Object.entries(calculation_data).forEach(([calcType, calcCategories]) => {
+                if (Array.isArray(calcCategories) && calcCategories.length > 0) {
+                    calcCategories.forEach(calcGroup => {
+                        if (Array.isArray(calcGroup)) {
+                            calcGroup.forEach(([calcId, timestamp, value]) => {
+                                if (typeof value === 'number') {
+                                    // Prefix calculation data to distinguish from sensor data
+                                    const calcLabel = `calc_${calcId}`;
+                                    this.addHistoricalDataPoint(calcLabel, timestamp, value, cycleStart);
+                                }
+                            });
+                        }
+                    });
                 }
             });
         }
-        
+
+        // Apply performance optimizations to loaded data
+        this.applyPerformanceOptimizationsToLoadedData();
+
         // Update max elapsed time based on loaded data
         this.chartInstance.data.datasets.forEach(dataset => {
             if (dataset.data && dataset.data.length > 0) {
@@ -1124,21 +1270,86 @@ export default class UniversalChartManager {
                 }
             }
         });
-        
+
         // Update time axis to accommodate the data
         this.updateTimeAxis(this.maxElapsedSeconds);
-        this.chartInstance.update();
+        this.chartInstance.update('none'); // Use optimized update mode
+
+        console.log(`[ChartManager] Loaded ${this.chartInstance.data.datasets.length} datasets with historical data`);
+    }
+
+    /**
+     * Add a single historical data point with performance optimizations
+     */
+    addHistoricalDataPoint(sensorId, timestamp, value, cycleStart) {
+        let dataset = this.chartInstance.data.datasets.find(ds => ds.label === sensorId);
+
+        if (!dataset) {
+            // Apply performance optimization settings to new datasets
+            dataset = {
+                label: sensorId,
+                data: [],
+                borderColor: getRandomColor(),
+                fill: false,
+                pointRadius: this.config.pointRadius || 0, // Use config setting
+                borderWidth: this.config.borderWidth || 1, // Use config setting
+                tension: 0
+            };
+            this.chartInstance.data.datasets.push(dataset);
+        }
+
+        // Convert timestamp to elapsed seconds from cycle start
+        const dataTime = new Date(timestamp).getTime();
+        const elapsedSeconds = Math.floor((dataTime - cycleStart) / 1000);
+
+        dataset.data.push({ x: elapsedSeconds, y: value });
+    }
+
+    /**
+     * Apply performance optimizations to loaded historical data
+     */
+    applyPerformanceOptimizationsToLoadedData() {
+        this.chartInstance.data.datasets.forEach(dataset => {
+            if (dataset.data && dataset.data.length > 0) {
+                // Apply rolling window and decimation to loaded data
+                if (dataset.data.length > this.config.maxDataPoints) {
+                    if (dataset.data.length > this.config.decimationThreshold) {
+                        // Apply decimation using LTTB algorithm
+                        dataset.data = this.decimateData(dataset.data, this.config.maxDataPoints);
+                        console.log(`[ChartManager] Applied decimation to ${dataset.label}: ${dataset.data.length} points`);
+                    } else {
+                        // Simple rolling window - keep most recent points
+                        dataset.data = dataset.data.slice(-this.config.maxDataPoints);
+                        console.log(`[ChartManager] Applied rolling window to ${dataset.label}: ${dataset.data.length} points`);
+                    }
+                }
+
+                // Apply performance optimization settings
+                dataset.pointRadius = this.config.pointRadius || 0;
+                dataset.borderWidth = this.config.borderWidth || 1;
+            }
+        });
     }
 
     /**
      * Destroy chart
      */
     destroy() {
+        // Clean up batch update timer
+        if (this.batchUpdateTimer) {
+            clearTimeout(this.batchUpdateTimer);
+            this.batchUpdateTimer = null;
+        }
+
+        // Clean up pending updates
+        this.pendingDataUpdates.clear();
+        this.pendingGuardingInfo = null;
+
         // Clean up selection overlay
         if (this.selectionOverlay && this.selectionOverlay.parentElement) {
             this.selectionOverlay.parentElement.removeChild(this.selectionOverlay);
         }
-        
+
         if (this.chartInstance) {
             this.chartInstance.destroy();
             this.chartInstance = null;

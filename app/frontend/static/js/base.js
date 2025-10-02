@@ -130,12 +130,43 @@ async function checkActiveCycle() {
             
             if (data.active_cycle && activeCycleLink) {
                 activeCycleLink.style.display = 'inline';
-                activeCycleLink.textContent = `Active Cycle: ${data.cycle_name}`;
-                
+
+                // Determine cycle type for display
+                let cycleType;
+                switch(data.origin_page) {
+                    case 'manual-control':
+                        cycleType = 'Manual Control';
+                        break;
+                    case 'flow-execution':
+                        cycleType = 'Flow Execution';
+                        break;
+                    case 'display-graph':
+                    default:
+                        cycleType = 'Graph Control';
+                        break;
+                }
+
+                activeCycleLink.textContent = `Active ${cycleType}`;
+                activeCycleLink.title = `${data.cycle_name} - Click to go to active cycle`;
+
                 // Set up click handler to redirect to origin page
                 activeCycleLink.onclick = (e) => {
                     e.preventDefault();
-                    const targetPage = data.origin_page === 'manual-control' ? '/manual-control' : '/display-graph';
+                    let targetPage;
+
+                    switch(data.origin_page) {
+                        case 'manual-control':
+                            targetPage = '/manual-control';
+                            break;
+                        case 'flow-execution':
+                            targetPage = '/flow-execution';
+                            break;
+                        case 'display-graph':
+                        default:
+                            targetPage = '/display-graph';
+                            break;
+                    }
+
                     window.location.href = targetPage;
                 };
             } else if (activeCycleLink) {

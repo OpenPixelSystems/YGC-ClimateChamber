@@ -33,7 +33,39 @@
         "editable": {
             "value": 10
         },
-        "unit": "degrees celcius/second",
-        "_comment": "Handles how fast temperature can increase or drop. (Tends to be non linear)"
+        "unit": "degrees celcius/minute",
+        "_comment": "Handles how fast temperature can drop. (Tends to be non linear)"
+    },
+    "max_rico_heating": {
+        "name": "max_rico_heating",
+        "editable": {
+            "value": 2
+        },
+        "unit": "degrees celcius/minute",
+        "_comment": "Handles how fast temperature can increase. (Tends to be non linear)"
+    },
+    "max_rico_cooling": {
+        "name": "max_rico_cooling",
+        "editable": {
+            "value": 1
+        },
+        "unit": "degrees celcius/minute",
+        "_comment": "Handles how fast temperature can decrease. (Tends to be non linear)"
+    },
+    "heating_curve_factor": {
+        "name": "heating_curve_factor",
+        "editable": {
+            "value": 0.6
+        },
+        "unit": "dimensionless",
+        "_comment": "Factor representing non-linear heating behavior (0-1, where lower=more curved/slower approach, 1=linear). Heating starts fast then slows approaching target."
+    },
+    "cooling_curve_factor": {
+        "name": "cooling_curve_factor",
+        "editable": {
+            "value": 0.7
+        },
+        "unit": "dimensionless",
+        "_comment": "Factor representing non-linear cooling behavior (0-1, where lower=more curved/slower approach, 1=linear). Cooling starts fast then slows approaching target."
     }
 }

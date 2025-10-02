@@ -1,0 +1,575 @@
+/* Flow Designer Styles */
+
+/* Flow Designer CSS Variables */
+:root {
+    --flow-bg: #f8f9fa;
+    --flow-card-bg: #ffffff;
+    --flow-text: #333333;
+    --flow-text-muted: #666666;
+    --flow-border: #dee2e6;
+    --flow-bg-light: #f8f9fa;
+    --flow-bg-hover: #e9ecef;
+    --flow-primary-light: #e7f1ff;
+    --flow-canvas-bg: #ffffff;
+    --flow-grid-color: #e9ecef;
+    --flow-node-bg: #ffffff;
+    --flow-node-shadow: rgba(0, 0, 0, 0.1);
+    --flow-svg-line: #999999;
+}
+
+/* Dark mode flow designer variables */
+.dark-mode {
+    --flow-bg: #1a1a1a;
+    --flow-card-bg: #2d2d2d;
+    --flow-text: #e0e0e0;
+    --flow-text-muted: #999999;
+    --flow-border: #555555;
+    --flow-bg-light: #3d3d3d;
+    --flow-bg-hover: #4d4d4d;
+    --flow-primary-light: #1e3a5f;
+    --flow-canvas-bg: #252525;
+    --flow-grid-color: #3a3a3a;
+    --flow-node-bg: #3d3d3d;
+    --flow-node-shadow: rgba(0, 0, 0, 0.5);
+    --flow-svg-line: #666666;
+}
+
+.flow-designer-container {
+    padding: 20px;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: var(--flow-bg);
+    color: var(--flow-text);
+}
+
+.designer-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding: 20px;
+    background: var(--flow-card-bg);
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.designer-header h1 {
+    margin: 0;
+    color: var(--primary-color);
+}
+
+.header-controls {
+    display: flex;
+    gap: 10px;
+}
+
+.btn {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.2s;
+}
+
+.btn-primary {
+    background: #007bff;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #0056b3;
+}
+
+.btn-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #545b62;
+}
+
+.btn-success {
+    background: #28a745;
+    color: white;
+}
+
+.btn-success:hover {
+    background: #1e7e34;
+}
+
+.designer-workspace {
+    display: flex;
+    flex: 1;
+    gap: 20px;
+    min-height: 0;
+}
+
+/* Node Palette */
+.node-palette {
+    width: 250px;
+    background: var(--flow-card-bg);
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    overflow-y: auto;
+}
+
+.node-palette h3 {
+    margin: 0 0 20px 0;
+    color: var(--primary-color);
+}
+
+.palette-section {
+    margin-bottom: 20px;
+}
+
+.palette-section h4 {
+    margin: 0 0 10px 0;
+    font-size: 14px;
+    color: var(--flow-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.node-template {
+    display: flex;
+    align-items: center;
+    padding: 12px;
+    margin-bottom: 8px;
+    background: var(--flow-bg-light);
+    border: 2px solid transparent;
+    border-radius: 6px;
+    cursor: move;
+    transition: all 0.2s;
+    user-select: none;
+}
+
+.node-template:hover {
+    background: var(--flow-bg-hover);
+    border-color: var(--primary-color);
+    transform: translateY(-1px);
+}
+
+.node-template .node-icon {
+    font-size: 20px;
+    margin-right: 10px;
+}
+
+.node-template .node-label {
+    font-weight: 500;
+}
+
+/* Design Canvas */
+.design-canvas-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: var(--flow-card-bg);
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    position: relative;
+    overflow: hidden;
+}
+
+.canvas-toolbar {
+    padding: 15px 20px;
+    border-bottom: 1px solid var(--flow-border);
+    background: var(--flow-bg-light);
+}
+
+.canvas-title {
+    font-weight: 600;
+    color: var(--flow-text);
+}
+
+.canvas-info {
+    font-size: 12px;
+    color: var(--flow-text-muted);
+    margin-left: 10px;
+}
+
+.design-canvas {
+    flex: 1;
+    position: relative;
+    background: var(--flow-canvas-bg) linear-gradient(
+        to right,
+        var(--flow-grid-color) 1px,
+        transparent 1px
+    ),
+    linear-gradient(
+        to bottom,
+        var(--flow-grid-color) 1px,
+        transparent 1px
+    );
+    background-size: 20px 20px;
+    min-height: 400px;
+    overflow: hidden;
+}
+
+/* Flow Nodes */
+.flow-node {
+    position: absolute;
+    width: 100px;
+    height: 50px;
+    background: var(--flow-node-bg);
+    border: 2px solid var(--flow-border);
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    user-select: none;
+    box-shadow: 0 2px 4px var(--flow-node-shadow);
+}
+
+.flow-node:hover {
+    border-color: var(--primary-color);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px var(--flow-node-shadow);
+}
+
+.flow-node.selected {
+    border-color: var(--primary-color);
+    background: var(--flow-primary-light);
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
+}
+
+.flow-node .node-icon {
+    font-size: 16px;
+    margin-bottom: 2px;
+}
+
+.flow-node .node-label {
+    font-size: 10px;
+    font-weight: 600;
+    text-align: center;
+}
+
+.flow-node .node-delete {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    width: 16px;
+    height: 16px;
+    background: #dc3545;
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.flow-node:hover .node-delete {
+    opacity: 1;
+}
+
+.flow-node .node-connector {
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    background: var(--primary-color, #007bff);
+    border-radius: 50%;
+    cursor: pointer;
+    z-index: 10;
+    border: 2px solid white;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+.flow-node .node-connector:hover {
+    transform: scale(1.3);
+    background: #0056b3;
+    box-shadow: 0 0 8px rgba(0, 123, 255, 0.6);
+}
+
+.flow-node .node-connector.pending {
+    background: #ffc107;
+    animation: pulse 1s infinite;
+}
+
+.flow-node .node-connector.connection-target {
+    background: #28a745;
+    transform: translateY(-50%) scale(1.5);
+    border-color: #fff;
+    box-shadow: 0 0 10px rgba(40, 167, 69, 0.5);
+}
+
+.flow-node .node-connector.can-start {
+    transform: translateY(-50%) scale(1.2);
+    box-shadow: 0 0 6px rgba(0, 123, 255, 0.4);
+}
+
+.flow-node .node-connector.pending {
+    background: #ffc107;
+    animation: pulse-pending 1s infinite;
+}
+
+@keyframes pulse-pending {
+    0% { transform: translateY(-50%) scale(1); }
+    50% { transform: translateY(-50%) scale(1.3); }
+    100% { transform: translateY(-50%) scale(1); }
+}
+
+.flow-node .node-connector.end {
+    left: -8px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: #28a745; /* Green for end points */
+}
+
+.flow-node .node-connector.end:hover {
+    transform: translateY(-50%) scale(1.3);
+    background: #1e7e34;
+    box-shadow: 0 0 8px rgba(40, 167, 69, 0.6);
+}
+
+.flow-node .node-connector.start {
+    right: -8px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: #007bff; /* Blue for start points */
+}
+
+.flow-node .node-connector.start:hover {
+    transform: translateY(-50%) scale(1.3);
+    background: #0056b3;
+    box-shadow: 0 0 8px rgba(0, 123, 255, 0.6);
+}
+
+@keyframes pulse {
+    0% { transform: translateY(-50%) scale(1); }
+    50% { transform: translateY(-50%) scale(1.5); }
+    100% { transform: translateY(-50%) scale(1); }
+}
+
+/* Connection SVG */
+.connection-svg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 1;
+    overflow: visible;
+}
+
+.connection-svg line {
+    stroke: var(--primary-color);
+    stroke-width: 2;
+}
+
+.connection-svg line {
+    /* No transition - arrows should move immediately with nodes during drag */
+}
+
+/* Properties Panel */
+.properties-panel {
+    width: 300px;
+    background: var(--flow-card-bg);
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    overflow-y: auto;
+}
+
+.properties-panel h3 {
+    margin: 0 0 20px 0;
+    color: var(--primary-color);
+}
+
+.properties-content .no-selection {
+    color: var(--flow-text-muted);
+    font-style: italic;
+    text-align: center;
+    margin: 40px 0;
+}
+
+.property-template h4 {
+    margin: 0 0 15px 0;
+    color: var(--flow-text);
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 500;
+    color: var(--flow-text);
+}
+
+.form-control {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid var(--flow-border);
+    border-radius: 4px;
+    font-size: 14px;
+    background: var(--input-bg, white);
+    color: var(--flow-text);
+    transition: border-color 0.2s;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+.form-help {
+    display: block;
+    margin-top: 5px;
+    font-size: 12px;
+    color: var(--flow-text-muted);
+}
+
+.inherited-value {
+    padding: 8px 12px;
+    background: var(--flow-bg-light);
+    border: 1px solid var(--flow-border);
+    border-radius: 4px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 14px;
+}
+
+.inherited-text {
+    color: var(--flow-text-muted);
+    font-style: italic;
+}
+
+.inherited-value-display {
+    font-weight: 600;
+    color: var(--primary-color);
+}
+
+/* Flow Status */
+.flow-status {
+    display: flex;
+    gap: 30px;
+    margin-top: 20px;
+    padding: 15px 20px;
+    background: var(--flow-card-bg);
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.status-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.status-label {
+    font-weight: 500;
+    color: var(--flow-text-muted);
+}
+
+.status-value {
+    font-weight: 600;
+    color: var(--flow-text);
+}
+
+.status-value.valid {
+    color: #28a745;
+}
+
+.status-value.invalid {
+    color: #dc3545;
+}
+
+/* Info boxes for temperature display and estimates */
+.info-box {
+    margin-top: 15px;
+    padding: 10px;
+    background-color: #f0f9ff;
+    border-radius: 4px;
+}
+
+.dark-mode .info-box {
+    background-color: #1e3a5f;
+}
+
+.info-box-label {
+    font-weight: 600;
+    color: #1976d2;
+}
+
+.dark-mode .info-box-label {
+    color: #64b5f6;
+}
+
+.info-box-value {
+    font-size: 18px;
+    font-weight: 700;
+    font-family: 'Courier New', monospace;
+    margin-top: 5px;
+}
+
+.info-box-value.temperature {
+    color: #4CAF50;
+}
+
+.dark-mode .info-box-value.temperature {
+    color: #81c784;
+}
+
+.info-box-value.duration {
+    font-size: 16px;
+    color: #2196F3;
+}
+
+.dark-mode .info-box-value.duration {
+    color: #64b5f6;
+}
+
+/* Dark mode is now handled by flow-specific CSS variables at the top of the file */
+
+/* Responsive Design */
+@media (max-width: 1200px) {
+    .designer-workspace {
+        flex-direction: column;
+    }
+
+    .node-palette,
+    .properties-panel {
+        width: 100%;
+        order: 2;
+    }
+
+    .design-canvas-container {
+        order: 1;
+        min-height: 400px;
+    }
+}
+
+@media (max-width: 768px) {
+    .flow-designer-container {
+        padding: 10px;
+    }
+
+    .designer-header {
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .header-controls {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .flow-status {
+        flex-direction: column;
+        gap: 10px;
+    }
+}

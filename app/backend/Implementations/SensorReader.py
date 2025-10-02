@@ -11,14 +11,16 @@ from app.backend.Sensors.DS18B20 import DS18B20
 from app.backend.Sensors.DS18B20Cluster import DS18B20Cluster
 from app.backend.Sensors.MPL3115A2 import MPL3115A2
 from app.backend.Services.Subscribe import Subscriptable
+from app.backend.Technical.Logging import LoggingMixin
 
 
-class SensorReader(ISensorReader, Subscriptable):
+class SensorReader(ISensorReader, Subscriptable, LoggingMixin):
     """Handles initialisation, reading and logging logic of all connected Sensors """
     #TODO add reload functionality for when config file gets edited
 
     def __init__(self, mcu_config: McuConfig):
-        super().__init__()
+        Subscriptable.__init__(self)
+        LoggingMixin.__init__(self)
         self.sensor_list = []
         self.inside_sensors_list = []
         
@@ -70,7 +72,7 @@ class SensorReader(ISensorReader, Subscriptable):
                 self.inside_sensors_list.append(sensor)
 
     def read_inside_sensors(self):
-        print(f"[SensorReader] reading inside sensors")
+        # Reading inside sensors for temperature average
         temperature_readings = []
         for sensor in self.inside_sensors_list:
             try:
@@ -81,9 +83,42 @@ class SensorReader(ISensorReader, Subscriptable):
                     if isinstance(sensor_data, dict) and 'sensor_value' in sensor_data:
                         temperature_readings.append(sensor_data['sensor_value'])
             except Exception as e:
-                print(f"[SensorReader] Error reading sensor {getattr(sensor, 'name', 'unknown')}: {e}")
+                self.print_error(f"Error reading sensor {getattr(sensor, 'name', 'unknown')}: {e}")
 
         return sum(temperature_readings) / len(temperature_readings)
+
+    """Return cached sensor values without notifications - for streaming only"""
+    def read_sensors_no_notify(self):
+        # Check if background reading is running
+        background_running = self._background_thread and self._background_thread.is_alive()
+
+        # Try to return cached data first (instant response) - only if background reading is active
+        if background_running:
+            with self._data_lock:
+                if self._cached_sensor_data and self._last_reading_time:
+                    age = (datetime.now() - self._last_reading_time).total_seconds()
+                    if age < 10.0:  # Use cache if less than 10 seconds old
+                        # Return cached data for streaming
+                        cached_data = self._cached_sensor_data.copy()
+                        # Add cache metadata to indicate this is cached data
+                        cache_status = 'cached_recent' if age < 3.0 else 'cached_old'
+                        cached_data['_cache_info'] = {
+                            'source': cache_status,
+                            'age_seconds': round(age, 1),
+                            'cached_at': self._last_reading_time.isoformat(),
+                            'is_recent': age < 3.0
+                        }
+                        # Apply peltier state correction to cached data
+                        cached_data = self._apply_peltier_state_correction(cached_data)
+                        # NO NOTIFICATION - this prevents duplicate calculations
+                        return cached_data
+                    else:
+                        # Cached data too old for streaming
+                        return {}
+
+        # If no background reading or no cache, return empty dict for streaming
+        # No cached data available for streaming
+        return {}
 
     """Return cached sensor values (instant response) or direct read if no cache available"""
     def read_sensors(self):
@@ -96,7 +131,7 @@ class SensorReader(ISensorReader, Subscriptable):
                 if self._cached_sensor_data and self._last_reading_time:
                     age = (datetime.now() - self._last_reading_time).total_seconds()
                     if age < 10.0:  # Use cache if less than 10 seconds old
-                        print(f"[SensorReader] Returning cached data (age: {age:.1f}s)")
+                        # Return cached sensor data
                         cached_data = self._cached_sensor_data.copy()
                         # Add cache metadata to indicate this is cached data
                         # Determine if cache is recent (< 3 seconds) or old
@@ -112,13 +147,16 @@ class SensorReader(ISensorReader, Subscriptable):
                         self.notify(cached_data)
                         return cached_data
                     else:
-                        print(f"[SensorReader] Cached data too old ({age:.1f}s), falling back to direct read")
-        
+                        # Cached data too old, reading sensors directly
+                        pass
+
         # Fallback: direct read if background reading not active or no cached data
         if not background_running:
-            print("[SensorReader] Background reading not active, reading sensors directly")
+            # Background reading not active, read sensors directly
+            pass
         else:
-            print("[SensorReader] No cached data available, reading sensors directly")
+            # No cached data available, read sensors directly
+            pass
             
         sensor_readings = self._read_sensors_directly()
         
@@ -140,24 +178,23 @@ class SensorReader(ISensorReader, Subscriptable):
     def start_background_reading(self):
         """Start the background sensor reading thread."""
         if self._background_thread and self._background_thread.is_alive():
-            print("[SensorReader] Background reading already running")
-            return
+            return  # Background reading already running
         
         self._stop_background = False
         self._background_thread = threading.Thread(target=self._background_read_loop, daemon=True)
         self._background_thread.start()
-        print(f"[SensorReader] Background reading started (interval: {self._reading_interval}s)")
+        self.print(f"[SensorReader] Background reading started (interval: {self._reading_interval}s)")
     
     def stop_background_reading(self):
         """Stop the background sensor reading thread."""
         if self._background_thread:
             self._stop_background = True
             self._background_thread.join(timeout=5.0)
-            print("[SensorReader] Background reading stopped")
+            self.print("[SensorReader] Background reading stopped")
     
     def _background_read_loop(self):
         """Continuously read sensors in background and store values."""
-        print("[SensorReader] Background reading loop started")
+        # Background reading loop started
         
         while not self._stop_background:
             try:
@@ -173,15 +210,15 @@ class SensorReader(ISensorReader, Subscriptable):
                 corrected_data = self._apply_peltier_state_correction(fresh_data)
                 self.notify(corrected_data)
                 
-                print(f"[SensorReader] Background read complete at {self._last_reading_time}")
+                # Background read complete
                 
             except Exception as e:
-                print(f"[SensorReader] Error in background reading: {e}")
+                self.print_error(f"[SensorReader] Error in background reading: {e}")
             
             # Wait before next reading
             time.sleep(self._reading_interval)
         
-        print("[SensorReader] Background reading loop ended")
+        self.print("[SensorReader] Background reading loop ended")
     
     def _read_sensors_directly(self):
         """Read sensors directly (used by background thread)."""
@@ -194,7 +231,7 @@ class SensorReader(ISensorReader, Subscriptable):
                 sensor_readings.update(reading)
                     
             except Exception as e:
-                print(f"[SensorReader] Error reading sensor {getattr(sensor, 'name', 'unknown')}: {e}")
+                self.print_error(f"Error reading sensor {getattr(sensor, 'name', 'unknown')}: {e}")
         
         return sensor_readings
     
@@ -206,7 +243,7 @@ class SensorReader(ISensorReader, Subscriptable):
         """
         with self._peltier_state_lock:
             self._peltier_enabled = enabled
-            print(f"[SensorReader] Peltier enabled state set to: {enabled}")
+            # Peltier enabled state updated
     
     def _is_current_sensor(self, sensor_name: str) -> bool:
         """Determine if a sensor measures current based on its name.
@@ -251,7 +288,7 @@ class SensorReader(ISensorReader, Subscriptable):
                             'sensor_value': 0.0,
                             'sensor_source': 'peltier_disabled'
                         }
-                        print(f"[SensorReader] Overrode {sensor_name} to 0A (peltier disabled)")
+                        # Override current sensor to 0A when peltier disabled
                 
                 return corrected_readings
             
@@ -310,14 +347,14 @@ class SensorReader(ISensorReader, Subscriptable):
             # Return average if we have temperature values
             if temperature_values:
                 average_temp = sum(temperature_values) / len(temperature_values)
-                print(f"[SensorReader] Starting temperature calculated: {average_temp:.2f}°C from {len(temperature_values)} sensors")
+                self.print(f"[SensorReader] Starting temperature: {average_temp:.1f}°C")
                 return average_temp
             else:
-                print("[SensorReader] No viable Inside temperature sensors found for starting temperature")
+                self.print_error("[SensorReader] No viable inside temperature sensors found")
                 return None
                 
         except Exception as e:
-            print(f"[SensorReader] Error getting starting temperature: {e}")
+            self.print_error(f"[SensorReader] Error getting starting temperature: {e}")
             return None
 
     def __del__(self):

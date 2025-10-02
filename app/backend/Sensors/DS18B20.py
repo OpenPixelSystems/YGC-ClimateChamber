@@ -5,6 +5,7 @@ from typing import Dict, Optional
 
 from app.backend.Dataclasses.Config import DS18B20Config
 from app.backend.Interfaces.ISensor import ISensor
+from app.backend.Services.TemperatureSimulation import get_temperature_simulation_service
 
 
 class DS18B20(ISensor):
@@ -92,24 +93,37 @@ class DS18B20(ISensor):
                     f"[DS18B20] [initialize] Make sure 1-Wire is enabled in /boot/config.txt with 'dtoverlay=w1-gpio'")
 
     def _get_simulated_value(self) -> float:
-        """Generate a simulated sensor value with natural variation starting from room temperature.
+        """Generate a simulated sensor value based on PID control output and physics.
 
         Returns:
-            Simulated sensor reading with realistic variation.
+            Simulated sensor reading with realistic physics-based behavior.
         """
-        # Initialize with room temperature
-        if self._last_reading is None:
-            self._last_reading = 20.0
+        try:
+            # Use the physics-based temperature simulation service
+            simulation_service = get_temperature_simulation_service()
+            simulated_temp = simulation_service.get_simulated_temperature(
+                sensor_name=self._name,
+                min_temp=self._min_value,
+                max_temp=self._max_value
+            )
+            self._last_reading = simulated_temp
+            return simulated_temp
+        except Exception as e:
+            print(f"[DS18B20] Warning: Temperature simulation failed, using fallback: {e}")
 
-        # Apply small random variation
-        variation = random.uniform(-0.3, 0.3)
-        new_value = self._last_reading + variation
+            # Fallback to old simple simulation if service fails
+            if self._last_reading is None:
+                self._last_reading = 20.0
 
-        # Keep value within specified min and max bounds
-        new_value = max(self._min_value, min(self._max_value + 1, new_value))
-        self._last_reading = new_value
+            # Apply small random variation
+            variation = random.uniform(-0.3, 0.3)
+            new_value = self._last_reading + variation
 
-        return round(new_value, 1)
+            # Keep value within specified min and max bounds
+            new_value = max(self._min_value, min(self._max_value + 1, new_value))
+            self._last_reading = new_value
+
+            return round(new_value, 1)
 
     def _read_sensor_with_timeout(self) -> Optional[float]:
         """Read sensor with timeout to prevent system stalls.

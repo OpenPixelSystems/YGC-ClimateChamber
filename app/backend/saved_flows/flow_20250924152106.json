@@ -1,0 +1,152 @@
+{
+  "version": "1.0",
+  "created": "2025-09-24T15:21:06.443Z",
+  "nodes": [
+    {
+      "id": "node_1",
+      "type": "start-node",
+      "x": 131,
+      "y": 216.625,
+      "properties": {
+        "readCurrent": true
+      }
+    },
+    {
+      "id": "node_2",
+      "type": "temperature-goal",
+      "x": 224,
+      "y": 117,
+      "properties": {
+        "temperature": 35,
+        "tolerance": 0.5,
+        "estimatedDuration": 8
+      }
+    },
+    {
+      "id": "node_3",
+      "type": "temperature-hold",
+      "x": 359,
+      "y": 204,
+      "properties": {
+        "duration": 5,
+        "tolerance": 0.5
+      }
+    },
+    {
+      "id": "node_4",
+      "type": "temperature-goal",
+      "x": 550,
+      "y": 143.625,
+      "properties": {
+        "temperature": 50,
+        "tolerance": 0.5,
+        "estimatedDuration": 13
+      }
+    },
+    {
+      "id": "node_5",
+      "type": "temperature-hold",
+      "x": 639,
+      "y": 202,
+      "properties": {
+        "duration": 5,
+        "tolerance": 0.5
+      }
+    },
+    {
+      "id": "node_6",
+      "type": "temperature-goal",
+      "x": 835,
+      "y": 161.625,
+      "properties": {
+        "temperature": 10,
+        "tolerance": 0.5,
+        "estimatedDuration": 58
+      }
+    },
+    {
+      "id": "node_7",
+      "type": "temperature-hold",
+      "x": 910,
+      "y": 200,
+      "properties": {
+        "duration": 5,
+        "tolerance": 0.5
+      }
+    },
+    {
+      "id": "node_8",
+      "type": "temperature-goal",
+      "x": 1036,
+      "y": 134,
+      "properties": {
+        "temperature": 25,
+        "tolerance": 0.5,
+        "estimatedDuration": 13
+      }
+    },
+    {
+      "id": "node_9",
+      "type": "end-node",
+      "x": 1172,
+      "y": 197,
+      "properties": {
+        "cooldown": false
+      }
+    }
+  ],
+  "connections": [
+    {
+      "from": "node_1",
+      "to": "node_2",
+      "lineElement": {}
+    },
+    {
+      "from": "node_2",
+      "to": "node_3",
+      "lineElement": {}
+    },
+    {
+      "from": "node_3",
+      "to": "node_4",
+      "lineElement": {}
+    },
+    {
+      "from": "node_4",
+      "to": "node_5",
+      "lineElement": {}
+    },
+    {
+      "from": "node_5",
+      "to": "node_6",
+      "lineElement": {}
+    },
+    {
+      "from": "node_6",
+      "to": "node_7",
+      "lineElement": {}
+    },
+    {
+      "from": "node_7",
+      "to": "node_8",
+      "lineElement": {}
+    },
+    {
+      "from": "node_8",
+      "to": "node_9",
+      "lineElement": {}
+    }
+  ],
+  "metadata": {
+    "nodeCount": 9,
+    "connectionCount": 8,
+    "canvasSize": {
+      "width": 1275,
+      "height": 596
+    }
+  },
+  "executionFlow": {},
+  "name": "long run",
+  "lastModified": "2025-09-24T15:21:06.444Z",
+  "id": "flow_20250924152106"
+}
