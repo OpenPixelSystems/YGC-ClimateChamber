@@ -26,6 +26,7 @@ class FlowExecutor:
         self.current_step_index = 0
         self.is_executing = False
         self.start_time: Optional[datetime] = None
+        self.time_last_step = None
         self.logger = logging.getLogger(__name__)
 
         # Store initial/current temperature when start node executes
@@ -194,6 +195,7 @@ class FlowExecutor:
                 self.initial_temperature = current_temp
                 self.logger.info(f"Captured initial temperature: {current_temp}°C")
             # Start node advances immediately after reading current temperature
+            self.time_last_step = elapsed_time
             return True
 
         elif step_type == 'temperature-goal':
@@ -203,7 +205,11 @@ class FlowExecutor:
 
             if target_temp is not None:
                 temp_diff = abs(current_temp - target_temp)
-                return temp_diff <= tolerance
+                if temp_diff <= tolerance:
+                    self.time_last_step = elapsed_time
+                    return True
+                else:
+                    return False
 
         elif step_type == 'temperature-hold':
             # Check if hold duration has elapsed
@@ -211,10 +217,14 @@ class FlowExecutor:
             duration_seconds = duration_minutes * 60
 
             # Get step start time (when this step became active)
-            step_start_time = elapsed_time - (duration_seconds if elapsed_time >= duration_seconds else elapsed_time)
+            step_start_time = self.time_last_step
             step_elapsed = elapsed_time - step_start_time
 
-            return step_elapsed >= duration_seconds
+            if step_elapsed >= duration_seconds:
+                self.time_last_step = elapsed_time
+                return True
+            else:
+                return False
 
         elif step_type == 'end-node':
             # End node stops execution
