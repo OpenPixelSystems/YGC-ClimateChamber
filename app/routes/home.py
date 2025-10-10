@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, redirect, url_for, request, flash
+from flask import Blueprint, render_template, redirect, url_for, request, flash, jsonify
 import socket
 
 from app import get_app_state
@@ -25,13 +25,11 @@ def status():
 def submit_temperature():
     # Check if a cycle is already active
     app_state = get_app_state()
+    temperature_str = request.form['temperature']
     if app_state.database.logging_active:
-        flash('A cycle is already running. Stop the current cycle first.', 'error')
-        return redirect(url_for('home.index'))
-
+        app_state.controller.desired_graph.update_current_target(float(temperature_str))
+        return redirect(url_for('climate.display_graph'))
     try:
-        temperature_str = request.form['temperature']
-
         result = get_app_state().temperature_service.set_constant_temperature(temperature_str)
         get_app_state().controller.set_desired_graph(
             Graph("desired_graph", [(0, float(temperature_str))], get_app_state().config_manager))
@@ -46,6 +44,31 @@ def submit_temperature():
     except KeyError:
         flash('No temperature value provided', 'error')
         return redirect(url_for('home.index'))
+
+@home_bp.route('/get-sensor-data', methods=['GET'])
+def get_sensor_data():
+    try:
+        sensor_data = get_app_state().controller.get_sensor_data()
+        
+        # Check if we have actual sensor data
+        if not sensor_data or sensor_data == {}:
+            return jsonify({
+                'status': 'no_data',
+                'message': 'No sensor data available yet. Start a cycle first.',
+                'data': {}
+            }), 200
+        
+        return jsonify({
+            'status': 'success',
+            'data': sensor_data
+        }), 200
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
 
 @home_bp.route('/manual-control')
 def manual_control():

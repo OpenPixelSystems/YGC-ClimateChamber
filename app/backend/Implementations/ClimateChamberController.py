@@ -41,6 +41,9 @@ class ClimateChamberController(IClimateChamberController, LoggingMixin):
         # Subscribe to sensor data for background steering
         self.sensor_reader.subscribe(self.on_sensor_data)
 
+    def get_sensor_data(self):
+        return self.latest_sensor_data
+
     def on_sensor_data(self, data):
         """Handle sensor data and apply steering logic in background"""
         if not self.running:

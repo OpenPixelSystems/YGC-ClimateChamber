@@ -114,6 +114,15 @@ class Graph:
                              [t for t, _ in self.interpolated_setpoints],
                              [temp for _, temp in self.interpolated_setpoints])
 
+    def update_current_target(self, target: float):
+        current_time = round((datetime.now() - self.start_time).total_seconds())
+        new_setpoint = (current_time, target)
+        self.setpoints.append(new_setpoint)
+        self.valid_dataset, self.validation_message = self._validate_dataset()
+        self.interpolated_setpoints = self._interpolate_setpoints() if self.valid_dataset else []
+        return
+
+
     def get_current_target(self):
         elapsed_seconds = round((datetime.now() - self.start_time).total_seconds())
         if len(self.setpoints) <= elapsed_seconds:
