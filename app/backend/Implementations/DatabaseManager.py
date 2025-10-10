@@ -11,8 +11,14 @@ from app.backend.Technical.Logging import LoggingMixin
 class DatabaseManager(LoggingMixin):
     """Manages database operations for the climate chamber application."""
 
-    def __init__(self, db_path: str = 'ClimateChamber_data.db', sensor_reader: Optional[ISensorReader] = None,
-                 calculation_service: ICalculationService = None, *args, **kwargs) -> None:
+    def __init__(
+        self,
+        db_path: str = "ClimateChamber_data.db",
+        sensor_reader: Optional[ISensorReader] = None,
+        calculation_service: ICalculationService = None,
+        *args,
+        **kwargs,
+    ) -> None:
         super().__init__(*args, **kwargs)
         self.db_path = db_path
         self.logging_active = False
@@ -38,7 +44,8 @@ class DatabaseManager(LoggingMixin):
         """Ensure the database and required tables exist."""
         with self.get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute('''
+            cursor.execute(
+                """
             CREATE TABLE IF NOT EXISTS cycles (
                 cycle_id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT UNIQUE,
@@ -46,8 +53,10 @@ class DatabaseManager(LoggingMixin):
                 end_time TEXT,
                 origin_page TEXT
             )
-            ''')
-            cursor.execute('''
+            """
+            )
+            cursor.execute(
+                """
             CREATE TABLE IF NOT EXISTS sensor_readings (
                 reading_id INTEGER PRIMARY KEY AUTOINCREMENT,
                 sensor_type TEXT,
@@ -57,8 +66,10 @@ class DatabaseManager(LoggingMixin):
                 value REAL,
                 FOREIGN KEY (cycle_id) REFERENCES cycles (cycle_id)
             )
-            ''')
-            cursor.execute('''
+            """
+            )
+            cursor.execute(
+                """
             CREATE TABLE IF NOT EXISTS calculation_data (
                 calculation_id INTEGER PRIMARY KEY AUTOINCREMENT,
                 cycle_id INTEGER,
@@ -71,29 +82,32 @@ class DatabaseManager(LoggingMixin):
                 control_status TEXT,
                 FOREIGN KEY (cycle_id) REFERENCES cycles (cycle_id)
             )
-            ''')
-            
+            """
+            )
+
             # Add control_status column to existing tables if it doesn't exist
             try:
-                cursor.execute('ALTER TABLE calculation_data ADD COLUMN control_status TEXT')
+                cursor.execute(
+                    "ALTER TABLE calculation_data ADD COLUMN control_status TEXT"
+                )
             except:
                 pass  # Column already exists
-                
+
             # Add origin_page column to cycles table if it doesn't exist
             try:
-                cursor.execute('ALTER TABLE cycles ADD COLUMN origin_page TEXT')
+                cursor.execute("ALTER TABLE cycles ADD COLUMN origin_page TEXT")
             except:
                 pass  # Column already exists
-                
+
             conn.commit()
 
     def start_logging_cycle(self, cycle_name: str, origin_page: str = None) -> bool:
         """Start a new logging cycle.
-        
+
         Args:
             cycle_name: Name of the logging cycle
             origin_page: Page where the cycle was started ('display-graph' or 'manual-control')
-            
+
         Returns:
             bool: True if cycle started successfully, False otherwise
         """
@@ -106,7 +120,7 @@ class DatabaseManager(LoggingMixin):
                 cursor = conn.cursor()
                 cursor.execute(
                     "INSERT INTO cycles (name, start_time, origin_page) VALUES (?, ?, ?)",
-                    (cycle_name, datetime.now().isoformat(), origin_page)
+                    (cycle_name, datetime.now().isoformat(), origin_page),
                 )
                 self.current_cycle_id = cursor.lastrowid
                 conn.commit()
@@ -135,32 +149,55 @@ class DatabaseManager(LoggingMixin):
                 # Process each sensor in the new flat structure
                 for sensor_name, sensor_info in sensor_readings.items():
                     # Skip cache info and invalid entries
-                    if sensor_name == '_cache_info' or not isinstance(sensor_info, dict):
+                    if sensor_name == "_cache_info" or not isinstance(
+                        sensor_info, dict
+                    ):
                         continue
-                    
-                    if 'sensor_value' not in sensor_info or sensor_info['sensor_value'] is None:
+
+                    if (
+                        "sensor_value" not in sensor_info
+                        or sensor_info["sensor_value"] is None
+                    ):
                         continue
-                    
-                    sensor_value = sensor_info['sensor_value']
-                    sensor_source = sensor_info.get('sensor_source', 'unknown')
-                    
+
+                    sensor_value = sensor_info["sensor_value"]
+                    sensor_source = sensor_info.get("sensor_source", "unknown")
+
                     # Determine sensor type based on known sensor names and their units
                     # You might want to get this from sensor config instead
-                    if any(temp_keyword in sensor_name.lower() for temp_keyword in ['temp', 'peltier', 'outside', 'inside', 'environment', 'ntc']):
-                        sensor_type = 'temperature'
-                        unit = '°C'
-                    elif 'current' in sensor_name.lower() or sensor_name.startswith(('R_IS_', 'L_IS_')):
-                        sensor_type = 'current'
-                        unit = 'A'
+                    if any(
+                        temp_keyword in sensor_name.lower()
+                        for temp_keyword in [
+                            "temp",
+                            "peltier",
+                            "outside",
+                            "inside",
+                            "environment",
+                            "ntc",
+                        ]
+                    ):
+                        sensor_type = "temperature"
+                        unit = "°C"
+                    elif "current" in sensor_name.lower() or sensor_name.startswith(
+                        ("R_IS_", "L_IS_")
+                    ):
+                        sensor_type = "current"
+                        unit = "A"
                     else:
                         # Default to temperature for DS18B20 sensors, current for ADS sensors
-                        sensor_type = 'temperature'  # Default assumption
-                        unit = '°C'
-                    
+                        sensor_type = "temperature"  # Default assumption
+                        unit = "°C"
+
                     # Insert sensor reading
                     cursor.execute(
                         "INSERT INTO sensor_readings (sensor_type, cycle_id, sensor_id, timestamp, value) VALUES (?, ?, ?, ?, ?)",
-                        (sensor_type, self.current_cycle_id, sensor_name, timestamp, sensor_value)
+                        (
+                            sensor_type,
+                            self.current_cycle_id,
+                            sensor_name,
+                            timestamp,
+                            sensor_value,
+                        ),
                     )
                     # Sensor data logged to database
 
@@ -187,7 +224,9 @@ class DatabaseManager(LoggingMixin):
                 current_temp = calculation_readings.get("current_temp")
                 target_temp = calculation_readings.get("target_temp")
                 error = calculation_readings.get("error")
-                control_status = calculation_readings.get("status", calculation_readings.get("control_status", "UNKNOWN"))
+                control_status = calculation_readings.get(
+                    "status", calculation_readings.get("control_status", "UNKNOWN")
+                )
 
                 # Convert None to 0.0 for database storage to avoid NULL issues
                 current_temp = current_temp if current_temp is not None else 0.0
@@ -196,7 +235,16 @@ class DatabaseManager(LoggingMixin):
 
                 cursor.execute(
                     "INSERT INTO calculation_data (cycle_id, calculation_name, timestamp, pid_output, current_temp, target_temp, error, control_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                    (self.current_cycle_id, "PID_Control", timestamp, pid_output, current_temp, target_temp, error, control_status)
+                    (
+                        self.current_cycle_id,
+                        "PID_Control",
+                        timestamp,
+                        pid_output,
+                        current_temp,
+                        target_temp,
+                        error,
+                        control_status,
+                    ),
                 )
 
                 # Calculation data logged to database
@@ -207,7 +255,7 @@ class DatabaseManager(LoggingMixin):
 
     def stop_logging_cycle(self) -> bool:
         """Stop the ongoing logging cycle.
-        
+
         Returns:
             bool: True if cycle stopped successfully, False otherwise
         """
@@ -220,7 +268,7 @@ class DatabaseManager(LoggingMixin):
                 cursor = conn.cursor()
                 cursor.execute(
                     "UPDATE cycles SET end_time = ? WHERE cycle_id = ?",
-                    (datetime.now().isoformat(), self.current_cycle_id)
+                    (datetime.now().isoformat(), self.current_cycle_id),
                 )
                 conn.commit()
                 self.logging_active = False
@@ -237,14 +285,18 @@ class DatabaseManager(LoggingMixin):
             cursor = conn.cursor()
             cursor.execute("SELECT cycle_id FROM cycles WHERE name = ?", (cycle_name,))
             cycle = cursor.fetchone()
-            
+
             if not cycle:
                 self.print(f"Cycle '{cycle_name}' not found.")
                 return False
 
             cycle_id = cycle[0]
-            cursor.execute("DELETE FROM sensor_readings WHERE cycle_id = ?", (cycle_id,))
-            cursor.execute("DELETE FROM calculation_data WHERE cycle_id = ?", (cycle_id,))
+            cursor.execute(
+                "DELETE FROM sensor_readings WHERE cycle_id = ?", (cycle_id,)
+            )
+            cursor.execute(
+                "DELETE FROM calculation_data WHERE cycle_id = ?", (cycle_id,)
+            )
             cursor.execute("DELETE FROM cycles WHERE cycle_id = ?", (cycle_id,))
             conn.commit()
             self.print(f"Deleted cycle '{cycle_name}' and associated sensor readings.")
@@ -254,7 +306,9 @@ class DatabaseManager(LoggingMixin):
             """Delete a cycle and its associated sensor data from the database."""
             with self.get_connection() as conn:
                 cursor = conn.cursor()
-                cursor.execute("SELECT cycle_id FROM cycles WHERE name = ?", (cycle_name,))
+                cursor.execute(
+                    "SELECT cycle_id FROM cycles WHERE name = ?", (cycle_name,)
+                )
                 cycle = cursor.fetchone()
 
                 if not cycle:
@@ -262,11 +316,17 @@ class DatabaseManager(LoggingMixin):
                     return False
 
                 cycle_id = cycle[0]
-                cursor.execute("DELETE FROM sensor_readings WHERE cycle_id = ?", (cycle_id,))
-                cursor.execute("DELETE FROM calculation_data WHERE cycle_id = ?", (cycle_id,))
+                cursor.execute(
+                    "DELETE FROM sensor_readings WHERE cycle_id = ?", (cycle_id,)
+                )
+                cursor.execute(
+                    "DELETE FROM calculation_data WHERE cycle_id = ?", (cycle_id,)
+                )
                 cursor.execute("DELETE FROM cycles WHERE cycle_id = ?", (cycle_id,))
                 conn.commit()
-                self.print(f"Deleted cycle '{cycle_name}' and associated sensor readings.")
+                self.print(
+                    f"Deleted cycle '{cycle_name}' and associated sensor readings."
+                )
                 return True
 
     def delete_all_cycles(self) -> bool:
@@ -338,26 +398,26 @@ class DatabaseManager(LoggingMixin):
             # Get sensor data
             cursor.execute(
                 "SELECT sensor_id, timestamp, value FROM sensor_readings WHERE cycle_id = ? and sensor_type = ?",
-                (cycle_id, 'temperature')
+                (cycle_id, "temperature"),
             )
             sensor_temperature_data = cursor.fetchall()
 
             cursor.execute(
                 "SELECT sensor_id, timestamp, value FROM sensor_readings WHERE cycle_id = ? and sensor_type = ?",
-                (cycle_id, 'current')
+                (cycle_id, "current"),
             )
             sensor_current_data = cursor.fetchall()
 
-            sensor_data = {'temperature': [sensor_temperature_data], 'current': [sensor_current_data]}
+            sensor_data = {
+                "temperature": [sensor_temperature_data],
+                "current": [sensor_current_data],
+            }
 
             # Get calculation data
             cursor.execute(
                 "SELECT calculation_name, timestamp, pid_output, current_temp, target_temp, error, control_status FROM calculation_data WHERE cycle_id = ?",
-                (cycle_id,)
+                (cycle_id,),
             )
             calculation_data = cursor.fetchall()
 
-            return {
-                "sensor_data": sensor_data,
-                "calculation_data": calculation_data
-            }
+            return {"sensor_data": sensor_data, "calculation_data": calculation_data}

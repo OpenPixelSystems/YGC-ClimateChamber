@@ -1,17 +1,21 @@
 from dataclasses import dataclass
 from typing import List, Optional
 
+
 @dataclass
 class ControlConfig:
     """Configuration for PID controller parameters."""
+
     kp: float = 1.0
     ki: float = 0.0
     kd: float = 0.0
     read_delay: float = 2.0
 
+
 @dataclass
 class GraphConfig:
     """Configuration for graph control parameters."""
+
     max_points: int = 100
     min_x: int = 0
     min_y: float = -10
@@ -22,9 +26,11 @@ class GraphConfig:
     heating_curve_factor: float = 0.6
     cooling_curve_factor: float = 0.7
 
+
 @dataclass
 class ISensorConfig:
     """Configuration for ISensor parameters."""
+
     name: str = ""
     type: str = ""
     max_value: float = None
@@ -36,9 +42,11 @@ class ISensorConfig:
 @dataclass
 class DS18B20Config(ISensorConfig):
     """Configuration for DS18B20 parameters."""
+
     sensor_location: str = ""
     rom_address: str = ""
     gpio_pin: int = 4
+
 
 @dataclass
 class ADS1115Config(ISensorConfig):
@@ -49,6 +57,7 @@ class ADS1115Config(ISensorConfig):
     calibrated_sensitivity: Optional[float] = None
     calibrated_offset: Optional[float] = None
     i2c_address: Optional[int] = None
+
 
 @dataclass
 class NTCConfig(ISensorConfig):
@@ -61,10 +70,12 @@ class NTCConfig(ISensorConfig):
     reference_resistance: float = 10000.0
     reference_voltage: float = 3.3
 
+
 @dataclass
 class MPL3115A2Config(ISensorConfig):
     SDA: int = None
     SCL: int = None
+
 
 @dataclass
 class SensorConfig:
@@ -78,6 +89,7 @@ class SensorConfig:
     unit: str = ""
     critical: bool = False
 
+
 @dataclass
 class PeltierConfig:
     name: str = ""
@@ -89,11 +101,13 @@ class PeltierConfig:
     PWM_FREQUENCY: float = None
     Duty_cycle_limit: int = None
 
+
 @dataclass
 class FanConfig:
     name: str = ""
     type: str = ""
     EN: int = None
+
 
 @dataclass
 class DriverConfig:
@@ -101,10 +115,12 @@ class DriverConfig:
     type: str = ""
     EN: int = None
 
+
 @dataclass
 class RelayConfig:
     name: str = ""
     gpio_pin: int = None
+
 
 @dataclass
 class McuConfig:

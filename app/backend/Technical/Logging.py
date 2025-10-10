@@ -2,6 +2,7 @@ from datetime import datetime
 import logging
 import os
 
+
 class LoggingMixin:
     """Mixin class that adds enhanced print functionality with logging"""
 
@@ -39,11 +40,11 @@ class LoggingMixin:
         # Create file handler if not already exists
         if not self.logger.handlers:
             handler = logging.FileHandler(self.log_file)
-            formatter = logging.Formatter('%(asctime)s - %(name)s - %(message)s')
+            formatter = logging.Formatter("%(asctime)s - %(name)s - %(message)s")
             handler.setFormatter(formatter)
             self.logger.addHandler(handler)
 
-    def print(self, *args, sep=' ', end='\n', file=None, flush=False):
+    def print(self, *args, sep=" ", end="\n", file=None, flush=False):
         """Enhanced print that also logs to file"""
         # Convert all arguments to strings and join them
         message = sep.join(str(arg) for arg in args)
@@ -54,13 +55,13 @@ class LoggingMixin:
         # Log to file
         self.logger.info(message)
 
-    def print_debug(self, *args, sep=' '):
+    def print_debug(self, *args, sep=" "):
         """Print and log as debug level"""
         message = sep.join(str(arg) for arg in args)
         print(f"[DEBUG] {message}")
         self.logger.debug(message)
 
-    def print_error(self, *args, sep=' '):
+    def print_error(self, *args, sep=" "):
         """Print and log as error level"""
         message = sep.join(str(arg) for arg in args)
         print(f"[ERROR] {message}")

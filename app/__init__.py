@@ -4,13 +4,16 @@ from flask import Flask
 """App_state initialisation."""
 from app.backend.app_state import get_app_state
 
+
 def create_app():
-    app = Flask(__name__,
-            static_folder='frontend/static',
-            static_url_path='/static',
-            template_folder='frontend/templates')
+    app = Flask(
+        __name__,
+        static_folder="frontend/static",
+        static_url_path="/static",
+        template_folder="frontend/templates",
+    )
     app.secret_key = os.urandom(24)
-    app.config['JSON_AS_ASCII'] = False
+    app.config["JSON_AS_ASCII"] = False
 
     # Initialize AppState singleton
     app.state = get_app_state()

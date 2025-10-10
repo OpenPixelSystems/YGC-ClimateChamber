@@ -2,19 +2,24 @@ from flask import Blueprint, render_template, jsonify, redirect, url_for, reques
 
 from app.backend.app_state import get_app_state
 
-graph_bp = Blueprint('graph', __name__)
+graph_bp = Blueprint("graph", __name__)
 
-@graph_bp.route('/graph-setup')
+
+@graph_bp.route("/graph-setup")
 def setup_graph():
     """Display the graph setup page"""
     # Check if a cycle is already active
     app_state = get_app_state()
     if app_state.database.logging_active:
-        flash('Cannot edit graph while a cycle is running. Stop the current cycle first.', 'error')
-        return redirect(url_for('home.index'))
-    return render_template('setupGraph.html')
+        flash(
+            "Cannot edit graph while a cycle is running. Stop the current cycle first.",
+            "error",
+        )
+        return redirect(url_for("home.index"))
+    return render_template("setupGraph.html")
 
-@graph_bp.route('/store-graph-data', methods=['POST'])
+
+@graph_bp.route("/store-graph-data", methods=["POST"])
 def store_graph_data():
     """Process and store a new temperature profile"""
     try:
@@ -24,87 +29,90 @@ def store_graph_data():
 
         # Extract the first (and typically only) dataset
         dataset = graph_data[0]
-        points_data = dataset['data']
-        scaling_data = dataset.get('scaling', {})
+        points_data = dataset["data"]
+        scaling_data = dataset.get("scaling", {})
 
         # Store scaling information if provided
         if scaling_data:
             app_state = get_app_state()
-            if hasattr(app_state, 'dynamic_scaling'):
+            if hasattr(app_state, "dynamic_scaling"):
                 app_state.dynamic_scaling = scaling_data
             else:
                 # Store scaling data as an attribute
-                setattr(app_state, 'dynamic_scaling', scaling_data)
+                setattr(app_state, "dynamic_scaling", scaling_data)
 
         # Process the temperature profile
-        success, message, graph = get_app_state().temperature_service.set_temperature_profile(points_data)
-        
+        success, message, graph = (
+            get_app_state().temperature_service.set_temperature_profile(points_data)
+        )
+
         if success:
             get_app_state().controller.desired_graph = graph
-            return redirect(url_for('climate.display_graph'))
+            return redirect(url_for("climate.display_graph"))
         else:
             return jsonify({"error": message}), 400
 
     except Exception as e:
         return jsonify({"error": f"An error occurred: {str(e)}"}), 500
 
-@graph_bp.route('/get-stored-graph-data', methods=['GET'])
+
+@graph_bp.route("/get-stored-graph-data", methods=["GET"])
 def get_stored_graph_data():
     """Get the current graph data for display"""
     config = get_app_state().config_manager.graph_config
     app_state = get_app_state()
-    
+
     # Convert Graph object's setpoints to the format expected by frontend
     desired_path = None
     if app_state.controller.desired_graph:
         desired_path = [
-            {"x": x, "y": y} 
+            {"x": x, "y": y}
             for x, y in app_state.controller.desired_flow_graph.setpoints
         ]
-    
+
     # Get dynamic scaling if available
-    dynamic_scaling = getattr(app_state, 'dynamic_scaling', {})
-        
-    return jsonify({
-        'desired_path': desired_path,
-        'config': {
-            'max_rico': config.max_rico
-        },
-        'scaling': dynamic_scaling
-    })
+    dynamic_scaling = getattr(app_state, "dynamic_scaling", {})
+
+    return jsonify(
+        {
+            "desired_path": desired_path,
+            "config": {"max_rico": config.max_rico},
+            "scaling": dynamic_scaling,
+        }
+    )
 
 
-@graph_bp.route('/get_graph_min_max_temp', methods=['GET'])
+@graph_bp.route("/get_graph_min_max_temp", methods=["GET"])
 def get_graph_min_max_temp():
     """Get the current graph data for display"""
     config = get_app_state().config_manager.graph_config
 
-    return jsonify({
-        'min_temp': config.min_y,
-        'max_temp': config.max_y
-    })
+    return jsonify({"min_temp": config.min_y, "max_temp": config.max_y})
 
 
-@graph_bp.route('/get_starting_temperature', methods=['GET'])
+@graph_bp.route("/get_starting_temperature", methods=["GET"])
 def get_starting_temperature():
     """Get the current starting temperature from sensors"""
     try:
         starting_temp = get_app_state().sensor_reader.read_inside_sensors()
         print(f"[graph_setup] read inside average temperature: {starting_temp}")
         if starting_temp is not None:
-            return jsonify({
-                'starting_temperature': round(starting_temp, 2),
-                'success': True
-            })
+            return jsonify(
+                {"starting_temperature": round(starting_temp, 2), "success": True}
+            )
         else:
-            return jsonify({
-                'starting_temperature': None,
-                'success': False,
-                'message': 'No viable temperature sensors found'
-            })
+            return jsonify(
+                {
+                    "starting_temperature": None,
+                    "success": False,
+                    "message": "No viable temperature sensors found",
+                }
+            )
     except Exception as e:
-        return jsonify({
-            'starting_temperature': None,
-            'success': False,
-            'message': f'Error reading sensors: {str(e)}'
-        })
+        return jsonify(
+            {
+                "starting_temperature": None,
+                "success": False,
+                "message": f"Error reading sensors: {str(e)}",
+            }
+        )

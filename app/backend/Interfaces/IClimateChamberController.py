@@ -10,7 +10,7 @@ class IClimateChamberController(ABC):
     @abstractmethod
     def set_desired_graph(self, graph: Graph) -> None:
         """Set the desired temperature profile.
-        
+
         Args:
             graph: The graph object containing the desired temperature profile
         """
@@ -29,7 +29,7 @@ class IClimateChamberController(ABC):
     @abstractmethod
     def sensor_data_provider(self) -> Generator[str, None, None]:
         """Generator function for Server-Sent Events (SSE).
-        
+
         Yields:
             JSON-formatted string containing sensor data and control information
         """

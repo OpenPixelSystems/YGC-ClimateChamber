@@ -14,7 +14,9 @@ class TB6612FNGDriver(IDriver):
 
         # Setup GPIO pins
         self._setup_pins()
-        print(f"[TB6612FNGDriver] [Init] initialised TB6612FNG driver module using {config}")
+        print(
+            f"[TB6612FNGDriver] [Init] initialised TB6612FNG driver module using {config}"
+        )
 
     def _setup_pins(self):
         """Initialize GPIO pins for TB6612FNG"""
@@ -33,8 +35,10 @@ class TB6612FNGDriver(IDriver):
 
     def heat(self, scaled_duty: int = 20):
 
-        print(f"TB6612FNG: HEATING - AIN2=HIGH (GPIO{self.config.LPWM}), "
-              f"AIN1=LOW (GPIO{self.config.R_EN}), PWM={scaled_duty}%")
+        print(
+            f"TB6612FNG: HEATING - AIN2=HIGH (GPIO{self.config.LPWM}), "
+            f"AIN1=LOW (GPIO{self.config.R_EN}), PWM={scaled_duty}%"
+        )
 
         # Set heating direction: AIN1=LOW, AIN2=HIGH
         GPIO.output(self.config.R_EN, GPIO.LOW)  # AIN1 = LOW (cooling OFF)
@@ -43,11 +47,12 @@ class TB6612FNGDriver(IDriver):
         # Set PWM duty cycle on PWMA
         self.pwm.ChangeDutyCycle(scaled_duty)
 
-
     def cool(self, scaled_duty: int = 20):
 
-        print(f"TB6612FNG: COOLING - AIN1=HIGH (GPIO{self.config.R_EN}), "
-              f"AIN2=LOW (GPIO{self.config.LPWM}), PWM={scaled_duty}%")
+        print(
+            f"TB6612FNG: COOLING - AIN1=HIGH (GPIO{self.config.R_EN}), "
+            f"AIN2=LOW (GPIO{self.config.LPWM}), PWM={scaled_duty}%"
+        )
 
         # Set cooling direction: AIN1=HIGH, AIN2=LOW
         GPIO.output(self.config.R_EN, GPIO.HIGH)  # AIN1 = HIGH (cooling ON)
@@ -66,7 +71,6 @@ class TB6612FNGDriver(IDriver):
         # Set both direction pins LOW (brake/stop)
         GPIO.output(self.config.R_EN, GPIO.LOW)  # AIN1 = LOW
         GPIO.output(self.config.LPWM, GPIO.LOW)  # AIN2 = LOW
-
 
     def cleanup(self):
         """Clean up GPIO resources"""

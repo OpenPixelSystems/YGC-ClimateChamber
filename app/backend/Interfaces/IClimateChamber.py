@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 
 class IClimateChamber(ABC):
     """Interface defining the contract for any climate chamber implementation."""
+
     @abstractmethod
     def initialize_modules(self):
         pass
@@ -22,4 +23,3 @@ class IClimateChamber(ABC):
     @abstractmethod
     def disable_peltier_modules(self):
         pass
-

@@ -1,11 +1,13 @@
 from abc import ABC, abstractmethod
 
+
 class ICalculationService(ABC):
     """Interface defining the contract for any climate chamber controller implementation."""
 
-
     @abstractmethod
-    def calculate_pid_control(self, current_temp: float, target_temp: float, current_time_offset=None) -> float:
+    def calculate_pid_control(
+        self, current_temp: float, target_temp: float, current_time_offset=None
+    ) -> float:
         """Apply PID control based on current and target temperatures.
 
         Args:

@@ -6,9 +6,11 @@ class ISensor(ABC):
     """Interface for sensor implementations."""
 
     @abstractmethod
-    def __init__(self, name: str, pin: int, min_value: float, max_value: float, unit: str):
+    def __init__(
+        self, name: str, pin: int, min_value: float, max_value: float, unit: str
+    ):
         """Initialize the sensor.
-        
+
         Args:
             name: Name of the sensor
             pin: GPIO pin number
@@ -26,7 +28,7 @@ class ISensor(ABC):
     @abstractmethod
     def read(self) -> Dict[str, Optional[float]]:
         """Read the sensor value.
-        
+
         Returns:
             Dictionary mapping sensor name to its reading value
         """

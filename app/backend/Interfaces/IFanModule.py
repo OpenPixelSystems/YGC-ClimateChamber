@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 
 from app.backend.Dataclasses.Config import FanConfig
 
+
 class IFanModule(ABC):
     """Interface for sensor implementations."""
 

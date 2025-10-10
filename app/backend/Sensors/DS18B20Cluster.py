@@ -26,18 +26,21 @@ class DS18B20Cluster(ISensor):
         """Initialize the sensor hardware."""
         gpio.setmode(gpio.BCM)
         gpio.setup(self._pin, gpio.IN)
-        print(f"[DS18B20Cluster] [{self.sensor_location}] Initialized sensor on pin {self._pin}, testing mode: {self._is_testing}")
+        print(
+            f"[DS18B20Cluster] [{self.sensor_location}] Initialized sensor on pin {self._pin}, testing mode: {self._is_testing}"
+        )
 
     def read(self) -> Dict[str, Optional[float]]:
         sensor_readings = {}
         for sensor in self.sensors:
-            reading = sensor.read()  # e.g., {'sensor_name': {'sensor_value': 19.9, 'sensor_source': 'test'}}
-            
+            reading = (
+                sensor.read()
+            )  # e.g., {'sensor_name': {'sensor_value': 19.9, 'sensor_source': 'test'}}
+
             # With the new flat structure, we can directly merge the readings
             sensor_readings.update(reading)
-            
-        return sensor_readings
 
+        return sensor_readings
 
     @property
     def name(self) -> str:
@@ -54,14 +57,15 @@ class DS18B20Cluster(ISensor):
         """
         # Check if we're using the MockGPIO from gpio_provider
         from app.backend.Providers.gpio_provider import GPIO
-        is_mock = hasattr(GPIO, '__name__') and GPIO.__name__ == 'MockGPIO'
+
+        is_mock = hasattr(GPIO, "__name__") and GPIO.__name__ == "MockGPIO"
 
         # Additional check for actual Raspberry Pi hardware
         is_not_pi = not (
-                os.path.exists('/opt/vc/bin/') or
-                os.path.exists('/sys/firmware/devicetree/base/model') or
-                os.path.exists('/proc/device-tree/model') or
-                os.path.exists('/sys/bus/w1/devices/')  # 1-Wire interface exists
+            os.path.exists("/opt/vc/bin/")
+            or os.path.exists("/sys/firmware/devicetree/base/model")
+            or os.path.exists("/proc/device-tree/model")
+            or os.path.exists("/sys/bus/w1/devices/")  # 1-Wire interface exists
         )
 
         return is_mock or is_not_pi

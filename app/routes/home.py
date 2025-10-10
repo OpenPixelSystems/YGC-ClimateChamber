@@ -4,9 +4,12 @@ import socket
 from app import get_app_state
 from app.routes.Helper.graph import Graph
 
-home_bp = Blueprint('home', __name__, template_folder='templates', static_folder='static')
+home_bp = Blueprint(
+    "home", __name__, template_folder="templates", static_folder="static"
+)
 
-@home_bp.route('/')
+
+@home_bp.route("/")
 def index():
     # Check if there's an active cycle to determine button states
     app_state = get_app_state()
@@ -15,78 +18,96 @@ def index():
         ip_address = socket.gethostbyname(socket.gethostname())
     except:
         ip_address = "Unable to determine IP"
-    return render_template('home.html', ip_address=ip_address)
+    return render_template("home.html", ip_address=ip_address)
 
-@home_bp.route('/status')
+
+@home_bp.route("/status")
 def status():
-    return 'Server is up and running', 200
+    return "Server is up and running", 200
 
-@home_bp.route('/submit-temperature', methods=['POST'])
+
+@home_bp.route("/submit-temperature", methods=["POST"])
 def submit_temperature():
     # Check if a cycle is already active
     app_state = get_app_state()
-    temperature_str = request.form['temperature']
+    temperature_str = request.form["temperature"]
     if app_state.database.logging_active:
         app_state.controller.desired_graph.update_current_target(float(temperature_str))
-        return redirect(url_for('climate.display_graph'))
+        return redirect(url_for("climate.display_graph"))
     try:
-        result = get_app_state().temperature_service.set_constant_temperature(temperature_str)
+        result = get_app_state().temperature_service.set_constant_temperature(
+            temperature_str
+        )
         get_app_state().controller.set_desired_graph(
-            Graph("desired_graph", [(0, float(temperature_str))], get_app_state().config_manager))
+            Graph(
+                "desired_graph",
+                [(0, float(temperature_str))],
+                get_app_state().config_manager,
+            )
+        )
 
         if result.is_valid:
-            flash(result.message, 'success')
-            return redirect(url_for('climate.display_graph'))
+            flash(result.message, "success")
+            return redirect(url_for("climate.display_graph"))
         else:
-            flash(result.message, 'error')
-            return redirect(url_for('home.index'))
-            
-    except KeyError:
-        flash('No temperature value provided', 'error')
-        return redirect(url_for('home.index'))
+            flash(result.message, "error")
+            return redirect(url_for("home.index"))
 
-@home_bp.route('/get-sensor-data', methods=['GET'])
+    except KeyError:
+        flash("No temperature value provided", "error")
+        return redirect(url_for("home.index"))
+
+
+@home_bp.route("/get-sensor-data", methods=["GET"])
 def get_sensor_data():
     try:
         sensor_data = get_app_state().controller.get_sensor_data()
-        
+
         # Check if we have actual sensor data
         if not sensor_data or sensor_data == {}:
-            return jsonify({
-                'status': 'no_data',
-                'message': 'No sensor data available yet. Start a cycle first.',
-                'data': {}
-            }), 200
-        
-        return jsonify({
-            'status': 'success',
-            'data': sensor_data
-        }), 200
+            return (
+                jsonify(
+                    {
+                        "status": "no_data",
+                        "message": "No sensor data available yet. Start a cycle first.",
+                        "data": {},
+                    }
+                ),
+                200,
+            )
+
+        return jsonify({"status": "success", "data": sensor_data}), 200
     except Exception as e:
         import traceback
-        traceback.print_exc()
-        return jsonify({
-            'status': 'error',
-            'message': str(e)
-        }), 500
 
-@home_bp.route('/manual-control')
+        traceback.print_exc()
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@home_bp.route("/manual-control")
 def manual_control():
     # Check if a cycle is already active from a different page
     app_state = get_app_state()
     if app_state.database.logging_active:
         with app_state.database.get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("SELECT origin_page FROM cycles WHERE cycle_id = ?", (app_state.database.current_cycle_id,))
+            cursor.execute(
+                "SELECT origin_page FROM cycles WHERE cycle_id = ?",
+                (app_state.database.current_cycle_id,),
+            )
             cycle_row = cursor.fetchone()
             origin_page = cycle_row[0] if cycle_row else None
 
             # Only block if cycle was started from a different page
-            if origin_page and origin_page != 'manual-control':
-                flash('A cycle is already running from a different page. Use the Active Cycle button to access it.', 'error')
-                return redirect(url_for('home.index'))
+            if origin_page and origin_page != "manual-control":
+                flash(
+                    "A cycle is already running from a different page. Use the Active Cycle button to access it.",
+                    "error",
+                )
+                return redirect(url_for("home.index"))
 
-    return render_template('manualControl.html')
+    return render_template("manualControl.html")
+
 
 def try_convert(value):
     """Convert string values to appropriate numeric types if possible"""

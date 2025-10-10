@@ -20,10 +20,18 @@ class TemperatureSimulationService:
 
         # Physical simulation parameters - tuned for climate chamber behavior
         self.thermal_mass = 30.0  # Thermal inertia (reduced for faster response)
-        self.heating_efficiency = 0.3  # How efficiently PID output converts to temperature change (increased)
-        self.cooling_efficiency = 0.15  # Natural cooling rate when PID output is low (increased)
-        self.heat_loss_coefficient = 0.01  # Heat loss to ambient (reduced for better heat retention)
-        self.max_heating_rate = 1.0  # Maximum °C/second when PID = 100% (increased significantly)
+        self.heating_efficiency = (
+            0.3  # How efficiently PID output converts to temperature change (increased)
+        )
+        self.cooling_efficiency = (
+            0.15  # Natural cooling rate when PID output is low (increased)
+        )
+        self.heat_loss_coefficient = (
+            0.01  # Heat loss to ambient (reduced for better heat retention)
+        )
+        self.max_heating_rate = (
+            1.0  # Maximum °C/second when PID = 100% (increased significantly)
+        )
         self.max_cooling_rate = 1.0  # Maximum °C/second when PID = -100% (increased)
 
         # Current control state
@@ -44,9 +52,13 @@ class TemperatureSimulationService:
         with self._lock:
             self.last_pid_output = self.current_pid_output
             self.current_pid_output = max(-100.0, min(100.0, pid_output))
-            print(f"[TemperatureSimulation] PID output updated: {self.current_pid_output}% (current temp: {self.current_temperature:.1f}°C)")
+            print(
+                f"[TemperatureSimulation] PID output updated: {self.current_pid_output}% (current temp: {self.current_temperature:.1f}°C)"
+            )
 
-    def get_simulated_temperature(self, sensor_name: str, min_temp: float = -20.0, max_temp: float = 180.0) -> float:
+    def get_simulated_temperature(
+        self, sensor_name: str, min_temp: float = -20.0, max_temp: float = 180.0
+    ) -> float:
         """Get simulated temperature based on current PID output and physics.
 
         Args:
@@ -72,10 +84,13 @@ class TemperatureSimulationService:
                 self.current_temperature += temp_change
 
                 # Apply bounds
-                self.current_temperature = max(min_temp, min(max_temp, self.current_temperature))
+                self.current_temperature = max(
+                    min_temp, min(max_temp, self.current_temperature)
+                )
 
                 # Add small random noise for realism
                 import random
+
                 noise = random.uniform(-0.1, 0.1)
                 self.current_temperature += noise
 
@@ -122,15 +137,17 @@ class TemperatureSimulationService:
         temp_change = actual_rate * dt
 
         # Debug output every 10 seconds (approximately)
-        if hasattr(self, '_debug_counter'):
+        if hasattr(self, "_debug_counter"):
             self._debug_counter += 1
         else:
             self._debug_counter = 0
 
         if self._debug_counter % 50 == 0:  # Print every ~50 calls (about 10 seconds)
-            print(f"[TemperatureSimulation] Debug: PID={self.current_pid_output}%, temp={self.current_temperature:.1f}°C, "
-                  f"pid_effect={pid_effect:.3f}, heat_loss={heat_loss:.3f}, total_rate={total_rate:.3f}, "
-                  f"temp_change={temp_change:.3f}")
+            print(
+                f"[TemperatureSimulation] Debug: PID={self.current_pid_output}%, temp={self.current_temperature:.1f}°C, "
+                f"pid_effect={pid_effect:.3f}, heat_loss={heat_loss:.3f}, total_rate={total_rate:.3f}, "
+                f"temp_change={temp_change:.3f}"
+            )
 
         return temp_change
 
@@ -170,7 +187,9 @@ class TemperatureSimulationService:
         """
         with self._lock:
             self.ambient_temperature = ambient_temp
-            print(f"[TemperatureSimulation] Ambient temperature set to {ambient_temp}°C")
+            print(
+                f"[TemperatureSimulation] Ambient temperature set to {ambient_temp}°C"
+            )
 
     def get_simulation_info(self) -> dict:
         """Get current simulation state for debugging.
@@ -180,12 +199,12 @@ class TemperatureSimulationService:
         """
         with self._lock:
             return {
-                'current_temperature': self.current_temperature,
-                'current_pid_output': self.current_pid_output,
-                'ambient_temperature': self.ambient_temperature,
-                'thermal_mass': self.thermal_mass,
-                'heating_efficiency': self.heating_efficiency,
-                'cooling_efficiency': self.cooling_efficiency
+                "current_temperature": self.current_temperature,
+                "current_pid_output": self.current_pid_output,
+                "ambient_temperature": self.ambient_temperature,
+                "thermal_mass": self.thermal_mass,
+                "heating_efficiency": self.heating_efficiency,
+                "cooling_efficiency": self.cooling_efficiency,
             }
 
 

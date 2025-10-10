@@ -2,8 +2,10 @@ from abc import ABC, abstractmethod
 
 from app.backend.Dataclasses.Config import DriverConfig
 
+
 class IDriver(ABC):
     """Interface for sensor implementations."""
+
     @abstractmethod
     def __init__(self, config: DriverConfig):
         pass

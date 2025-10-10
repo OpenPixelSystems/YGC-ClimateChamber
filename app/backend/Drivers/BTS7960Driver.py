@@ -18,7 +18,9 @@ class BTS7960Driver(IDriver):
         # Setup GPIO pins
         self._setup_pins()
 
-        print(f"[BTS7960Driver] [Init] Initialized BTS7960 driver module using {config}")
+        print(
+            f"[BTS7960Driver] [Init] Initialized BTS7960 driver module using {config}"
+        )
 
     def _setup_pins(self):
         """Initialize GPIO pins for BTS7960"""
@@ -109,7 +111,9 @@ class BTS7960Driver(IDriver):
             limit: Maximum duty cycle percentage (0-100)
         """
         self.max_duty_cycle = max(0, min(100, limit))
-        print(f"[BTS7960Driver] [set_duty_cycle_limit] Duty cycle limit set to {self.max_duty_cycle}%")
+        print(
+            f"[BTS7960Driver] [set_duty_cycle_limit] Duty cycle limit set to {self.max_duty_cycle}%"
+        )
 
     def get_current_mode(self):
         """
@@ -174,12 +178,9 @@ class BTS7960Driver(IDriver):
 
         # Clean up GPIO pins
         try:
-            GPIO.cleanup([
-                self.config.RPWM,
-                self.config.LPWM,
-                self.config.R_EN,
-                self.config.L_EN
-            ])
+            GPIO.cleanup(
+                [self.config.RPWM, self.config.LPWM, self.config.R_EN, self.config.L_EN]
+            )
         except:
             pass  # Ignore cleanup errors
 
@@ -187,7 +188,6 @@ class BTS7960Driver(IDriver):
         GPIO.output(self.config.R_EN, GPIO.LOW)
         GPIO.output(self.config.L_EN, GPIO.LOW)
         self.enabled = False
-
 
     def enable(self):
         GPIO.output(self.config.R_EN, GPIO.HIGH)

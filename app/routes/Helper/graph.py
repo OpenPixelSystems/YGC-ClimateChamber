@@ -20,8 +20,12 @@ def linear_interp(x, xp, fp):
 class Graph:
     """Main graph model replicating original helper.py functionality"""
 
-    def __init__(self, name, setpoints: List[Tuple[Union[int, float, str], Union[int, float, str]]],
-                 config_manager: IConfigManager):
+    def __init__(
+        self,
+        name,
+        setpoints: List[Tuple[Union[int, float, str], Union[int, float, str]]],
+        config_manager: IConfigManager,
+    ):
         # Convert setpoints to float tuples
         self.name = name
         self.config = config_manager.graph_config
@@ -30,7 +34,9 @@ class Graph:
         self.start_time = None
 
         # Create interpolated points (one per second)
-        self.interpolated_setpoints = self._interpolate_setpoints() if self.valid_dataset else []
+        self.interpolated_setpoints = (
+            self._interpolate_setpoints() if self.valid_dataset else []
+        )
 
     def set_start_time(self, start_time):
         self.start_time = start_time
@@ -44,7 +50,11 @@ class Graph:
 
             # Check if all points are within the limits
             for i, (x, y) in enumerate(self.setpoints):
-                if x < self.config.min_x or y < self.config.min_y or y > self.config.max_y:
+                if (
+                    x < self.config.min_x
+                    or y < self.config.min_y
+                    or y > self.config.max_y
+                ):
                     return False, f"Punt {i} ({x}, {y}) ligt buiten de limieten."
 
             # Check if time progression and slope are realistic
@@ -52,10 +62,16 @@ class Graph:
                 x1, y1 = self.setpoints[i - 1]
                 x2, y2 = self.setpoints[i]
                 if x2 <= x1:
-                    return False, f"Punten {i - 1} en {i} hebben een niet-realistische tijdssprong."
+                    return (
+                        False,
+                        f"Punten {i - 1} en {i} hebben een niet-realistische tijdssprong.",
+                    )
                 slope = abs((y2 - y1) / (x2 - x1))
                 if slope > self.config.max_rico:
-                    return False, f"Helling tussen punten {i - 1} en {i} is te groot: {slope} > {self.config.max_rico}."
+                    return (
+                        False,
+                        f"Helling tussen punten {i - 1} en {i} is te groot: {slope} > {self.config.max_rico}.",
+                    )
 
             # If all checks pass
             return True, None
@@ -110,18 +126,21 @@ class Graph:
                 return temp
 
         # Fallback to interpolation
-        return linear_interp(time,
-                             [t for t, _ in self.interpolated_setpoints],
-                             [temp for _, temp in self.interpolated_setpoints])
+        return linear_interp(
+            time,
+            [t for t, _ in self.interpolated_setpoints],
+            [temp for _, temp in self.interpolated_setpoints],
+        )
 
     def update_current_target(self, target: float):
         current_time = round((datetime.now() - self.start_time).total_seconds())
         new_setpoint = (current_time, target)
         self.setpoints.append(new_setpoint)
         self.valid_dataset, self.validation_message = self._validate_dataset()
-        self.interpolated_setpoints = self._interpolate_setpoints() if self.valid_dataset else []
+        self.interpolated_setpoints = (
+            self._interpolate_setpoints() if self.valid_dataset else []
+        )
         return
-
 
     def get_current_target(self):
         elapsed_seconds = round((datetime.now() - self.start_time).total_seconds())
