@@ -1,0 +1,4 @@
+(sym_lib_table
+  (version 7)
+  (lib (name "climatechamber")(type "KiCad")(uri "${KIPRJMOD}/climatechamber.kicad_sym")(options "")(descr ""))
+)
